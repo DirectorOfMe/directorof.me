@@ -1,3 +1,4 @@
 .*.sw[lmnop]
 .DS_Store
 .pyc
+.requirements.out
