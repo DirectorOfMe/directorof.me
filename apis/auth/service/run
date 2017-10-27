@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# TODO: Template this
+APP=directorofme_auth:app
+SERVER_ADDR=0.0.0.0
+SERVER_PORT=5555
+NUMBER_OF_FORKS=4
+DAEMON_USER=matt
+
+exec setuidgid "$DAEMON_USER" \
+     gunicorn -b "$SERVER_ADDR:$SERVER_PORT" \
+              -w "$NUMBER_OF_FORKS" \
+              "$APP" 2>&1

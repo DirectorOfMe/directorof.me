@@ -1,9 +1,12 @@
 LIB_DIR := ../../lib
 
 .PHONY: default
-default: .requirements.out
+default: build-setup-py
 
 .PHONY: clean
-clean: clean.requirements.out
+clean: clean-setup-py
+
+.PHONY: install
+install: install-setup-py
 
 include $(LIB_DIR)/mk/python.mk
