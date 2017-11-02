@@ -10,3 +10,7 @@ from . import resource_url
 @resource_url("/app/<string:app_id>", endpoint="app_api")
 class App(Resource):
     pass
+
+@resource_url("/app/<string:app_id>/installed/<string:id>", endpoint="installed_app_api")
+class InstalledApp(Resource):
+    pass

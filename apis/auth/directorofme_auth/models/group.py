@@ -1,37 +1,51 @@
-from . import Model, Query
+'''
+models/group.py -- Group system
+
+@author: Matt Story <matt@directorof.me>
+'''
+
+from directorofme.stubtools import Model
 
 class Group(Model):
-    query = Query({
-        "app-auth": {
+    examples = {
+        "app/auth": {
             "type": "app",
             "name": "auth",
-            "id": "app-auth",
+            "id": "app/auth",
             "parent": None
         },
-        "app-dashboard": {
+        "app/dashboard": {
             "type": "app",
             "id": "app-dashboard",
             "name": "dashboard",
-            "parent": "app-auth",
+            "parent": "app/auth",
         },
-        "license-free": {
+        "license/free": {
             "type": "license",
-            "id": "license-free",
+            "id": "license/free",
             "name": "free",
             "parent": None,
         },
-        "license-premium": {
+        "license/premium": {
             "type": "license",
-            "id": "license-premium",
+            "id": "license/premium",
             "name": "premium",
-            "parent": "license-free",
+            "parent": "license/free",
         },
-        "profile-dom-staff": {
-            #TODO: this doesn't feel great.
-            "type": "profile",
-            "id": "profile-dom-staff",
+        "group/dom-staff": {
+            "type": "group",
+            "id": "group/dom-staff",
             "name": "dom-staff",
             "parent": None,
-            #TODO: Users?
+            "users": []
+        },
+        "group/dom-admin": {
+            "type": "group",
+            "id": "group/dom-admin",
+            "name": "dom-admin",
+            "parent": "dom-staff",
+            "users": [
+                User.query.get("matt")
+            ]
         }
-    })
+    }

@@ -9,4 +9,6 @@ from .app import app, api
 from . import resources
 from . import models
 
+#TODO: add in JWT or OpenID based auth headers
+
 __all__ = [ "app", "api", "resources", "models" ]
