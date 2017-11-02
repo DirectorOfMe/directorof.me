@@ -15,11 +15,13 @@ build/.d: $(SETUP_PY) $(PY_FILES)
 install-setup-py: build/.d
 	$(PYTHON) $(SETUP_PY) install
 
+.PHONY: clean-setup-py
 clean-setup-py:
 	rm -rf build/ dist/ *.egg-info/
 
-.requirements.out: requirements.txt
-	$(PIP) install -r $< | tee $@
-
+.PHONY: clean.requirements.out
 clean.requirements.out:
 	rm -f .requirements.out
+
+.requirements.out: requirements.txt
+	$(PIP) install -r $< | tee $@

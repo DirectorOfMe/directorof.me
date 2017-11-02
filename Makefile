@@ -1,6 +1,8 @@
+LIB_DIR             = ./lib
 API_DIR             = ./apis
 APP_DIR             = ./apps
 
+PY_LIBS             = $(shell find $(LIB_DIR)/python -maxdepth 1 -mindepth 1 -type d)
 APIS                = $(shell find $(API_DIR) -maxdepth 1 -mindepth 1 -type d)
 APPS                = $(shell find $(APP_DIR) -maxdepth 1 -mindepth 1 -type d)
 
@@ -8,7 +10,14 @@ SUBMAKE             = sh -c 'target=$$1; shift; for dir in "$$@"; do cd $$dir &&
 
 # build targets
 .PHONY: default
-default: python apis apps
+default: | python py-libs apis apps
+
+.PHONY: python
+python: .requirements.out
+
+.PHONY: py-libs
+py-libs:
+	$(SUBMAKE) "" $(PY_LIBS)
 
 .PHONY: apis
 apis:
@@ -18,12 +27,13 @@ apis:
 apps:
 	$(SUBMAKE) "" $(APPS)
 
-.PHONY: python
-python: .requirements.txt
-
 # install targets
 .PHONY: install
-install: install-apis install-apps
+install: | install-py-libs install-apis install-apps
+
+.PHONY: install-py-libs
+install-py-libs:
+	$(SUBMAKE) install $(PY_LIBS)
 
 .PHONY: install-apis
 install-apis:
@@ -35,7 +45,11 @@ install-apps:
 
 # clean targets
 .PHONY: clean
-clean: clean-python clean-apis clean-apps
+clean: clean-py-libs clean-python clean-apis clean-apps
+
+.PHONY: clean-py-libs
+clean-py-libs:
+	$(SUBMAKE) clean $(PY_LIBS)
 
 .PHONY: clean-apps
 clean-apps:
@@ -46,6 +60,6 @@ clean-apis:
 	$(SUBMAKE) clean $(APIS)
 
 .PHONY: clean-python
-clean-python: clean.requirements.txt
+clean-python: clean.requirements.out
 
 include $(LIB_DIR)/mk/python.mk
