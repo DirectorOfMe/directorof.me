@@ -6,7 +6,7 @@ authentication and authorization functionality for directorofme.
 '''
 # ORDER MATTERS HERE
 from .app import app, api
-import resources
-import models
+from . import resources
+from . import models
 
 __all__ = [ "app", "api", "resources", "models" ]

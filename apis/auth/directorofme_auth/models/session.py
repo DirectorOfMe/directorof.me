@@ -1,6 +1,6 @@
 import datetime
 
-from . import Model, Query
+from . import Model, Query, Group
 
 class Session(Model):
     query = Query({
@@ -10,9 +10,9 @@ class Session(Model):
             "profile_id": "ms.director",
             "app_id": "directorof.me",
             "groups": [
-                { "group_type": "app", "group_id": "core" },
-                { "group_type": "license", "group_id": "premium" },
-                { "group_type": "profile", "group_id": "dom-staff" },
+                Group.query.get("app-auth"),
+                Group.query.get("license-premium"),
+                Group.query.get("profile-dom-staff"),
             ],
             "environment": {
                 "layout": "two-column",
