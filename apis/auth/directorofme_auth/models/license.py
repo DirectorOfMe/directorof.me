@@ -12,6 +12,7 @@ __all__ = [ "License" ]
 class License(Model):
     examples = {
         "12345": {
+            "id": "12345",
             "groups": [
                 Group.query.get("license/premium")
             ],
