@@ -41,7 +41,7 @@ class App(Model):
 
 class InstalledApp(Model):
     examples = {
-        "dashboard/install/12345": {
+        "dashboard/12345": {
             "id": "12345",
             "app_id": "dashboard",
             "app": App.query.get("dashboard"),

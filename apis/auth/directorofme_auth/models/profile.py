@@ -10,7 +10,7 @@ __all__ = [ "Profile" ]
 class Profile(Model):
     examples = {
         "matt": {
-            "handle": "matt",
+            "id": "matt",
             "email": "matt@directorof.me",
             "password": "sha512$100000$salt$0394a2ede332c9a13eb82e9b24631604c31df978b4e2f0fbd2c549944f9d79a5",
 

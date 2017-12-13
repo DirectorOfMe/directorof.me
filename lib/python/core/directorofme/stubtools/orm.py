@@ -35,6 +35,11 @@ class Query:
 class Model:
     query = Query()
 
+    def __str__(self):
+        return "<{} {}> (Stub)".format(
+            self.__class__.__name__, getattr(self, "id", id(self))
+        )
+
     def __init__(self, **contents):
         for k,v in contents.items():
             setattr(self, k, v)
