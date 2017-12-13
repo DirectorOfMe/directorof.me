@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="directorofme_flask_restful_fields",
+    name="directorofme_flask_restful",
     version="0.1",
     packages=find_packages(),
     install_requires=[

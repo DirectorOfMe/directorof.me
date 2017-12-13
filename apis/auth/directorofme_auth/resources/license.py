@@ -4,14 +4,14 @@ resources/license.py -- The REST API for the license resource.
 @author: Matthew Story <matt@directorof.me>
 '''
 from flask_restful import Resource, fields, marshal_with
-import directorofme_flask_restful_fields as dom_fields
+from directorofme_flask_restful import fields as dom_fields, resource_url
 
-from . import resource_url
+from . import api
 from ..models import License as LicenseModel
 
 __all__ = [ "Group" ]
 
-@resource_url("/license/<string:id>", endpoint="license_api")
+@resource_url(api, "/license/<string:id>", endpoint="license_api")
 class License(Resource):
     resource_type_map = {
         "id": fields.Url("license_api"),

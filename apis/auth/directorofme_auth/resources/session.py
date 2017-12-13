@@ -6,15 +6,15 @@ resources/session.py -- The REST API for the session resource.
 import datetime
 
 from flask_restful import Resource, fields, marshal_with
-import directorofme_flask_restful_fields as dom_fields
+from directorofme_flask_restful import fields as dom_fields, resource_url
 
-from . import resource_url, Group
+from . import api
 from ..models import Session as SessionModel
 
 __all__ = [ "Session" ]
 
 ### TODO: make an example wrapper thing that holds the schema and examples
-@resource_url("/session/<string:id>", endpoint="session_api")
+@resource_url(api, "/session/<string:id>", endpoint="session_api")
 class Session(Resource):
     resource_type_map = {
         "id": fields.Url("session_api"),

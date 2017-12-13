@@ -6,7 +6,7 @@ setup(
     packages=find_packages(),
     install_requires=[
 		"directorofme",
-        "directorofme_flask_restful_fields",
+        "directorofme_flask_restful",
         "flask==0.12.2",
         "flask-restful==0.3.5",
         "gunicorn==19.7",

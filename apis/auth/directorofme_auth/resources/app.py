@@ -4,12 +4,12 @@ resources/app.py -- The REST API for the app resource.
 @author: Matthew Story <matt@directorof.me>
 '''
 from flask_restful import Resource, fields, marshal_with
-import directorofme_flask_restful_fields as dom_fields
+from directorofme_flask_restful import fields as dom_fields, resource_url
 
-from . import resource_url
+from . import api
 from ..models import App as AppModel, InstalledApp as InstalledAppModel
 
-@resource_url("/app/<string:id>", endpoint="app_api")
+@resource_url(api, "/app/<string:id>", endpoint="app_api")
 class App(Resource):
     resource_type_map = {
         "id": fields.Url("app_api"),
@@ -24,7 +24,7 @@ class App(Resource):
     def get(self, **kwargs):
         return AppModel.query.get(kwargs["id"])
 
-@resource_url("/app/<string:app_id>/<string:id>", endpoint="installed_app_api")
+@resource_url(api, "/app/<string:app_id>/<string:id>", endpoint="installed_app_api")
 class InstalledApp(Resource):
     resource_type_map = {
         "id": fields.Url("installed_app_api"),
