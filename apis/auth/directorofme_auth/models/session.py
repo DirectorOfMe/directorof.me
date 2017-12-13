@@ -1,8 +1,15 @@
+'''
+models/session.py -- Session system
+
+@author: Matt Story <matt@directorof.me>
+'''
 import datetime
 
 from directorofme.stubtools import Model
 
 from . import Group, Profile, License, InstalledApp
+
+__all__ = [ "Session" ]
 
 class Session(Model):
     examples = {
@@ -11,11 +18,11 @@ class Session(Model):
             "expires": datetime.datetime.now(),
             "profile": Profile.query.get("matt"),
             "license": License.query.get("12345"),
-            "installed_app": InstalledApp.query.get("dashboard/12345"),
+            "installed_app": InstalledApp.query.get("dashboard/install/12345"),
             "groups": [
                 Group.query.get("app/auth"),
                 Group.query.get("license/premium"),
-                Group.query.get("group/dom-staff"),
+                Group.query.get("profile/dom-staff"),
             ],
             "environment": {
                 "layout": "two-column",

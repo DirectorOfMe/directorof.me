@@ -1,6 +1,11 @@
+'''
+models/app.py -- App system
+'''
 from directorofme.stubtools import Model
 
 from . import Group
+
+__all__ = [ "App", "InstalledApp" ]
 
 class App(Model):
     examples = {
@@ -36,7 +41,8 @@ class App(Model):
 
 class InstalledApp(Model):
     examples = {
-        "dashboard/12345": {
+        "dashboard/install/12345": {
+            "id": "12345",
             "app_id": "dashboard",
             "app": App.query.get("dashboard"),
             "config": {

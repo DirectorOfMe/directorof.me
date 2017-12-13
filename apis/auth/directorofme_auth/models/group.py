@@ -6,6 +6,10 @@ models/group.py -- Group system
 
 from directorofme.stubtools import Model
 
+from . import Profile
+
+__all__ = [ "Group" ]
+
 class Group(Model):
     examples = {
         "app/auth": {
@@ -32,20 +36,20 @@ class Group(Model):
             "name": "premium",
             "parent": "license/free",
         },
-        "group/dom-staff": {
-            "type": "group",
-            "id": "group/dom-staff",
+        "profile/dom-staff": {
+            "type": "profile",
+            "id": "profile/dom-staff",
             "name": "dom-staff",
             "parent": None,
             "users": []
         },
-        "group/dom-admin": {
-            "type": "group",
-            "id": "group/dom-admin",
+        "profile/dom-admin": {
+            "type": "profile",
+            "id": "profile/dom-admin",
             "name": "dom-admin",
             "parent": "dom-staff",
             "users": [
-                User.query.get("matt")
+                Profile.query.get("matt")
             ]
         }
     }

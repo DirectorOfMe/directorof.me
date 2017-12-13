@@ -5,6 +5,8 @@ models/profile.py -- Profile system
 '''
 from directorofme.stubtools import Model
 
+__all__ = [ "Profile" ]
+
 class Profile(Model):
     examples = {
         "matt": {
