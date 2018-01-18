@@ -3,21 +3,28 @@ models/profile.py -- Profile system
 
 @author: Matt Story <matt@directorof.me>
 '''
-from directorofme.stubtools import Model
+from sqlalchemy import Column, String
+from sqlalchemy_utils import JSONType, EmailType
+
+from directorofme.orm import Model
 
 __all__ = [ "Profile" ]
 
 class Profile(Model):
-    examples = {
-        "matt": {
-            "id": "matt",
-            "email": "matt@directorof.me",
-            "password": "sha512$100000$salt$0394a2ede332c9a13eb82e9b24631604c31df978b4e2f0fbd2c549944f9d79a5",
+    '''A profile, at the moement is what we authenticate against a third party
+       service. It associates a user to a license and set of groups, which
+       determines which applications, features and data a user has access to
+       for a session. We may determine that one user may have multiple profiles
+       in the future, but for now this should be assumed to be 1<>1 with a
+       "person".
+    '''
+    __tablename__ = "profile"
 
-            "preferences": {
-                "layout": "3-column",
-                "beta_features": True,
-                "main-dashboard": "dashboard/12345"
-            }
-        }
-    }
+    #: the name of the person using this profile
+    name = Column(String(255), nullable=False)
+
+    #: email as the unique identifier for our user, used by OAuth
+    email = Column(EmailType, unique=True, nullable=False)
+
+    #: preferences for this user (e.g. display color, layout, etc)
+    preferences = Column(JSONType)

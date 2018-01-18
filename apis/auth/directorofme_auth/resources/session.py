@@ -3,8 +3,6 @@ resources/session.py -- The REST API for the session resource.
 
 @author: Matthew Story <matt@directorof.me>
 '''
-import datetime
-
 from flask_restful import Resource, fields, marshal_with
 from directorofme_flask_restful import fields as dom_fields, resource_url
 

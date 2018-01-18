@@ -17,7 +17,6 @@ class Group(Resource):
         "id": fields.Url("group_api"),
         "name": fields.String(),
         "type": fields.String(),
-        "parent": fields.Url("group_api"),
         "parent": dom_fields.AttributedUrl("group_api", attribute="parent")
     }
 

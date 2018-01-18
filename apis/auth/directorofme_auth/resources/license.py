@@ -9,7 +9,7 @@ from directorofme_flask_restful import fields as dom_fields, resource_url
 from . import api
 from ..models import License as LicenseModel
 
-__all__ = [ "Group" ]
+__all__ = [ "License" ]
 
 @resource_url(api, "/license/<string:id>", endpoint="license_api")
 class License(Resource):

@@ -7,7 +7,5 @@ directorofme -- the main libraries for providing shared functionality to
 '''
 
 ### ORDER MATTERS
-from . import stubtools
 from . import auth
-# depends on auth
 from . import orm

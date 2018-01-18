@@ -3,14 +3,8 @@ models/session.py -- Session system
 
 @author: Matt Story <matt@directorof.me>
 '''
-import datetime
-
-from directorofme.stubtools import Model
-
-from . import Group, Profile, License, InstalledApp
-
-__all__ = [ "Session" ]
-
+# WILL BE FRONT-END
+'''
 class Session(Model):
     examples = {
         "123": {
@@ -30,3 +24,4 @@ class Session(Model):
             }
         }
     }
+'''

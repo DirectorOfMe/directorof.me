@@ -6,7 +6,8 @@ authentication and authorization functionality for directorofme.
 '''
 # ORDER MATTERS HERE
 from .app import app, api
-from . import resources
+# TODO: Hook this back up
+# from . import resources
 from . import models
 
 #TODO: add in JWT or OpenID based auth headers

@@ -7,7 +7,10 @@ SERVER_PORT=5555
 NUMBER_OF_FORKS=4
 DAEMON_USER=matt
 
+export APP_DB_ENGINE="sqlite:///:memory:"
+export APP_DEBUG=TRUE
+
 exec setuidgid "$DAEMON_USER" \
-     gunicorn -b "$SERVER_ADDR:$SERVER_PORT" \
-              -w "$NUMBER_OF_FORKS" \
-              "$APP" 2>&1
+       gunicorn -b "$SERVER_ADDR:$SERVER_PORT" \
+                -w "$NUMBER_OF_FORKS" \
+                "$APP" 2>&1

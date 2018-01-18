@@ -9,6 +9,9 @@ setup(
         "directorofme_flask_restful",
         "flask==0.12.2",
         "flask-restful==0.3.5",
+        "sqlalchemy>=1.2",
+        "sqlalchemy-utils>=0.32",
+        "python-slugify>=1.2.4",
         "gunicorn==19.7",
     ]
 )

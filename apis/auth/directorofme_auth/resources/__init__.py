@@ -6,4 +6,4 @@ from .app import App, InstalledApp
 from .session import Session
 from .license import License
 
-__all__ = [ "Session", "Group", "Profile", "App", "License" ]
+__all__ = [ "Session", "Group", "Profile", "App", "InstalledApp", "License", "api" ]
