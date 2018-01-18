@@ -10,7 +10,6 @@ from sqlalchemy_utils import Timestamp, UUIDType, generic_repr
 
 from .auth.orm import PermissionedModel
 
-### TODO: Tests
 ### The base model
 @generic_repr
 class Model(PermissionedModel, Timestamp):
