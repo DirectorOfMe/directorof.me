@@ -1,7 +1,8 @@
 from directorofme.auth import orm
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.attributes import InstrumentedAttribute
-from sqlalchemy import Column, Integer
+from sqlalchemy import Column
+from sqlalchemy_utils import UUIDType
 
 from unittest import mock
 import pytest
@@ -14,6 +15,9 @@ class RandomPermission(orm.Permission):
 
     type_name = "random"
     rel = "random.id"
+
+    def __init__(self, name=None, max_permissions=5):
+        super().__init__(name=name, max_permissions=max_permissions)
 
 class RandomlyPermissionedObject:
     random = RandomPermission("random")
@@ -46,7 +50,7 @@ class TestPermission:
 
         column = RandomPermission.make_column()
         assert isinstance(column, Column), "concrete implementation returns a column"
-        assert isinstance(column.type, Integer), "permission is an integer column"
+        assert isinstance(column.type, UUIDType), "permission is an integer column"
         assert column.nullable, "permission is nullable"
 
     def test__column_name(self):
@@ -117,7 +121,7 @@ class TestPermissionedModelMeta:
         class NonAbstract(Base):
             __tablename__ = "hi"
             perm = RandomPermission()
-            id = Column(Integer, primary_key=True)
+            id = Column(UUIDType, primary_key=True)
 
         for ii in range(NonAbstract.perm.max_permissions):
             column = NonAbstract.__dict__[NonAbstract.perm.column_name(ii)]
@@ -153,19 +157,19 @@ def test__PermissionedBase_works():
 
     class Concrete(ReadOnlyModel):
         __tablename__ = "concrete"
-        id = Column(Integer, primary_key = True)
+        id = Column(UUIDType, primary_key = True)
 
     concrete = Concrete()
     assert concrete.read == tuple(), "permission descriptor get is working"
-    concrete.read = range(3)
-    assert concrete.read == tuple(range(3)), "permission descriptor set is working"
+    concrete.read = [0]
+    assert concrete.read == (0,), "permission descriptor set is working"
     assert concrete._permissions_read_0 == 0, "permission attrs get set correctly"
-    assert concrete._permissions_read_4 == None, "permission attrs get set correctly"
+    assert concrete._permissions_read_1 == None, "permission attrs get set correctly"
 
 def test__PermissionedModel_contract():
     class Permed(orm.PermissionedModel):
         __tablename__ = "permisionedconcrete"
-        id = Column(Integer, primary_key = True)
+        id = Column(UUIDType, primary_key = True)
 
     assert isinstance(Permed.read, orm.GroupBasedPermission), "read installed"
     assert isinstance(Permed.write, orm.GroupBasedPermission), "write installed"

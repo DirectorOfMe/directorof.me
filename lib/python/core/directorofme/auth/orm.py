@@ -1,15 +1,17 @@
+'''
+auth/orm.py -- Auth support for a SQLAlchemy-based ORM.
+
+@author: Matt Story <matt.story@directorof.me>
+'''
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy import Column, Integer
+from sqlalchemy_utils import UUIDType
 
 __all__ = [ "Permission", "GroupBasedPermission", "PermissionedModelMeta",
             "PermissionedModel" ]
 
-### TODO: decorator
-def with_permission():
-    pass
-
 class Permission:
-    col_type = Integer
+    col_type = UUIDType
 
     permissions_prefix = "_permissions"
     permissions_delimiter = "_"
@@ -19,14 +21,14 @@ class Permission:
             raise NotImplementedError("Permission is an abstract class")
         return super().__new__(cls)
 
-    def __init__(self, name=None, max_permissions=5):
+    def __init__(self, name=None, max_permissions=2):
         self.name = name
         self.max_permissions = max_permissions
 
     ### Protocol used by PermissionedModelMeta
     @classmethod
     def make_column(cls):
-        return Column(cls.col_type, nullable=True)
+        return Column(cls.col_type, nullable=True, index=True)
 
     def column_name(self, perm_number):
         if self.name is None:

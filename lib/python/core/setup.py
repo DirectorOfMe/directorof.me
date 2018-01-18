@@ -7,6 +7,7 @@ setup(
     setup_requires=[
         "pytest-runner>=3.0",
         "sqlalchemy>=1.2",
+        "sqlalchemy-utils>=0.32",
     ],
     tests_require=[
         "pytest>=3.2.3",
