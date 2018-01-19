@@ -6,6 +6,6 @@ directorofme -- the main libraries for providing shared functionality to
 @author: Matt Story <matt.story@directorof.me>
 '''
 
-### ORDER MATTERS
-from . import auth
+__all__ = [ "orm" ]
+
 from . import orm
