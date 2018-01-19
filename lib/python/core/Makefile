@@ -1,4 +1,5 @@
-LIB_DIR := ../../
+LIB_DIR :=   ../../
+SHARE_DIR := ../../../share
 
 .PHONY: default
 default: build-setup-py
