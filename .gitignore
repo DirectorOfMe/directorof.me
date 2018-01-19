@@ -1,6 +1,6 @@
 .*.sw[lmnop]
 .DS_Store
-.pyc
+*.pyc
 .requirements.out
 __pycache__
 build

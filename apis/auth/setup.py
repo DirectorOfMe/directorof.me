@@ -11,7 +11,12 @@ setup(
         "flask-restful==0.3.5",
         "sqlalchemy>=1.2",
         "sqlalchemy-utils>=0.32",
+        "flask-sqlalchemy>=2.3.2",
         "python-slugify>=1.2.4",
         "gunicorn==19.7",
+        "pytest>=3.2.3",
+    ],
+    tests_require=[
+        "pytest>=3.2.3",
     ]
 )

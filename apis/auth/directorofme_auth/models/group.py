@@ -45,15 +45,15 @@ class Group(Model):
     __tablename__ = "group"
 
     #: unique, user-defined name of this :class:`.Group`
-    name = Column(String(20), unique=True)
+    name = Column(String(20), unique=True, nullable=False)
 
     #: unique, url-safe name used to fetch :class:`.Group` objects from the API
-    slug = Column(String(20), index=True, unique=True)
+    slug = Column(String(20), index=True, unique=True, nullable=False)
 
     #: the group type determines which authorization objects are responsible
     #: for and authorized to add this group to a session.
     #: (see :class:`.GroupTypes` for more info)
-    group_type = Column(Enum(GroupTypes))
+    group_type = Column(Enum(GroupTypes), nullable=False)
 
     #: id of :attr:`parent` of this group
     parent_id = Column(UUIDType, ForeignKey("group.id"), nullable=True)
@@ -67,4 +67,4 @@ class Group(Model):
     ### TODO: factor this -- also used in models/app.py
     @observes("name")
     def slugify_name(self, name):
-        return slugify(name)
+        self.slug = slugify(name)

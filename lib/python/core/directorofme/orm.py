@@ -3,19 +3,13 @@ orm.py -- Auth support for a SQLAlchemy-based ORM.
 
 @author: Matt Story <matt.story@directorof.me>
 '''
-from sqlalchemy import Column, Integer
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
-
+from sqlalchemy import Column, Integer
 from sqlalchemy_utils import Timestamp, UUIDType, generic_repr
 
 __all__ = [ "Permission", "GroupBasedPermission", "PermissionedModelMeta",
-            "PermissionedModel", "Model", "Session" ]
+            "PermissionedModel", "Model" ]
 
-### This will require configuration by the calling application
-Session = sessionmaker()
-
-### TODO: Sphynx Docs
 class Permission:
     col_type = UUIDType
 

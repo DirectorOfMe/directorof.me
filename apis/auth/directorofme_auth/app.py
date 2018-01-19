@@ -2,7 +2,8 @@ import os
 
 import flask
 import flask_restful
-import sqlalchemy
+from flask_sqlalchemy import SQLAlchemy
+from directorofme import orm
 
 config = {
     "config_file": os.environ.get("APP_CONFIG_FILE"),
@@ -12,13 +13,12 @@ config = {
     ),
     "app": {
         "DEBUG": os.environ.get("APP_DEBUG", False),
-    },
-    "db": {
-        "engine": os.environ.get("APP_DB_ENGINE", None),
+        "SQLALCHEMY_DATABASE_URI": os.environ.get("APP_DB_ENGINE", None),
+        "SQLALCHEMY_TRACK_MODIFICATIONS": False
     }
 }
 
 app = flask.Flask(config["name"])
 app.config.update(config["app"])
 api = flask_restful.Api(app)
-db = sqlalchemy.create_engine(config["db"]["engine"])
+db = SQLAlchemy(app, model_class=orm.Model)

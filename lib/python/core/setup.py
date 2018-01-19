@@ -8,6 +8,7 @@ setup(
         "pytest-runner>=3.0",
         "sqlalchemy>=1.2",
         "sqlalchemy-utils>=0.32",
+        "flask-sqlalchemy>=2.3.2",
     ],
     tests_require=[
         "pytest>=3.2.3",
