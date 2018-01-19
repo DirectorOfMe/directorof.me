@@ -1,4 +1,5 @@
-LIB_DIR := ../../lib
+LIB_DIR   := ../../lib
+SHARE_DIR := ../../share
 
 .PHONY: default
 default: build-setup-py
@@ -7,6 +8,6 @@ default: build-setup-py
 clean: clean-setup-py
 
 .PHONY: install
-install: install-setup-py
+install: default install-setup-py
 
 include $(LIB_DIR)/mk/python.mk

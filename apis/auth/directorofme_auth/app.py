@@ -6,7 +6,6 @@ from flask_sqlalchemy import SQLAlchemy
 from directorofme import orm
 
 config = {
-    "config_file": os.environ.get("APP_CONFIG_FILE"),
     "name": os.environ.get(
         "APP_CONFIG_NAME",
         os.path.basename(os.path.dirname(__file__))
