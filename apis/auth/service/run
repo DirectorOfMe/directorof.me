@@ -6,8 +6,11 @@ SERVER_ADDR=0.0.0.0
 SERVER_PORT=5555
 NUMBER_OF_FORKS=4
 DAEMON_USER=matt
+PSQL_HOST=localhost
+PSQL_DB=dom
+PSQL_USER=dom:password
 
-export APP_DB_ENGINE="sqlite:///:memory:"
+export APP_DB_ENGINE="postgresql:///${PSQL_USER}@${PSQL_HOST}/${PSQL_DB}"
 export APP_DEBUG=TRUE
 
 exec setuidgid "$DAEMON_USER" \

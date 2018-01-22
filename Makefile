@@ -1,12 +1,12 @@
-LIB_DIR             = ./lib
-API_DIR             = ./apis
-APP_DIR             = ./apps
+LIB_DIR             ?= ./lib
+API_DIR             ?= ./apis
+APP_DIR             ?= ./apps
 
-PY_LIBS             = $(shell find $(LIB_DIR)/python -maxdepth 1 -mindepth 1 -type d)
-APIS                = $(shell find $(API_DIR) -maxdepth 1 -mindepth 1 -type d)
-APPS                = $(shell find $(APP_DIR) -maxdepth 1 -mindepth 1 -type d)
+PY_LIBS             ?= $(shell find $(LIB_DIR)/python -maxdepth 1 -mindepth 1 -type d)
+APIS                ?= $(shell find $(API_DIR) -maxdepth 1 -mindepth 1 -type d)
+APPS                ?= $(shell find $(APP_DIR) -maxdepth 1 -mindepth 1 -type d)
 
-SUBMAKE             = sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd $$dir && [ -f Makefile ] && { make $$target || exit $$?; }"; done' submake
+SUBMAKE             ?= sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd $$dir && [ -f Makefile ] && { make $$target || exit $$?; }"; done' submake
 
 # build targets
 .PHONY: default
