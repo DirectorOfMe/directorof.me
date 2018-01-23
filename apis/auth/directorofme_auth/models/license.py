@@ -16,15 +16,15 @@ __all__ = [ "License" ]
 groups_to_license = Table(
     'group_to_license',
     Model.metadata,
-    Column('license_id', Integer, ForeignKey('license.id')),
-    Column('group_id', Integer, ForeignKey('group.id'))
+    Column('license_id', UUIDType, ForeignKey('license.id')),
+    Column('group_id', UUIDType, ForeignKey('group.id'))
 )
 
 profiles_to_license = Table(
     'profile_to_license',
     Model.metadata,
-    Column('license_id', Integer, ForeignKey('license.id')),
-    Column('profile_id', Integer, ForeignKey('profile.id'))
+    Column('license_id', UUIDType, ForeignKey('license.id')),
+    Column('profile_id', UUIDType, ForeignKey('profile.id'))
 )
 
 class License(Model):

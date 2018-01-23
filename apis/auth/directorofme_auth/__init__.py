@@ -8,7 +8,8 @@ authentication and authorization functionality for directorofme.
 __all__ = [ "app", "api", "db", "resources", "models" ]
 
 # ORDER MATTERS HERE
-from .app import app, api, db
+from .app import app, api, db, migrate
+
 # TODO: Hook this back up
 # from . import resources
 from . import models

@@ -1,0 +1,2 @@
+SERVICE_SOURCE_DIR  = ./service
+SERVICE_INSTALL_DIR = /service

@@ -2,12 +2,12 @@
 PSQL_DB         ?= dom
 PSQL_USER       ?= dom
 PSQL_PASS       ?= password
-PSQL_HOST       ?= loclahost
+PSQL_HOST       ?= localhost
 
 # XXX: This needs to move to ansible or similar
 PSQL_SHELL_USER ?= postgres
 PSQL_VERSION    ?= 9.5
-PSQL            ?= sudo -u "$(PSQL_SHELL_USER)" psql
+PSQL            := sudo -u "$(PSQL_SHELL_USER)" psql
 
 .PHONY: postgresql
 postgresql: .setup.postgresql.out
@@ -24,11 +24,9 @@ postgresql: .setup.postgresql.out
 			  SELECT * FROM test; \
 			  DELETE FROM test; \
 			  DROP TABLE test;" | \
-			 PGPASSWORD="$(PSQL_PASS)" psql -h localhost $(PSQL_DB) $(PSQL_USER) \
+			 PGPASSWORD="$(PSQL_PASS)" psql -h $(PSQL_HOST) $(PSQL_DB) $(PSQL_USER) \
 			   || exit 1; \
 	 } | tee $<
 
 .postgresql.apt.out:
-	apt install postgresql-$(PSQL_VERSION) | tee $<
-
-
+	apt install postgresql-$(PSQL_VERSION) libpq-dev | tee $<

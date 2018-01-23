@@ -2,9 +2,10 @@
 PSQL_DB         ?= dom
 PSQL_USER       ?= dom
 PSQL_PASS       ?= password
-PSQL_HOST       ?= loclahost
+PSQL_HOST       ?= localhost
 FLASK_APP       ?= app
-APP_DB_ENGINE   ?= "postgresql:///$(PSQL_USER):$(PSQL_PASS)@$(PSQL_HOST)/$(PSQL_DB)"
+MIGRATIONS      ?= migrations/
+APP_DB_ENGINE   ?= "postgresql://$(PSQL_USER):$(PSQL_PASS)@$(PSQL_HOST)/$(PSQL_DB)"
 FLASK           ?= FLASK_APP="$(FLASK_APP)" APP_DB_ENGINE="$(APP_DB_ENGINE)" flask
 
 .PHONY: shell
@@ -13,4 +14,8 @@ shell:
 
 .PHONY: migrate
 migrate:
-	$(FLASK) $@
+	{ [ -d $(MIGRATIONS) ] || $(FLASK) db init; } && $(FLASK) db  $@
+
+.PHONY: upgrade-db
+upgrade-db:
+	$(FLASK) db upgrade
