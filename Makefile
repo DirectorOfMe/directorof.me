@@ -1,4 +1,5 @@
 LIB_DIR             ?= ./lib
+SHARE_DIR           ?= ./share
 API_DIR             ?= ./apis
 APP_DIR             ?= ./apps
 
@@ -10,7 +11,7 @@ SUBMAKE             ?= sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd 
 
 # build targets
 .PHONY: default
-default: | python py-libs apis apps postgresql
+default: | python py-libs apis apps postgresql jwt_keys
 
 .PHONY: all
 all: | default install upgrade-db
@@ -72,3 +73,4 @@ upgrade-db:
 
 include $(LIB_DIR)/mk/python.mk
 include $(LIB_DIR)/mk/psql.mk
+include $(LIB_DIR)/mk/jwt.mk
