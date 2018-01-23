@@ -10,7 +10,10 @@ SUBMAKE             ?= sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd 
 
 # build targets
 .PHONY: default
-default: | python py-libs apis apps
+default: | python py-libs apis apps postgresql
+
+.PHONY: all
+all: | default install upgrade-db
 
 .PHONY: python
 python: .requirements.out
@@ -62,4 +65,10 @@ clean-apis:
 .PHONY: clean-python
 clean-python: clean.requirements.out
 
+# db bits
+.PHONY: upgrade-db
+upgrade-db:
+	$(SUBMAKE) $@ $(APIS)
+
 include $(LIB_DIR)/mk/python.mk
+include $(LIB_DIR)/mk/psql.mk

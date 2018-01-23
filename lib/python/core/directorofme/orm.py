@@ -3,6 +3,8 @@ orm.py -- Auth support for a SQLAlchemy-based ORM.
 
 @author: Matt Story <matt.story@directorof.me>
 '''
+import uuid
+
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy import Column, Integer
 from sqlalchemy_utils import Timestamp, UUIDType, generic_repr
@@ -101,10 +103,12 @@ class PermissionedModel(PermissionedBase):
     read = GroupBasedPermission()
     write = GroupBasedPermission()
     delete = GroupBasedPermission()
+    ### TODO: populate these defaults from session
 
 ### The base model
 @generic_repr
 class Model(PermissionedModel, Timestamp):
     __abstract__ = True
     #: Unique identifier for this object.
-    id = Column(UUIDType, primary_key=True)
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid1)
+    ### TODO: tests for default
