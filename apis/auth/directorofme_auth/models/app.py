@@ -1,6 +1,4 @@
-'''
-models/app.py -- App system
-'''
+''' models/app.py -- App system '''
 
 from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.orm import relationship
@@ -68,3 +66,6 @@ class InstalledApp(Model):
 
     #: config for this app (conforms to :attr:`.App.config_schema`)
     config = Column(JSONType)
+
+###TODO: hook up jwt bits
+###: START HERE

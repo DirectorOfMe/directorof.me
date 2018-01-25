@@ -6,6 +6,7 @@ directorofme -- the main libraries for providing shared functionality to
 @author: Matt Story <matt.story@directorof.me>
 '''
 
-__all__ = [ "orm" ]
+__all__ = [ "orm", "authorization" ]
 
 from . import orm
+from . import authorization

@@ -4,7 +4,7 @@ models/profile.py -- Profile system
 @author: Matt Story <matt@directorof.me>
 '''
 from sqlalchemy import Column, String
-from sqlalchemy_utils import JSONType, EmailType
+from sqlalchemy_utils import JSONType, EmailType, UUIDType
 
 from directorofme.orm import Model
 

@@ -5,7 +5,7 @@ import flask_restful
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-from directorofme import orm
+from directorofme import orm, json
 
 __all__ = [ "app", "api", "db", "migrate" ]
 
@@ -23,6 +23,7 @@ config = {
 
 app = flask.Flask(config["name"])
 app.config.update(config["app"])
+app.json_encoder = json.JSONEncoder
 api = flask_restful.Api(app)
 db = SQLAlchemy(app, model_class=orm.Model)
 migrate = Migrate(app, db)

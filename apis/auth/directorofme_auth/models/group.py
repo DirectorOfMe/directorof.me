@@ -11,34 +11,15 @@ from sqlalchemy_utils import UUIDType, observes
 from slugify import slugify
 
 from directorofme.orm import Model
+from directorofme.authorization import GroupTypes
 
-__all__ = [ "Group", "GroupTypes" ]
+__all__ = [ "Group" ]
 
 groups_to_profiles = Table(
     'group_to_profile',
     Model.metadata,
     Column('profile_id', UUIDType, ForeignKey('profile.id')),
-    Column('group_id', UUIDType, ForeignKey('group.id'))
-)
-
-
-class GroupTypes(enum.Enum):
-    '''GroupTypes defines the three types of group that are available. Groups
-       determine access control by virue of being added to a groups list in
-       the user's active session. The type of group determines which active
-       authorization objects may add a particular group to a session.
-
-       - A group with type :attr:`.app` would be added to a session by the
-         active :attr:`InstalledApp.app` for this session.
-       - A group with type :attr:`.license` would be added to a session by an
-         active :class:`License` for this session.
-       - A group with type :attr:`.profile` would be added to the session by
-         a :class:`Profile` (essentially a user-defined group).
-    '''
-    app = 1
-    license = 2
-    profile = 3
-
+    Column('group_id', UUIDType, ForeignKey('group.id')))
 
 class Group(Model):
     '''The basic building block of access control.'''
