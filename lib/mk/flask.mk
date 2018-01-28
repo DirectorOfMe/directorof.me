@@ -14,7 +14,7 @@ shell:
 
 .PHONY: migrate
 migrate:
-	{ [ -d $(MIGRATIONS) ] || $(FLASK) db init; } && $(FLASK) db  $@
+	{ [ -d $(MIGRATIONS) ] || $(FLASK) db init; } && $(FLASK) db $@
 
 .PHONY: upgrade-db
 upgrade-db:

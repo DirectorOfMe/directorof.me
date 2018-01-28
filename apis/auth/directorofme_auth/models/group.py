@@ -5,13 +5,15 @@ models/group.py -- Group system
 '''
 import enum
 
-from sqlalchemy import Table, Column, String, Enum, ForeignKey
+from sqlalchemy import Table, Column, String, Enum, ForeignKey, \
+                       UniqueConstraint, CheckConstraint
+from sqlalchemy.types import CHAR
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType, observes
 from slugify import slugify
 
 from directorofme.orm import Model
-from directorofme.authorization import GroupTypes
+from directorofme.authorization.groups import GroupTypes
 
 __all__ = [ "Group" ]
 
@@ -24,12 +26,15 @@ groups_to_profiles = Table(
 class Group(Model):
     '''The basic building block of access control.'''
     __tablename__ = "group"
+    __table_args__ = (
+        UniqueConstraint("display_name", "group_type"),
+    )
 
-    #: unique, user-defined name of this :class:`.Group`
+    #: unique name of this :class:`.Group`, derived from Type/Display-Name
     name = Column(String(20), unique=True, nullable=False)
 
-    #: unique, url-safe name used to fetch :class:`.Group` objects from the API
-    slug = Column(String(20), index=True, unique=True, nullable=False)
+    #: user-defined name of this :class:`.Group`
+    display_name = Column(String(18), nullable=False)
 
     #: the group type determines which authorization objects are responsible
     #: for and authorized to add this group to a session.
@@ -45,7 +50,7 @@ class Group(Model):
     #: profiles referenced by this group
     profiles = relationship("Profile", secondary=groups_to_profiles)
 
-    ### TODO: factor this -- also used in models/app.py
-    @observes("name")
-    def slugify_name(self, name):
-        self.slug = slugify(name)
+    @observes("display_name", "group_type")
+    def slugify_name(self, display_name, group_type):
+        if self.name is None and display_name is not None and group_type is not None:
+                self.name = slugify("{}-{}".format(group_type.value, display_name))

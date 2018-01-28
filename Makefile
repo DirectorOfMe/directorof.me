@@ -66,7 +66,6 @@ clean-apis:
 .PHONY: clean-python
 clean-python: clean.requirements.out
 
-# db bits
 .PHONY: upgrade-db
 upgrade-db:
 	$(SUBMAKE) $@ $(APIS)

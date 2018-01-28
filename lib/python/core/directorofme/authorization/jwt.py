@@ -1,27 +1,24 @@
-import typing
 import uuid
 
-from flask import Flask, SessionInterface as FlaskSessionInterface
+from flask import Flask
+from flask.sessions import SessionInterface as FlaskSessionInterface
 import flask_jwt_extended as jwt
-
-from . import session
-
-class MisconfiguredAuthError(Exception):
-    pass
+from . import session, exceptions
 
 ### We are using this basically just to hook up JWT to the request context
-class JWTSessionInterface(SessionInterface):
+class SessionInterface(FlaskSessionInterface):
     def open_session(self, app, request):
-        jwt_claims = get_jwt_claims()
+        jwt_claims = jwt.get_jwt_claims()
         return session.Session(
-            id = uuid.UUID(jwt.get_jti())
+            id = uuid.UUID(jwt.get_jti()),
             profile=session.SessionProfile(**jwt.get_jwt_identity()),
             groups=[session.SessionGroup(**g) for g in jwt_claims.get("groups", [])],
-            app=session.SessionApp(jwt_claims.get("app", {}))
+            app=session.SessionApp(jwt_claims.get("app", {})),
             environment=jwt_claims.get("environment", {}))
 
 
 
+    ###: TODO: this isn't setup
     def null_session(self, *args, **kwargs):
         return session.Session.anonymous()
 
@@ -44,17 +41,17 @@ class JWTManager(jwt.JWTManager):
 
         # these force asymetric crypto, which is desirable
         if not app.config.get('JWT_PUBLIC_KEY'):
-            raise MisconfiguredAuthError("JWT_PUBLIC_KEY must be set")
+            raise exceptions.MisconfiguredAuthError("JWT_PUBLIC_KEY must be set")
 
         if app.config.get("JWT_PRIVATE_KEY") and not app.config.get("IS_AUTH_SERVER"):
-            raise MisconfiguredAuthError(
+            raise exceptions.MisconfiguredAuthError(
                 "JWT_PRIVATE_KEY may only be specified by the auth server"
             )
 
-        if app.config.get("IS_AUTH_SERVER" and not app.config.get("JWT_PRIVATE_KEY"):
-            raise MisconfiguredAuthError(
+        if app.config.get("IS_AUTH_SERVER") and not app.config.get("JWT_PRIVATE_KEY"):
+            raise exceptions.MisconfiguredAuthError(
                 "JWT_PRIVATE_KEY must be specified by the auth server"
             )
 
         # hook up the JWT session
-        app.session_interface = JWTSessionInterface()
+        app.session_interface = SessionInterface()

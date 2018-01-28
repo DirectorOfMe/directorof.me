@@ -30,3 +30,7 @@ postgresql: .setup.postgresql.out
 
 .postgresql.apt.out:
 	apt install postgresql-$(PSQL_VERSION) libpq-dev | tee $<
+
+.PHONY: dropdb
+dropdb:
+	sudo -u "$(PSQL_SHELL_USER)" dropdb "$(PSQL_DB)"

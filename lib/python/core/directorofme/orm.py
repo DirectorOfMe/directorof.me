@@ -6,7 +6,7 @@ orm.py -- Auth support for a SQLAlchemy-based ORM.
 import uuid
 
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
-from sqlalchemy import Column
+from sqlalchemy import Column, String
 from sqlalchemy_utils import Timestamp, UUIDType, generic_repr
 
 __all__ = [ "Permission", "GroupBasedPermission", "PermissionedModelMeta",
@@ -73,7 +73,7 @@ class Permission:
 
 class GroupBasedPermission(Permission):
     ### without any foreign keys, this is just idiomatic for now
-    pass
+    col_type = String(20)
 
 ### Permissions Model Classes
 class PermissionedModelMeta(DeclarativeMeta):

@@ -1,11 +1,10 @@
-from sqlalchemy import Column
+from sqlalchemy import Column, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy_utils import UUIDType
 
 from directorofme import orm
 
-from unittest import mock
 import pytest
 
 
@@ -100,6 +99,12 @@ class TestPermission:
             instance.random = range(6)
         assert instance.random == (123,), "failed set failed in full"
 
+def test__GroupBasedPermission__contract():
+    column = orm.GroupBasedPermission.make_column()
+    assert isinstance(column, Column), "concrete implementation returns a column"
+    assert isinstance(column.type, String), "permission is an integer column"
+    assert column.nullable, "permission is nullable"
+
 ### Fixtures
 Base = declarative_base(metaclass=orm.PermissionedModelMeta)
 class Permissioned(Base):
@@ -162,10 +167,10 @@ def test__PermissionedBase_works():
 
     concrete = Concrete()
     assert concrete.read == tuple(), "permission descriptor get is working"
-    concrete.read = [0]
-    assert concrete.read == (0,), "permission descriptor set is working"
-    assert concrete._permissions_read_0 == 0, "permission attrs get set correctly"
-    assert concrete._permissions_read_1 == None, "permission attrs get set correctly"
+    concrete.read = ["read"]
+    assert concrete.read == ("read",), "permission descriptor set is working"
+    assert concrete._permissions_read_0 == "read", "permission attrs set correctly"
+    assert concrete._permissions_read_1 == None, "permission attrs set correctly"
 
 
 def test__PermissionedModel_contract():

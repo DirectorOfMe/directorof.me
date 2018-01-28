@@ -5,74 +5,28 @@
 import uuid
 import typing
 
-import flask
+from . import groups
+from ..specify import Spec, Attribute
 
-from . import GroupTypes
+__all__ = [ "SessionApp", "SessionProfile", "Session" ]
 
-__all__ = [ "SessionGroup", "SessionApp", "SessionProfile", "Session" ]
+class SessionApp(Spec):
+    id = Attribute(uuid.UUID)
+    app_id = Attribute(uuid.UUID)
+    app_name = Attribute(str)
+    config = Attribute(typing.Dict[str, typing.Any])
 
-class SessionableAttribute:
-    # support an optional type declaration which does nothing at present
-    def __init__(self, type_: typing.Any = None) -> None:
-        self.type = type_
-        super().__init__()
+class SessionProfile(Spec):
+    id = Attribute(uuid.UUID)
+    email = Attribute(str)
 
-    def __get__(self, cls, obj):
-        if obj is not None:
-            raise ValueError("value not initialized for instance")
-
-        return self
-
-class SessionableMeta(type):
-    def __new__(cls, name, bases, __dict__):
-        attrs = __dict__.setdefault("attributes", set())
-        for name, attr in __dict__.items():
-            if isinstance(attr, SessionableAttribute):
-                attrs.add(name)
-
-        return super().__new__(cls, name, bases, __dict__)
-
-
-class Sessionable(metaclass=SessionableMeta):
-    # convention
-    attributes = []
-
-    def __init__(self, **kwargs):
-        for name, val in kwargs.items():
-            if name in self.attributes:
-                setattr(self, name, val)
-
-    def __json_encode__(self):
-        return {name: getattr(self, name) for name in self.attributes}
-
-    @classmethod
-    def from_model(cls, model: typing.Any) -> typing.Any:
-        return cls({name: getattr(model, name) for name in cls.attributes})
-
-class SessionGroup(Sessionable):
-    id = SessionableAttribute(uuid.UUID)
-    slug = SessionableAttribute(str)
-    type = SessionableAttribute(GroupTypes)
-
-
-class SessionApp(Sessionable):
-    id = SessionableAttribute(uuid.UUID)
-    app_id = SessionableAttribute(uuid.UUID)
-    app_name = SessionableAttribute(str)
-    config = SessionableAttribute(typing.Dict[str, typing.Any])
-
-class SessionProfile(Sessionable):
-    id = SessionableAttribute(uuid.UUID)
-    email = SessionableAttribute(str)
-
-
-class Session(Sessionable):
+class Session(Spec):
     '''The session object.'''
-    id = SessionableAttribute(uuid.UUID)
-    app = SessionableAttribute(SessionApp)
-    profile = SessionableAttribute(SessionProfile)
-    groups = SessionableAttribute(typing.List[SessionGroup])
-    environment = SessionableAttribute(typing.Dict[str, typing.Any])
+    id = Attribute(uuid.UUID)
+    app = Attribute(SessionApp)
+    profile = Attribute(SessionProfile)
+    groups = Attribute(typing.List[groups.Group])
+    environment = Attribute(typing.Dict[str, typing.Any])
 
     @classmethod
     def anonymous(cls) -> typing.Any:
