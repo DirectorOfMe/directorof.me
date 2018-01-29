@@ -124,6 +124,8 @@ class TestPermissionedModelMeta:
             assert isinstance(column, Column), \
                    "permission {} was added to an abstract model".format(ii)
 
+        assert Permissioned.__perms__ == ("perm",), "perms tuple set correctly"
+
         class NonAbstract(Base):
             __tablename__ = "hi"
             perm = RandomPermission()
@@ -137,6 +139,8 @@ class TestPermissionedModelMeta:
             column = getattr(NonAbstract, NonAbstract.perm.column_name(ii))
             assert isinstance(column, InstrumentedAttribute), \
                    "permission {} was added to a concrete model".format(ii)
+
+        assert NonAbstract.__perms__ == ("perm",), "perms tuple set correctly"
 
     def test__make_permissions(self):
         cols = orm.PermissionedModelMeta.make_permissions(Permissioned.perm)
@@ -152,6 +156,13 @@ class TestPermissionedModelMeta:
 
         for col in cols.values():
             assert isinstance(col, Column), "make_permissions values are Columns"
+
+    def test__name_mismatch_raises(self):
+        my_name_is = orm.GroupBasedPermission("my_name_is")
+        with pytest.raises(ValueError):
+            class ExtraPermissioned(Permissioned):
+                something_else = my_name_is
+
 
 def test__PermissionedBase_works():
     perm = orm.GroupBasedPermission()
@@ -173,20 +184,29 @@ def test__PermissionedBase_works():
     assert concrete._permissions_read_1 == None, "permission attrs set correctly"
 
 
-def test__PermissionedModel_contract():
-    class Permed(orm.PermissionedModel):
-        __tablename__ = "permisionedconcrete"
-        id = Column(UUIDType, primary_key = True)
+class Permed(orm.PermissionedModel):
+    __tablename__ = "permisionedconcrete"
+    id = Column(UUIDType, primary_key = True)
 
-    assert isinstance(Permed.read, orm.GroupBasedPermission), "read installed"
-    assert isinstance(Permed.write, orm.GroupBasedPermission), "write installed"
-    assert isinstance(Permed.delete, orm.GroupBasedPermission), "delete installed"
+class TestPermissionedModel:
+    def test__PermissionedModel_contract(self):
+        assert isinstance(Permed.read, orm.GroupBasedPermission), "read installed"
+        assert isinstance(Permed.write, orm.GroupBasedPermission), "write installed"
+        assert isinstance(Permed.delete, orm.GroupBasedPermission), "delete installed"
 
-    concrete = Permed()
-    concrete.read == tuple(), "read installed to instance"
-    concrete.write == tuple(), "read installed to instance"
-    concrete.delete == tuple(), "read installed to instance"
+        concrete = Permed()
+        concrete.read == tuple(), "read installed to instance"
+        concrete.write == tuple(), "read installed to instance"
+        concrete.delete == tuple(), "read installed to instance"
 
+    def test__Permissions__init__(self):
+        instance = Permed(read=("test", "groups"), write=("test",))
+        assert instance.read == ("test", "groups"), "read set via __init__ kwarg"
+        assert instance.write == ("test",), "write set via __init__ kwarg"
+        assert instance.delete == (), "delete not set when not passed"
+
+        class ExtraPermed(Permed):
+            fancy = orm.GroupBasedPermission()
 
 def test__Model_contract():
     class ConcreteModel(orm.Model):

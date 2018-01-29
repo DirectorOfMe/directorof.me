@@ -23,6 +23,7 @@ class Permission:
             raise NotImplementedError("Permission is an abstract class")
         return super().__new__(cls)
 
+    ### TODO: default protocol
     def __init__(self, name=None, max_permissions=2):
         self.name = name
         self.max_permissions = max_permissions
@@ -65,6 +66,8 @@ class Permission:
             except IndexError:
                 setattr(instance, self.column_name(ii), None)
 
+    ### TODO: __del__
+
     def permissions(self, instance):
         for ii in range(self.max_permissions):
             yield getattr(instance, self.column_name(ii))
@@ -79,12 +82,19 @@ class GroupBasedPermission(Permission):
 class PermissionedModelMeta(DeclarativeMeta):
     def __new__(cls, object_or_name, bases, __dict__):
         perm_columns = {}
+        perms = []
+
         for kk,vv in __dict__.items():
             if isinstance(vv, Permission):
-                if vv.name is None:
-                    vv.name = kk
+                if vv.name is not None and vv.name != kk:
+                    raise ValueError("Perm name ({}) does not match "\
+                                     "attribute name ({})".format(vv.name, kk))
+                vv.name = kk
                 perm_columns.update(cls.make_permissions(vv))
+                perms.append(vv.name)
+
         __dict__.update(perm_columns)
+        __dict__["__perms__"] = tuple(perms)
 
         return super().__new__(cls, object_or_name, bases, __dict__)
 
@@ -105,10 +115,24 @@ class PermissionedModel(PermissionedBase):
     delete = GroupBasedPermission()
     ### TODO: populate these defaults from session
 
+    def __init__(self, *args, **kwargs):
+        for perm_name in self.__perms__:
+            perm = kwargs.pop(perm_name, None)
+            if perm is not None:
+                setattr(self, perm_name, perm)
+
+        super().__init__(*args, **kwargs)
+
 ### The base model
-@generic_repr
+@generic_repr("id")
 class Model(PermissionedModel, Timestamp):
     __abstract__ = True
+
     #: Unique identifier for this object.
-    id = Column(UUIDType, primary_key=True, default=uuid.uuid1)
+    id = Column(UUIDType, primary_key=True, default=Model.get_id)
+
+    @classmethod
+    def get_id(cls):
+        return uuid.uuid1()
+
     ### TODO: tests for default

@@ -19,3 +19,11 @@ migrate:
 .PHONY: upgrade-db
 upgrade-db:
 	$(FLASK) db upgrade
+
+.PHONY: db
+db:
+	if [ -z "$(DB_COMMAND)" ]; then \
+	  echo "set DB_COMMAND and re-run"; exit 1; \
+	else \
+		$(FLASK) db $(DB_COMMAND); \
+	fi

@@ -13,5 +13,6 @@ setup(
     ],
     tests_require=[
         "pytest>=3.2.3",
+        "pytest-cov>=2.5",
     ]
 )

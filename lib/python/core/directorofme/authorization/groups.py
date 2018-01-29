@@ -11,11 +11,12 @@ class GroupTypes(enum.Enum):
          type of group is added to a session by the active
          :attr:`InstalledApp.app` for this session, which the user has
          previously authorized to access these scopes.
-       - A group with type :attr:`.license` would be added to a session by an
+       - A group with type :attr:`.feature` would be added to a session by an
          active :class:`License` for this session.
-       - A group with type :attr:`.profile` would be added to the session by
+       - A group with type :attr:`.data` would be added to the session by
          a :class:`Profile` (essentially a user-defined group).
     '''
+    system = '0'
     scope = 's'
     feature = 'f'
     data = 'd'
