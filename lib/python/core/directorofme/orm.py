@@ -9,6 +9,8 @@ from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy import Column, String
 from sqlalchemy_utils import Timestamp, UUIDType, generic_repr
 
+from .authorization import standard_permissions
+
 __all__ = [ "Permission", "GroupBasedPermission", "PermissionedModelMeta",
             "PermissionedModel", "Model" ]
 
@@ -84,6 +86,10 @@ class PermissionedModelMeta(DeclarativeMeta):
         perm_columns = {}
         perms = []
 
+        if __dict__.get("__standard_permissions__"):
+            PermType = __dict__.get("__permission_type__", GroupBasedPermission)
+            __dict__.update({k: PermType() for k in standard_permissions})
+
         for kk,vv in __dict__.items():
             if isinstance(vv, Permission):
                 if vv.name is not None and vv.name != kk:
@@ -110,11 +116,9 @@ PermissionedBase = declarative_base(metaclass=PermissionedModelMeta)
 
 class PermissionedModel(PermissionedBase):
     __abstract__ = True
-    read = GroupBasedPermission()
-    write = GroupBasedPermission()
-    delete = GroupBasedPermission()
-    ### TODO: populate these defaults from session
+    __standard_permissions__ = True
 
+    ### TODO: populate these defaults from session
     def __init__(self, *args, **kwargs):
         for perm_name in self.__perms__:
             perm = kwargs.pop(perm_name, None)

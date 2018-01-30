@@ -8,5 +8,5 @@ directorofme -- the main libraries for providing shared functionality to
 
 __all__ = [ "orm", "authorization" ]
 
-from . import orm
 from . import authorization
+from . import orm

@@ -1,5 +1,11 @@
 import enum
+
+import slugify
+
 from ..specify import Spec, Attribute
+from ..authorization import standard_permissions
+
+__all__ = [ "GroupTypes", "Group", "Scope", "scope" ]
 
 class GroupTypes(enum.Enum):
     '''GroupTypes defines the three types of group that are available. Groups
@@ -21,7 +27,73 @@ class GroupTypes(enum.Enum):
     feature = 'f'
     data = 'd'
 
+### TODO: docs
 class Group(Spec):
-    name = Attribute(str)
+    name = Attribute(str, default=None)
     display_name = Attribute(str)
     type = Attribute(GroupTypes)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # will throw if name is not set and either display name or type are not set
+        self.name = self.generate_name()
+
+    def generate_name(self):
+        if self.name is None:
+            return slugify.slugify("{}-{}".format(self.type.value, self.display_name))
+        return self.name
+
+
+class Scope(Spec):
+    name = Attribute(str, default=None)
+    display_name = Attribute(str)
+
+    __perms__ = Attribute(tuple, default=standard_permissions)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.name = self.generate_name()
+        self.perms = {}
+
+        for perm_name in self.__perms__:
+            self.perms[perm_name] = Group(
+                display_name=self.perm_name(perm_name),
+                type=GroupTypes.scope
+            )
+
+    def __getattr__(self, attr):
+        try:
+            return self.perms[attr]
+        except KeyError:
+            raise AttributeError(attr)
+
+    def generate_name(self):
+        if self.name is None:
+            return slugify.slugify(self.display_name)
+        return self.name
+
+    def perm_name(self, perm_name):
+        return slugify.slugify("{}-{}".format(self.name, perm_name))
+
+
+def scope(scope_name_or_cls):
+    scope_name = scope_name_or_cls
+    if callable(scope_name_or_cls):
+        scope_name = getattr(
+            scope_name_or_cls,
+            "__tablename__",
+            scope_name_or_cls.__name__
+        )
+
+        # recurse
+        return scope(scope_name)(scope_name_or_cls)
+
+    new_scope = Scope(display_name=scope_name)
+    scope.known_scopes.setdefault(new_scope.name, new_scope)
+    ###: TODO hook this up to do authorization things
+    def inner(cls):
+        return cls
+    return inner
+
+scope.known_scopes = {}
