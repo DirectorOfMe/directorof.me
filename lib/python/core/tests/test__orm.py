@@ -203,10 +203,15 @@ class TestPermissionedModel:
         instance = Permed(read=("test", "groups"), write=("test",))
         assert instance.read == ("test", "groups"), "read set via __init__ kwarg"
         assert instance.write == ("test",), "write set via __init__ kwarg"
-        assert instance.delete == (), "delete not set when not passed"
+        assert instance.delete == tuple(), "delete not set when not passed"
 
         class ExtraPermed(Permed):
             fancy = orm.GroupBasedPermission()
+
+        instance = ExtraPermed(fancy=("foo",))
+        assert instance.fancy == ("foo",), "fancy perm set correctly"
+        for perm in ("read", "write", "delete"):
+            assert getattr(instance, perm) == tuple(), "{} not set".format(perm)
 
 def test__Model_contract():
     class ConcreteModel(orm.Model):

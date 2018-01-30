@@ -129,10 +129,4 @@ class Model(PermissionedModel, Timestamp):
     __abstract__ = True
 
     #: Unique identifier for this object.
-    id = Column(UUIDType, primary_key=True, default=Model.get_id)
-
-    @classmethod
-    def get_id(cls):
-        return uuid.uuid1()
-
-    ### TODO: tests for default
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid1)
