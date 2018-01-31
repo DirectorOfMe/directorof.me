@@ -10,8 +10,9 @@ from sqlalchemy_utils import UUIDType, observes, generic_repr
 from directorofme.orm import Model
 from directorofme.authorization.groups import GroupTypes, Group as AuthGroup, Scope, scope
 
-__all__ = [ "Group" ]
+__all__ = [ "Group", "GroupTypes" ]
 
+# through table for group -< profiles
 groups_to_profiles = Table(
     'group_to_profile',
     Model.metadata,

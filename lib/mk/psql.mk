@@ -7,12 +7,12 @@ PSQL_HOST       ?= localhost
 # XXX: This needs to move to ansible or similar
 PSQL_SHELL_USER ?= postgres
 PSQL_VERSION    ?= 9.5
-PSQL            := sudo -u "$(PSQL_SHELL_USER)" psql
+PSQL            ?= sudo -u "$(PSQL_SHELL_USER)" psql
 
 .PHONY: postgresql
-postgresql: .setup.postgresql.out
+postgresql: .setup.postgresql.$(PSQL_DB).out
 
-.setup.postgresql.out: .postgresql.apt.out
+.setup.postgresql.$(PSQL_DB).out: .postgresql.apt.out
 	{ \
 		sudo -u "$(PSQL_SHELL_USER)" createdb "$(PSQL_DB)"; \
 		echo "CREATE USER $(PSQL_USER) PASSWORD '$(PSQL_PASS)';" | $(PSQL); \
@@ -32,5 +32,13 @@ postgresql: .setup.postgresql.out
 	apt install postgresql-$(PSQL_VERSION) libpq-dev | tee $<
 
 .PHONY: dropdb
-dropdb:
+dropdb: clean-postgresql.$(PSQL_DB).out
 	sudo -u "$(PSQL_SHELL_USER)" dropdb "$(PSQL_DB)"
+
+.PHONY: clean-postgresql
+clean-postgresql: clean-postgresql.$(PSQL_DB).out
+	rm -f .postgresql.apt.out
+
+.PHONY: clean-postgresql.$(PSQL_DB).out
+clean-postgresql.$(PSQL_DB).out:
+	rm -f .setup.postgresql.$(PSQL_DB).out

@@ -10,4 +10,7 @@ clean: clean-setup-py
 .PHONY: install
 install: install-setup-py
 
+.PHONY: test
+test: run-test
+
 include $(LIB_DIR)/mk/python.mk

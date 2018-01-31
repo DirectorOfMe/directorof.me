@@ -9,5 +9,4 @@ dist
 .eggs/
 .cache/
 .coverage
-setup.cfg
-.postgresql.apt.out
+.*postgresql.*.out
