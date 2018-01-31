@@ -13,8 +13,8 @@ build/.d: $(SETUP_PY) $(PY_FILES)
 	$(PYTHON) $(SETUP_PY) build && touch $@
 
 #TODO: automatically hook up py.test for projects
-.PHONY: run-test
-run-test:
+.PHONY: run-py-test
+run-py-test:
 	$(PYTHON) $(SETUP_PY) test
 
 .PHONY: install-setup-py

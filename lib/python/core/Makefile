@@ -11,6 +11,6 @@ clean: clean-setup-py
 install: install-setup-py
 
 .PHONY: test
-test: run-test
+test: run-py-test
 
 include $(LIB_DIR)/mk/python.mk

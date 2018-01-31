@@ -27,3 +27,7 @@ db:
 	else \
 		$(FLASK) db $(DB_COMMAND); \
 	fi
+
+.PHONY: run-flask-test
+run-flask-test:
+	APP_DB_ENGINE=$(APP_DB_ENGINE) $(MAKE) run-py-test
