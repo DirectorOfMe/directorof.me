@@ -3,11 +3,12 @@ models/license.py -- License system
 
 @author: Matt Story <matt@directorof.me>
 '''
-from sqlalchemy import Table, Column, Integer, ForeignKey
+from sqlalchemy import Table, Column, Integer, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
 from directorofme.orm import Model
+from directorofme.authorization.groups import scope
 
 from . import Group
 
@@ -27,6 +28,7 @@ profiles_to_license = Table(
     Column('profile_id', UUIDType, ForeignKey('profile.id'))
 )
 
+@scope
 class License(Model):
     __tablename__ = "license"
 
@@ -36,6 +38,7 @@ class License(Model):
 
     #: id of :attr:`managing_group` for this :class:`License`
     managing_group_id = Column(UUIDType, ForeignKey(Group.id))
+
     #: :class:`Group` that can administer this license (e.g. add/remove profiles)
     #: this is different than having write permission to the license directly,
     #: which allows for adding groups and profiles without additional
@@ -47,5 +50,13 @@ class License(Model):
     ### TODO: enforce quota
     #: max number of :attr:`.profiles` that can be associated with this license
     seats = Column(Integer, nullable=False)
+
     #: profiles attached to this license (up to :attr:`.seats`)
     profiles = relationship("Profile", secondary=profiles_to_license)
+
+    # TODO: reconsider this default
+    #: this profile is valid through (null is good forever)
+    valid_through = Column(DateTime, nullable=True, default=None)
+
+    #: any pertinent notes on this license.
+    notes = Column(Text, nullable=False, default="")

@@ -3,13 +3,22 @@ models/profile.py -- Profile system
 
 @author: Matt Story <matt@directorof.me>
 '''
-from sqlalchemy import Column, String
-from sqlalchemy_utils import JSONType, EmailType, UUIDType
+# third party imports
+from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy_utils import JSONType, EmailType, UUIDType, generic_repr
 
+# proprietary imports
 from directorofme.orm import Model
+from directorofme.authorization.groups import scope
+
+from . import GroupTypes, Group, InstalledApp, License
+from .exceptions import NoProfileError, MisconfiguredProfileError
 
 __all__ = [ "Profile" ]
 
+@scope
+@generic_repr("email")
 class Profile(Model):
     '''A profile, at the moement is what we authenticate against a third party
        service. It associates a user to a license and set of groups, which
@@ -19,6 +28,10 @@ class Profile(Model):
        "person".
     '''
     __tablename__ = "profile"
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.id is None:
+            raise NoProfileError("new profiles may only be created with Profile.create_profile")
 
     #: the name of the person using this profile
     name = Column(String(255), nullable=False)
@@ -28,3 +41,43 @@ class Profile(Model):
 
     #: preferences for this user (e.g. display color, layout, etc)
     preferences = Column(JSONType)
+
+    #: id of :attr:`parent` of this group
+    group_of_one_id = Column(UUIDType, ForeignKey("group.id"), nullable=False)
+
+    #: all members of this :class:`.Group` are also members of parent.
+    group_of_one = relationship("Group")
+
+    @classmethod
+    def create_profile(cls, name, email, valid_through=None,
+                       additional_groups=tuple(), install_apps=tuple()):
+        '''Factory for generating a profile with all of the necessary related
+           objects to make it useful. This is *the way* to create a new user.
+        '''
+        if not cls.id.default.is_callable:
+            raise MisconfiguredProfileError("id default should be a callable")
+
+        # setup the profile and force the id to be allocated
+        profile = cls(id=cls.id.default.arg({}), name=name, email=email)
+
+        # create the group-of-one using the UUID as the display_name
+        profile.group_of_one = Group(
+            display_name=profile.id.hex,
+            type=GroupTypes.data,
+            profiles=[profile]
+        )
+
+        # allocate a default license for this user (required for login)
+        License(
+            valid_through = valid_through,
+            profiles = [ profile ],
+            groups = [ profile.group_of_one ] + list(additional_groups),
+            managing_group = profile.group_of_one,
+            seats = 1
+        )
+
+        # install apps for this user if requested
+        for app in install_apps:
+            InstalledApp.install_for_group(app, profile.group_of_one)
+
+        return profile

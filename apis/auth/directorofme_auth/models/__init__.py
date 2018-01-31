@@ -1,7 +1,8 @@
 ## placeholder class
-from .profile import Profile
-from .group import Group
-from .license import License
+from . import exceptions
+from .group import Group, GroupTypes
 from .app import App, InstalledApp
+from .license import License
+from .profile import Profile
 
-__all__ = [ "Group", "License", "Profile", "App", "InstalledApp" ]
+__all__ = [ "Group", "GroupTypes", "License", "Profile", "App", "InstalledApp", "exceptions" ]

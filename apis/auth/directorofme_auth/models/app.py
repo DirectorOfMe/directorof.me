@@ -1,16 +1,28 @@
 ''' models/app.py -- App system '''
 
-from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy import Table, Column, String, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import URLType, JSONType, UUIDType, observes
 from slugify import slugify
 
 from directorofme.orm import Model
-
-from . import Group
+from directorofme.authorization.groups import scope
 
 __all__ = [ "App", "InstalledApp" ]
 
+requested_access_groups = Table(
+    'requested_scopes',
+    Model.metadata,
+    Column('app_id', UUIDType, ForeignKey('app.id')),
+    Column('group_id', UUIDType, ForeignKey('group.id')))
+
+granted_access_groups = Table(
+    'granted_scopes',
+    Model.metadata,
+    Column('installed_app_id', UUIDType, ForeignKey('installed_app.id')),
+    Column('group_id', UUIDType, ForeignKey('group.id')))
+
+@scope
 class App(Model):
     '''An App is an application that can be installed and run on the DOM
        platform as an :class:`.InstalledApp`.
@@ -35,18 +47,14 @@ class App(Model):
     #: JSON Schema defining the expected format for :class:`.InstalledApp` config.
     config_schema = Column(JSONType)
 
-    #: id of :attr:`.group` added to sessions using an :class:`.InstalledApp` of
-    #: this type
-    group_id = Column(UUIDType, ForeignKey(Group.id))
+    #: Groups this app would like to add into the session
+    requested_access_groups = relationship("Group", secondary=requested_access_groups)
 
-    #: Group added to sessions using an InstalledApp of this type
-    group = relationship(Group)
-
-    ### TODO: factor this
     @observes("name")
     def slugify_name(self, name):
-        return slugify(name)
+        self.slug = slugify(name)
 
+@scope
 class InstalledApp(Model):
     '''InstalledApp is an instance of :class:`.App` that has been installed
        and is running on the DOM platform.
@@ -67,5 +75,9 @@ class InstalledApp(Model):
     #: config for this app (conforms to :attr:`.App.config_schema`)
     config = Column(JSONType)
 
-###TODO: hook up jwt bits
-###: START HERE
+    #: Groups this app will mix into session
+    access_groups = relationship("Group", secondary=granted_access_groups)
+
+    @classmethod
+    def install_for_group(cls, app, group, config=None):
+        return cls(app=app, read=[group], config=config)

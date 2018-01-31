@@ -20,9 +20,11 @@ setup(
 
         "python-slugify>=1.2.4",
         "gunicorn==19.7",
-        "pytest>=3.2.3",
+
+        "pytest-runner>=3.0",
     ],
     tests_require=[
         "pytest>=3.2.3",
+        "pytest-cov>=2.5",
     ]
 )
