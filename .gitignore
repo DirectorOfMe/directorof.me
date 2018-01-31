@@ -19,3 +19,4 @@ directorofme.conf
 .pytest_cache
 www-errors
 www
+*.un~
