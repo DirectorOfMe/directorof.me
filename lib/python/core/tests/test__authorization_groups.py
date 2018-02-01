@@ -29,7 +29,7 @@ class TestGroup:
         assert isinstance(gen_name, Group), "display name and type passed works"
         assert isinstance(gen_name.name, str), "str name generated if not passed"
 
-    def test__generate_name(self):
+    def test__generate_name_happy_path(self):
         group = Group(display_name="root", type=GroupTypes.system)
 
         assert group.name == "0-root", "init defaulted"
@@ -46,6 +46,18 @@ class TestGroup:
         assert group.generate_name() == "s-i-am-a-sentence", "name is slugged"
         assert group.name is None, "no side-effects"
 
+    @pytest.mark.parametrize("kwargs", [
+        { "display_name": "root" },                          # missing type
+        { "type": GroupTypes.system },                       # missing display_name
+        { "type": None, "display_name": "root" },            # type is None
+        { "type": GroupTypes.system, "display_name": None},  # display_name is None
+        { "type": GroupTypes.system, "display_name": True }, # display_name not a str
+        { "type": "this one", "display_name": "root"},       # type is not a GroupType
+    ])
+    def test__generate_name_errors(self, kwargs):
+        with pytest.raises(ValueError):
+            # test uninitialized type raises
+            group = Group(**kwargs)
 
 class TestScope:
     def test__init__(self):

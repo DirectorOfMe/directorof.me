@@ -40,7 +40,11 @@ class Group(Spec):
 
     def generate_name(self):
         if self.name is None:
-            return slugify.slugify("{}-{}".format(self.type.value, self.display_name))
+            try:
+                return slugify.slugify("-".join([self.type.value, self.display_name]))
+            except (AttributeError, TypeError):
+                raise ValueError("generate name failed for type: {}, display_name:"\
+                                 " {}".format(self.type, self.display_name))
         return self.name
 
 
