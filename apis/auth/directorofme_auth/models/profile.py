@@ -64,7 +64,6 @@ class Profile(Model):
         profile.group_of_one = Group(
             display_name=profile.id.hex,
             type=GroupTypes.data,
-            profiles=[profile]
         )
 
         # allocate a default license for this user (required for login)

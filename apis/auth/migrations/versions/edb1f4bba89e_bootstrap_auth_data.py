@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'edb1f4bba89e'
-down_revision = '7705ff00b511'
+down_revision = 'a1ef8411799b'
 branch_labels = None
 depends_on = None
 
@@ -22,8 +22,6 @@ from directorofme_auth.models import Group, GroupTypes, License, Profile,\
 ### GROUPS
 # TODO: DEFAULT OWNERSHIP
 def build_groups():
-    everybody = Group(display_name="everybody", type=GroupTypes.system)
-    user = Group(display_name="user", type=GroupTypes.feature, parent=everybody)
 
     groups = {
         ### 0-root and 0-admin members can selectively skip access controls
@@ -36,14 +34,13 @@ def build_groups():
         "0-nobody": Group(display_name="nobody", type=GroupTypes.system),
 
         # everybody, logged in or otherwise
-        "0-everybody": everybody,
+        "0-everybody": Group(display_name="everybody", type=GroupTypes.system),
 
         # anyone with an account
-        "f-user": user,
+        "f-user": Group(display_name="user", type=GroupTypes.feature),
 
         # dom admins
-        "f-dom-admin": Group(display_name="dom-admin", type=GroupTypes.feature,
-                             parent=user)
+        "f-dom-admin": Group(display_name="dom-admin", type=GroupTypes.feature)
     }
 
     for s in scope.known_scopes.values():

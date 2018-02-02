@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 7705ff00b511
+Revision ID: a1ef8411799b
 Revises: 
-Create Date: 2018-01-30 21:54:09.790556
+Create Date: 2018-02-01 19:36:26.426258
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '7705ff00b511'
+revision = 'a1ef8411799b'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -21,10 +21,10 @@ def upgrade():
     op.create_table('app',
     sa.Column('created', sa.DateTime(), nullable=False),
     sa.Column('updated', sa.DateTime(), nullable=False),
-    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
     sa.Column('_permissions_write_0', sa.String(length=20), nullable=True),
     sa.Column('_permissions_write_1', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
     sa.Column('_permissions_delete_0', sa.String(length=20), nullable=True),
     sa.Column('_permissions_delete_1', sa.String(length=20), nullable=True),
     sa.Column('id', sa.dialects.postgresql.UUID(), nullable=False),
@@ -47,20 +47,18 @@ def upgrade():
     op.create_table('group',
     sa.Column('created', sa.DateTime(), nullable=False),
     sa.Column('updated', sa.DateTime(), nullable=False),
-    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
     sa.Column('_permissions_write_0', sa.String(length=20), nullable=True),
     sa.Column('_permissions_write_1', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
     sa.Column('_permissions_delete_0', sa.String(length=20), nullable=True),
     sa.Column('_permissions_delete_1', sa.String(length=20), nullable=True),
     sa.Column('id', sa.dialects.postgresql.UUID(), nullable=False),
     sa.Column('name', sa.String(length=34), nullable=False),
     sa.Column('display_name', sa.String(length=32), nullable=False),
     sa.Column('type', sa.Enum('system', 'scope', 'feature', 'data', name='grouptypes'), nullable=False),
-    sa.Column('parent_id', sa.dialects.postgresql.UUID(), nullable=True),
     sa.Column('scope', sa.String(length=34), nullable=True),
     sa.Column('scope_permission', sa.String(length=20), nullable=True),
-    sa.ForeignKeyConstraint(['parent_id'], ['group.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('display_name', 'type'),
     sa.UniqueConstraint('name'),
@@ -72,13 +70,19 @@ def upgrade():
     op.create_index(op.f('ix_group__permissions_read_1'), 'group', ['_permissions_read_1'], unique=False)
     op.create_index(op.f('ix_group__permissions_write_0'), 'group', ['_permissions_write_0'], unique=False)
     op.create_index(op.f('ix_group__permissions_write_1'), 'group', ['_permissions_write_1'], unique=False)
+    op.create_table('group_to_group',
+    sa.Column('parent_group_id', sa.dialects.postgresql.UUID(), nullable=True),
+    sa.Column('member_group_id', sa.dialects.postgresql.UUID(), nullable=True),
+    sa.ForeignKeyConstraint(['member_group_id'], ['group.id'], ),
+    sa.ForeignKeyConstraint(['parent_group_id'], ['group.id'], )
+    )
     op.create_table('installed_app',
     sa.Column('created', sa.DateTime(), nullable=False),
     sa.Column('updated', sa.DateTime(), nullable=False),
-    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
     sa.Column('_permissions_write_0', sa.String(length=20), nullable=True),
     sa.Column('_permissions_write_1', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
     sa.Column('_permissions_delete_0', sa.String(length=20), nullable=True),
     sa.Column('_permissions_delete_1', sa.String(length=20), nullable=True),
     sa.Column('id', sa.dialects.postgresql.UUID(), nullable=False),
@@ -96,10 +100,10 @@ def upgrade():
     op.create_table('license',
     sa.Column('created', sa.DateTime(), nullable=False),
     sa.Column('updated', sa.DateTime(), nullable=False),
-    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
     sa.Column('_permissions_write_0', sa.String(length=20), nullable=True),
     sa.Column('_permissions_write_1', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
     sa.Column('_permissions_delete_0', sa.String(length=20), nullable=True),
     sa.Column('_permissions_delete_1', sa.String(length=20), nullable=True),
     sa.Column('id', sa.dialects.postgresql.UUID(), nullable=False),
@@ -119,10 +123,10 @@ def upgrade():
     op.create_table('profile',
     sa.Column('created', sa.DateTime(), nullable=False),
     sa.Column('updated', sa.DateTime(), nullable=False),
-    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
     sa.Column('_permissions_write_0', sa.String(length=20), nullable=True),
     sa.Column('_permissions_write_1', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
     sa.Column('_permissions_delete_0', sa.String(length=20), nullable=True),
     sa.Column('_permissions_delete_1', sa.String(length=20), nullable=True),
     sa.Column('id', sa.dialects.postgresql.UUID(), nullable=False),
@@ -158,12 +162,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['group_id'], ['group.id'], ),
     sa.ForeignKeyConstraint(['license_id'], ['license.id'], )
     )
-    op.create_table('group_to_profile',
-    sa.Column('profile_id', sa.dialects.postgresql.UUID(), nullable=True),
-    sa.Column('group_id', sa.dialects.postgresql.UUID(), nullable=True),
-    sa.ForeignKeyConstraint(['group_id'], ['group.id'], ),
-    sa.ForeignKeyConstraint(['profile_id'], ['profile.id'], )
-    )
     op.create_table('profile_to_license',
     sa.Column('license_id', sa.dialects.postgresql.UUID(), nullable=True),
     sa.Column('profile_id', sa.dialects.postgresql.UUID(), nullable=True),
@@ -176,7 +174,6 @@ def upgrade():
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_table('profile_to_license')
-    op.drop_table('group_to_profile')
     op.drop_table('group_to_license')
     op.drop_table('granted_scopes')
     op.drop_table('requested_scopes')
@@ -201,6 +198,7 @@ def downgrade():
     op.drop_index(op.f('ix_installed_app__permissions_delete_1'), table_name='installed_app')
     op.drop_index(op.f('ix_installed_app__permissions_delete_0'), table_name='installed_app')
     op.drop_table('installed_app')
+    op.drop_table('group_to_group')
     op.drop_index(op.f('ix_group__permissions_write_1'), table_name='group')
     op.drop_index(op.f('ix_group__permissions_write_0'), table_name='group')
     op.drop_index(op.f('ix_group__permissions_read_1'), table_name='group')
