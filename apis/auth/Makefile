@@ -16,8 +16,8 @@ install: default install-setup-py
 
 .PHONY:
 test:
-	$(TEST_MAKE) postgresql;
-	$(TEST_MAKE) upgrade-db; \
+	$(TEST_MAKE) postgresql && \
+	$(TEST_MAKE) upgrade-db && \
 	  $(TEST_MAKE) run-flask-test; rc=$$?; \
 	  $(TEST_MAKE) dropdb && exit $$rc;
 

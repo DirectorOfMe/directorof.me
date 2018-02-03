@@ -22,7 +22,10 @@ class DBFixture:
 			try:
 				self.real_db.session.rollback()
 				for obj in self.to_cleanup:
-					self.real_db.session.delete(obj)
+					try:
+						self.real_db.session.delete(obj)
+					except sqlalchemy.exc.InvalidRequestError:
+						pass
 				self.real_db.session.commit()
 			finally:
 				self.to_cleanup = []
