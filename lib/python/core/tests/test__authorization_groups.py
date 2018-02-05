@@ -71,6 +71,10 @@ class TestScope:
                "display name of group set correctly"
         assert test.perms["test"].type == GroupTypes.scope, "perm GroupType is scope"
 
+        test_perm = Scope(name="tEst", display_name="test", perms=test.perms)
+        assert test_perm.perms == test.perms, "passing perms works"
+        assert test_perm.__perms__ == test.__perms__, "perms generates __perms__"
+
         with pytest.raises(ValueError):
             # if neither display_name or name provided, should error
             Scope()

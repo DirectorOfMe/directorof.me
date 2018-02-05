@@ -52,19 +52,24 @@ class Scope(Spec):
     name = Attribute(str, default=None)
     display_name = Attribute(str)
 
+    perms = Attribute(dict)
     __perms__ = Attribute(tuple, default=standard_permissions)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.name = self.generate_name()
-        self.perms = {}
+        try:
+            self.__perms__ = tuple(self.perms.keys())
+        except ValueError:
+            self.perms = {}
+            for perm_name in self.__perms__:
+                self.perms[perm_name] = Group(
+                    display_name=self.perm_name(perm_name),
+                    type=GroupTypes.scope
+                )
 
-        for perm_name in self.__perms__:
-            self.perms[perm_name] = Group(
-                display_name=self.perm_name(perm_name),
-                type=GroupTypes.scope
-            )
+
 
     def __getattr__(self, attr):
         try:
