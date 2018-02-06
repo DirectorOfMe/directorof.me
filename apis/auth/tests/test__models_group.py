@@ -178,6 +178,51 @@ class TestGroup:
         assert isinstance(scope_.perms["test"], AuthGroup), "group installed"
         assert scope_.perms["test"].name == scoped.name, "group installed"
 
+
+    def test__scopes(self, db):
+        assert Group.scopes([]) == [], "empty groups list returns empty scopes list"
+        assert Group.scopes([Group(display_name="dom", type=GroupTypes.data)]) == [],\
+               "Groups with no scope returns empty list"
+
+        scope_one_groups = [
+            Group(display_name="foo", type=GroupTypes.data,
+                  scope_name="one", scope_permission="read"),
+            Group(display_name="bar", type=GroupTypes.data,
+                  scope_name="one", scope_permission="write")
+        ]
+
+        assert len(Group.scopes(scope_one_groups)) == 1, \
+               "many groups in one scope return only one scope"
+
+        scope_one = Group.scopes(scope_one_groups)[0]
+        assert scope_one.name == "one", "scope_one has the correct name"
+        assert sorted(scope_one.__perms__) == [ "read", "write" ], \
+               "scope_one has the correct perm names"
+        for perm, group in (("read", scope_one_groups[0]),
+                            ("write", scope_one_groups[1])):
+            assert scope_one.perms[perm].name == group.name, "groups installed"
+
+        two_scopes_groups = scope_one_groups + [
+            Group(display_name="baz", type=GroupTypes.data,
+                  scope_name="two", scope_permission="test"),
+            Group(display_name="bang", type=GroupTypes.data,
+                  scope_name="two", scope_permission="this")
+        ]
+        two_scopes = sorted(Group.scopes(two_scopes_groups), key=lambda x: x.name)
+
+        assert len(two_scopes) == 2, "two scopes from the 4 passed groups"
+        assert two_scopes[0].name == "one", "scope one set correctly"
+        assert sorted(two_scopes[0].__perms__) == [ "read", "write" ], \
+               "scopes[0] has the correct perm names"
+
+        assert two_scopes[1].name == "two", "scope two set correctly"
+        assert sorted(two_scopes[1].__perms__) == [ "test", "this" ], \
+               "scopes[1] has the correct perm names"
+
+        for perm, group in (("test", two_scopes_groups[2]),
+                            ("this", two_scopes_groups[3])):
+            assert two_scopes[1].perms[perm].name == group.name, "groups installed"
+
     def test__expand(self, db):
         dom = Group(display_name="dom", type=GroupTypes.data)
         dom_employees = Group(display_name="dom-emp", type=GroupTypes.data)

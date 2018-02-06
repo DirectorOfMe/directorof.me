@@ -87,6 +87,17 @@ class Group(Model):
             })
         return None
 
+    @classmethod
+    def scopes(cls, groups):
+        '''Return a list of scopes objects for a given list of groups'''
+        scopes = {}
+        for group in groups:
+            scope_ = group.scope()
+            if scope_ is not None:
+                scopes[scope_.name] = scopes.get(scope_.name, scope_).merge(scope_)
+
+        return list(scopes.values())
+
     def expand(self, max_depth=None):
         '''Return a list of all groups which this group is a member of,
            recursively. This is usually done in order to flatten a list of
