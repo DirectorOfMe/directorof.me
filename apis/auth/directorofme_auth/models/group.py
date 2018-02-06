@@ -1,8 +1,3 @@
-'''
-models/group.py -- Group system
-
-@author: Matt Story <matt@directorof.me>
-'''
 from sqlalchemy import Table, Column, String, Enum, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship, aliased
 from sqlalchemy.sql.expression import literal, func
@@ -31,10 +26,10 @@ class Group(Model):
     __tablename__ = "group"
     __table_args__ = (
         UniqueConstraint("display_name", "type"),
-        UniqueConstraint("scope", "scope_permission"),
+        UniqueConstraint("scope_name", "scope_permission"),
     )
     #: unique name of this :class:`.Group`, derived from Type/Display-Name
-    name = Column(String(34), unique=True, nullable=False)
+    name = Column(String(34), unique=True, nullable=False, index=True)
 
     #: user-defined name of this :class:`.Group`
     display_name = Column(String(32), nullable=False)
@@ -54,7 +49,7 @@ class Group(Model):
     )
 
     #: used by feature groups to identify a scope (realm) for discovery
-    scope = Column(String(34), nullable=True)
+    scope_name = Column(String(34), nullable=True, index=True)
 
     #: used by feature groups to identify the permission associated with this
     #: group/scope (realm) for discovery
@@ -83,6 +78,14 @@ class Group(Model):
         except ValueError:
             return self.name
 
+    def scope(self):
+        '''Return a scope object representing the scope and permission
+           associated with this group.'''
+        if self.scope_name is not None and self.scope_permission is not None:
+            return Scope(name=self.scope_name, perms={
+                self.scope_permission: AuthGroup.from_conforming_type(self)
+            })
+        return None
 
     def expand(self, max_depth=None):
         '''Return a list of all groups which this group is a member of,
@@ -205,13 +208,13 @@ class Group(Model):
            :class:`InstalledApp`.
         '''
         groups = []
-        scope = Scope.from_conforming_type(scope)
-        for perm_name, group in scope.perms.items():
+        scope_ = Scope.from_conforming_type(scope)
+        for perm_name, group in scope_.perms.items():
             groups.append(cls(
                 name=group.name,
                 display_name=group.display_name,
                 type=group.type,
-                scope=scope.name,
+                scope_name=scope_.name,
                 scope_permission=perm_name
             ))
 

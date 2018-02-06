@@ -3,7 +3,7 @@ import uuid
 import pytest
 
 from sqlalchemy.exc import IntegrityError
-from directorofme.authorization.groups import Scope
+from directorofme.authorization.groups import Scope, Group as AuthGroup
 
 from directorofme_auth.models import Group, GroupTypes
 
@@ -80,7 +80,6 @@ class TestGroup:
         db.session.add(Group(name="uniq2", display_name="test", type=GroupTypes.data))
         with pytest.raises(IntegrityError):
             db.session.commit()
-
 
     def test__required_fields(self, db):
         # missing type
@@ -161,6 +160,24 @@ class TestGroup:
         assert group.name is None, "no side-effects"
         assert group.display_name == "foo", "no side-effects"
 
+    def test__scope(self, db):
+        scoped = Group(display_name="not_scoped", type=GroupTypes.data)
+        assert scoped.scope() is None, "missing scope & scope_perimssion returns None"
+
+        scoped.scope_name = "no_perm"
+        assert scoped.scope() is None, "missing scope_perimssion returns None"
+
+        scoped.scope_name = None
+        scoped.scope_permission = "test"
+        assert scoped.scope() is None, "missing scope returns None"
+
+        scoped.scope_name = "test"
+        scope_ = scoped.scope()
+        assert isinstance(scope_, Scope), "has name and permission returns scope"
+        assert scope_.name == "test", "scope_name set properly"
+        assert isinstance(scope_.perms["test"], AuthGroup), "group installed"
+        assert scope_.perms["test"].name == scoped.name, "group installed"
+
     def test__expand(self, db):
         dom = Group(display_name="dom", type=GroupTypes.data)
         dom_employees = Group(display_name="dom-emp", type=GroupTypes.data)
@@ -218,7 +235,7 @@ class TestGroup:
             permissions.append(group.scope_permission)
             names.append(group.name)
 
-            assert group.scope == "test-scope", "scope setup"
+            assert group.scope_name == "test-scope", "scope setup"
             assert group.type == GroupTypes.scope
             assert group.display_name == "test-scope-{}".format(permissions[-1]), \
                    "display name set correctly"
@@ -230,5 +247,5 @@ class TestGroup:
 
         db.session.commit()
         assert sorted(names) == [i[0] for i in db.session.query(Group.name).filter(
-            Group.scope == "test-scope"
+            Group.scope_name == "test-scope"
         ).order_by(Group.name).all()], "objects can be retrieved by scope name"
