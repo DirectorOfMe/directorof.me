@@ -2,10 +2,32 @@ import uuid
 
 import pytest
 
-from directorofme.authorization.groups import Scope
+from directorofme.authorization.groups import Scope, Group as AuthGroup
 from directorofme.testing import commit_with_integrity_error, existing
 
-from directorofme_auth.models import App, InstalledApp, Group
+from directorofme_auth.models import App, InstalledApp, Group, GroupTypes
+
+def scopes_helper(cls, group_attr, scope_attr):
+    obj = cls()
+    assert getattr(obj, group_attr) == [], \
+           "no {} returns an empty list".format(group_attr)
+
+    one_scope_groups = [
+        Group(name="s-test-1", scope_name="test", scope_permission="test_1"),
+        Group(name="s-test-2", scope_name="test", scope_permission="test_2")
+    ]
+
+    setattr(obj, group_attr, one_scope_groups)
+    scopes = getattr(obj, scope_attr)
+
+    assert len(scopes) == 1, "There is one scope"
+    assert isinstance(scopes[0], Scope), "the scope is a Scope"
+    assert scopes[0].name == "test", "The one scope is right"
+    assert scopes[0].perms["test_1"].name == one_scope_groups[0].name, \
+           "permission 1 is correct"
+    assert scopes[0].perms["test_2"].name == one_scope_groups[1].name, \
+           "permission 2 is correct"
+
 
 class TestApp:
     def test__mininum_well_formed(self, db):
@@ -109,36 +131,97 @@ class TestApp:
                "save works if url set"
 
     def test__requested_scopes(self, db):
-        assert App().requested_access_groups == [], \
-               "no requested access groups and property returns an empty list"
+        scopes_helper(App, "requested_access_groups", "requested_scopes")
 
-        one_scope_groups = [
-            Group(name="s-test-1", scope_name="test", scope_permission="test_1"),
-            Group(name="s-test-2", scope_name="test", scope_permission="test_2")
-        ]
-        one_scope_app = App(requested_access_groups=one_scope_groups)
-
-        assert one_scope_app.requested_access_groups == one_scope_groups, \
-               "__init__ sets up requested_access_groups"
-
-        requested_scopes = one_scope_app.requested_scopes
-        assert len(requested_scopes) == 1, "There is one scope"
-        assert isinstance(requested_scopes[0], Scope), "the scope is a Scope"
-        assert requested_scopes[0].name == "test", "The one scope is right"
-        assert requested_scopes[0].perms["test_1"].name == one_scope_groups[0].name, \
-               "permission 1 is correct"
-        assert requested_scopes[0].perms["test_2"].name == one_scope_groups[1].name, \
-               "permission 2 is correct"
 
 class TestInstalledApp:
     def test__minimum_well_formed(self, db):
-        pass
+        app = App(name="test", desc="test app", url="https://directorof.me/")
+        assert existing(app, "name") is None, "no app pre-save"
+
+        installed_app = InstalledApp(app=app)
+        installed_app.app == app, "app setup correctly"
+        assert installed_app.app_id is None, "app_id None until saved"
+        assert installed_app.id is None, "id None until saved"
+
+        db.session.add(installed_app)
+        db.session.commit()
+
+        assert isinstance(installed_app.id, uuid.UUID), "id set after commit"
+        assert isinstance(app.id, uuid.UUID), "id set after commit"
 
     def test__required_fields(self, db):
-        pass
+        missing_app = InstalledApp()
+        assert existing(missing_app, "app") is None, "app does not exist"
+        commit_with_integrity_error(db, missing_app)
+
+        missing_app.app = App(name="test", desc="r", url="https://directorof.me/")
+        db.session.add(missing_app)
+        db.session.commit()
+        assert existing(missing_app, "app").app.name == "test", "works if app set"
 
     def test__scopes(self, db):
-        pass
+        scopes_helper(InstalledApp, "access_groups", "scopes")
 
     def test__install_for_group(self, db):
-        pass
+        # basic setup
+        owner = Group(display_name="tester", type=GroupTypes.data)
+        app = App(name="basic", desc="basic app", url="http://example.com")
+
+        installed = InstalledApp.install_for_group(app, owner)
+        assert isinstance(installed, InstalledApp), "factory returns correct class"
+        assert installed.app == app, "app setup correctly"
+        assert installed.read == (owner.name,), "permissions setup correctly"
+        assert installed.id is None, "id not yet set"
+
+        db.session.add(owner)
+        db.session.add(installed)
+        db.session.commit()
+
+        assert isinstance(installed.id, uuid.UUID), "id set after successful save"
+
+        # with auth group group
+        owner = Group(display_name="tester2", type=GroupTypes.data)
+        auth_owner = AuthGroup.from_conforming_type(owner)
+        installed = InstalledApp.install_for_group(app, auth_owner)
+
+        db.session.add(owner)
+        db.session.add(installed)
+        db.session.commit()
+        assert installed.read == (owner.name,), "permissions setup correctly"
+
+        # with group name
+        owner = Group(display_name="tester3", type=GroupTypes.data)
+        installed = InstalledApp.install_for_group(app, owner.name)
+
+        db.session.add(owner)
+        db.session.add(installed)
+        db.session.commit()
+        assert installed.read == (owner.name,), "permissions setup correctly"
+
+        # with implicit access_groups
+        access_groups = [ Group(display_name="access1", type=GroupTypes.scope,
+                                scope_name="test", scope_permission="test") ]
+        app.requested_access_groups = access_groups
+
+        installed = InstalledApp.install_for_group(app, owner)
+        assert len(installed.access_groups) == 1, "access group installed"
+        assert installed.access_groups[0].name == access_groups[0].name, \
+               "access group installed"
+        assert len(installed.scopes) == 1, "scopes works"
+
+
+        # with passed access_groups
+        access_groups = [ Group(display_name="access2", type=GroupTypes.scope,
+                                scope_name="test", scope_permission="test") ]
+
+        installed = InstalledApp.install_for_group(
+                        app, owner, access_groups=access_groups)
+        assert len(installed.access_groups) == 1, "access group installed"
+        assert installed.access_groups[0].name == access_groups[0].name, \
+               "access group installed"
+        assert len(installed.scopes) == 1, "scopes works"
+
+        # config
+        installed = InstalledApp.install_for_group(app, owner, config={})
+        assert installed.config == {}, "config added"

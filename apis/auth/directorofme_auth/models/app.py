@@ -60,7 +60,6 @@ class App(Model):
 
     @property
     def requested_scopes(self):
-        print(self.requested_access_groups)
         return Group.scopes(self.requested_access_groups)
 
 
@@ -95,5 +94,11 @@ class InstalledApp(Model):
         return Group.scopes(self.access_groups)
 
     @classmethod
-    def install_for_group(cls, app, group, config=None):
-        return cls(app=app, read=[group], config=config)
+    def install_for_group(cls, app, group, config=None, access_groups=None):
+        if access_groups is None:
+            access_groups = app.requested_access_groups
+
+        if isinstance(group, Group) or isinstance(group, AuthGroup):
+            group = group.name
+
+        return cls(app=app, read=[group], config=config, access_groups=access_groups)
