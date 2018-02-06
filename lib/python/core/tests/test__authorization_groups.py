@@ -99,29 +99,60 @@ class TestScope:
             test.read
 
     def test__generate_name(self):
-        scope = Scope(display_name="test")
+        scope_ = Scope(display_name="test")
 
-        assert scope.name == "test", "init defaulted"
+        assert scope_.name == "test", "init defaulted"
 
-        scope.name = "manual"
-        assert scope.generate_name() == "manual", "name returned if set"
+        scope_.name = "manual"
+        assert scope_.generate_name() == "manual", "name returned if set"
 
-        scope.name = None
-        assert scope.generate_name() == "test", "name generated if not set"
-        assert scope.name is None, "no side-effects"
+        scope_.name = None
+        assert scope_.generate_name() == "test", "name generated if not set"
+        assert scope_.name is None, "no side-effects"
 
-        scope.display_name = "I Am A Sentence"
-        assert scope.generate_name() == "i-am-a-sentence", "name is slugged"
-        assert scope.name is None, "no side-effects"
+        scope_.display_name = "I Am A Sentence"
+        assert scope_.generate_name() == "i-am-a-sentence", "name is slugged"
+        assert scope_.name is None, "no side-effects"
 
     def test__perm_name(self):
-        scope = Scope(name="test", __perms__=("test",))
-        assert scope.perm_name("test") == "test-test", \
+        scope_ = Scope(name="test", __perms__=("test",))
+        assert scope_.perm_name("test") == "test-test", \
                "permission name combines permission name and scope name"
 
-        scope = Scope(name="Test It", __perms__=("Test It",))
-        assert scope.perm_name("Test It") == "test-it-test-it", "name is slugged"
+        scope_ = Scope(name="Test It", __perms__=("Test It",))
+        assert scope_.perm_name("Test It") == "test-it-test-it", "name is slugged"
 
+    def test__merge(self):
+        one = Scope(name="test", __perms__=("one",))
+        two = Scope(name="test", __perms__=("two",))
+
+        merged = one.merge(two)
+        assert merged.__perms__ == ("one", "two"), "both sets of permissions present"
+        assert merged.perms["one"] is one.perms["one"], "permission one is correct"
+        assert merged.perms["two"] is two.perms["two"], "permission two is correct"
+
+        assert merged is not one, "new object returned"
+        assert merged is not two, "nwe object returned"
+
+        merged = Scope(name="test", __perms__=("one",)).merge(one)
+        assert tuple(merged.perms.keys()) == ("one",), "only one perm after merge"
+        assert merged.perms["one"] is one.perms["one"], \
+               "when both sides have a perm, right side over-rides left"
+
+        mismatched_one = Scope(name="test")
+        mismatched_two = Scope(name="nope")
+        with pytest.raises(ValueError):
+            mismatched_one.merge(mismatched_two)
+
+        display_named_one = Scope(name="test", display_name="one")
+        display_named_two = Scope(name="test", display_name="two")
+
+        assert display_named_one.merge(Scope(name="test")).display_name == "one", \
+               "take left-side display name if only left-side is set"
+        assert Scope(name="test").merge(display_named_two).display_name == "two", \
+               "take right-side display name if only right-side is set"
+        assert display_named_one.merge(display_named_two).display_name == "two", \
+               "take right-side display name if both are set"
 
 class Foo:
     pass

@@ -86,6 +86,27 @@ class Scope(Spec):
         return slugify.slugify("{}-{}".format(self.name, perm_name))
 
 
+    def merge(self, other):
+        if self.name != other.name:
+            raise ValueError(
+                "Cannot merge scopes with mis-matched names:"\
+                " '{}'/'{}'".format(self.name, other.name)
+            )
+
+        new_kwargs = { "perms": self.perms.copy(), "name": self.name }
+        new_kwargs["perms"].update(other.perms)
+
+        # other wins to stay consistent with perms behavior
+        for obj in (other, self):
+            try:
+                new_kwargs["display_name"] = obj.display_name
+                break
+            except ValueError:
+                pass
+
+        # return a new scope
+        return self.__class__(**new_kwargs)
+
 def scope(scope_name_or_cls):
     scope_name = scope_name_or_cls
     if callable(scope_name_or_cls):
