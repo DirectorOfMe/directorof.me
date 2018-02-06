@@ -37,7 +37,7 @@ class License(Model):
     groups = relationship("Group", secondary=groups_to_license)
 
     #: id of :attr:`managing_group` for this :class:`License`
-    managing_group_id = Column(UUIDType, ForeignKey(Group.id))
+    managing_group_id = Column(UUIDType, ForeignKey(Group.id), nullable=False)
 
     #: :class:`Group` that can administer this license (e.g. add/remove profiles)
     #: this is different than having write permission to the license directly,
@@ -52,7 +52,7 @@ class License(Model):
     seats = Column(Integer, nullable=False)
 
     #: profiles attached to this license (up to :attr:`.seats`)
-    profiles = relationship("Profile", secondary=profiles_to_license)
+    profiles = relationship("Profile", secondary=profiles_to_license, lazy="dynamic")
 
     # TODO: reconsider this default
     #: this profile is valid through (null is good forever)
@@ -60,3 +60,9 @@ class License(Model):
 
     #: any pertinent notes on this license.
     notes = Column(Text, nullable=False, default="")
+
+    @property
+    def active_profiles(self):
+        if self.seats >= 0:
+            return self.profiles.limit(self.seats)
+        return self.profiles

@@ -1,7 +1,5 @@
 import uuid
 
-import pytest
-
 from directorofme.authorization.groups import Scope, Group as AuthGroup
 from directorofme.testing import existing, commit_with_integrity_error
 
