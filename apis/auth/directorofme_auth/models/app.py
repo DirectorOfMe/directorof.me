@@ -1,12 +1,13 @@
-''' models/app.py -- App system '''
-
 from sqlalchemy import Table, Column, String, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.event import listen
 from sqlalchemy_utils import URLType, JSONType, UUIDType, observes
 from slugify import slugify
 
 from directorofme.orm import Model
-from directorofme.authorization.groups import scope
+from directorofme.authorization.groups import scope, Scope, Group as AuthGroup
+
+from . import Group
 
 __all__ = [ "App", "InstalledApp" ]
 
@@ -30,16 +31,16 @@ class App(Model):
     __tablename__ = "app"
 
     #: unique, user-defined name of this Application
-    name = Column(String(50), unique=True)
+    name = Column(String(50), unique=True, nullable=False)
 
     #: unique, url-safe name used to fetch :class:`.App` objects from the API
-    slug = Column(String(50), index=True, unique=True)
+    slug = Column(String(50), index=True, unique=True, nullable=False)
 
     #: user-defined description fo this app.
-    desc = Column(String(255))
+    desc = Column(String(255), nullable=False)
 
     #: Informational URL for this application.
-    url = Column(URLType)
+    url = Column(URLType, nullable=False)
 
     #: OAuth callback URL.
     callback_url = Column(URLType)
@@ -50,9 +51,20 @@ class App(Model):
     #: Groups this app would like to add into the session
     requested_access_groups = relationship("Group", secondary=requested_access_groups)
 
-    @observes("name")
-    def slugify_name(self, name):
-        self.slug = slugify(name)
+    def __init__(self, *args, **kwargs):
+        '''Standard Model setup + generate a URL safe slug if we have enough
+           information to do so.
+        '''
+        super().__init__(*args, **kwargs)
+        self.slug = None if self.name is None else slugify(self.name)
+
+    @property
+    def requested_scopes(self):
+        print(self.requested_access_groups)
+        return Group.scopes(self.requested_access_groups)
+
+
+listen(App.name, "set", lambda app, v, x, y: setattr(app, "slug", slugify(v)))
 
 @scope
 class InstalledApp(Model):
@@ -67,7 +79,7 @@ class InstalledApp(Model):
     __tablename__ = "installed_app"
 
     #: id of :attr:`.app` associated with this instance
-    app_id = Column(UUIDType, ForeignKey(App.id))
+    app_id = Column(UUIDType, ForeignKey(App.id), nullable=False)
 
     #: type of :class:`.App` this :class:`.InstalledApp` is.
     app = relationship(App)
@@ -77,6 +89,10 @@ class InstalledApp(Model):
 
     #: Groups this app will mix into session
     access_groups = relationship("Group", secondary=granted_access_groups)
+
+    @property
+    def scopes(self):
+        return Group.scopes(self.access_groups)
 
     @classmethod
     def install_for_group(cls, app, group, config=None):

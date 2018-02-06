@@ -2,15 +2,12 @@ import uuid
 
 import pytest
 
-from sqlalchemy.exc import IntegrityError
 from directorofme.authorization.groups import Scope, Group as AuthGroup
+from directorofme.testing import existing, commit_with_integrity_error
 
 from directorofme_auth.models import Group, GroupTypes
 
 class TestGroup:
-    def existing(self, group):
-        return Group.query.filter(Group.name == group.name).first()
-
     def test__mininum_well_formed(self, db):
         group = Group(display_name="test", type=GroupTypes.feature)
         assert group.display_name == "test", "display_name set"
@@ -59,8 +56,7 @@ class TestGroup:
                "object successfully saved"
 
         db.session.add(Group(name="name", display_name="no", type=GroupTypes.data))
-        with pytest.raises(IntegrityError):
-            db.session.commit()
+        commit_with_integrity_error(db)
 
     def test__unique_display_name_and_type(self, db):
         assert Group.query.filter(Group.name == "uniq").first() is None, \
@@ -78,26 +74,18 @@ class TestGroup:
         assert Group.query.filter(Group.name == "uniq2").first() is None, \
                "uniq2 group does not exist"
         db.session.add(Group(name="uniq2", display_name="test", type=GroupTypes.data))
-        with pytest.raises(IntegrityError):
-            db.session.commit()
+        commit_with_integrity_error(db)
 
     def test__required_fields(self, db):
         # missing type
-        db.session.add(Group(name="hi", display_name="hi"))
-        with pytest.raises(IntegrityError):
-            db.session.commit()
+        commit_with_integrity_error(db, Group(name="hi", display_name="hi"))
 
         db.session.rollback()
-        db.session.add(Group(name="hi", type=GroupTypes.data))
-        with pytest.raises(IntegrityError):
-            db.session.commit()
+        commit_with_integrity_error(db, Group(name="hi", type=GroupTypes.data))
 
-        db.session.rollback()
         nameless = Group(display_name="hi", type=GroupTypes.data)
         nameless.name = None
-        db.session.add(nameless)
-        with pytest.raises(IntegrityError):
-            db.session.commit()
+        commit_with_integrity_error(db, nameless)
 
     def test__members_and_members_of(self, db):
         assert Group.query.filter(
@@ -227,14 +215,14 @@ class TestGroup:
         dom = Group(display_name="dom", type=GroupTypes.data)
         dom_employees = Group(display_name="dom-emp", type=GroupTypes.data)
         dom_employees.member_of = [dom]
-        assert self.existing(dom) is None, "dom group not installed"
-        assert self.existing(dom_employees) is None, "dom_employees not installed"
+        assert existing(dom, "name") is None, "dom group not installed"
+        assert existing(dom_employees, "name") is None, "dom_employees not installed"
 
         prog = Group(display_name="programmers", type=GroupTypes.data)
         dom_prog = Group(display_name="dom-programmers", type=GroupTypes.data)
         dom_prog.member_of = [dom_employees, prog]
-        assert self.existing(prog) is None, "dom group not installed"
-        assert self.existing(dom_prog) is None, "dom_employees group not installed"
+        assert existing(prog, "name") is None, "dom group not installed"
+        assert existing(dom_prog, "name") is None, "dom_employees group not installed"
 
         db.session.add_all([dom, dom_employees, prog, dom_prog])
         db.session.commit()
@@ -257,8 +245,8 @@ class TestGroup:
         everybody = Group(display_name="everybody", type=GroupTypes.data)
         anybody = Group(display_name="anybody", type=GroupTypes.data)
 
-        assert self.existing(everybody) is None, "everybody not installed"
-        assert self.existing(anybody) is None, "everybody not installed"
+        assert existing(everybody, "name") is None, "everybody not installed"
+        assert existing(anybody, "name") is None, "everybody not installed"
 
         everybody.member_of = [anybody]
         anybody.member_of = [everybody]

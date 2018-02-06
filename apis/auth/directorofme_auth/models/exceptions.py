@@ -1,4 +1,4 @@
-__all__ = [ "NoProfileError" ]
+__all__ = [ "NoProfileError", "MisconfiguredProfileError" ]
 
 class NoProfileError(Exception):
     pass

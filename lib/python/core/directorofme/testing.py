@@ -1,7 +1,9 @@
 import pytest
 import sqlalchemy
 
-__all__ = [ "DBFixture" ]
+# TODO ironically, tests
+__all__ = [ "DBFixture", "existing", "commit_with_integrity_error" ]
+
 class DBFixture:
 	def __init__(self, real_db):
 		self.real_db = real_db
@@ -36,3 +38,14 @@ class DBFixture:
 
 		inner.__name__ = fixture_name
 		return inner
+
+def commit_with_integrity_error(db, *objs):
+    db.session.add_all(objs)
+    with pytest.raises(sqlalchemy.exc.IntegrityError):
+        db.session.commit()
+    db.session.rollback()
+
+def existing(model, query_on="id"):
+    return model.__class__.query.filter(
+        getattr(model.__class__, query_on) == getattr(model, query_on)
+    ).first()
