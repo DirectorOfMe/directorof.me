@@ -57,7 +57,7 @@ class TestGroup:
     def test__generate_name_errors(self, kwargs):
         with pytest.raises(ValueError):
             # test uninitialized type raises
-            group = Group(**kwargs)
+            Group(**kwargs)
 
 class TestScope:
     def test__init__(self):
@@ -84,8 +84,6 @@ class TestScope:
         gen_name = Scope(display_name="Test It")
         assert isinstance(gen_name, Scope), "display name and type passed works"
         assert isinstance(gen_name.name, str), "str name generated if not passed"
-
-        perms = Scope(name="test")
         assert set(Scope(name="test").perms.keys()) == set(standard_permissions), \
                "perms default to standard"
 
@@ -165,7 +163,7 @@ def test__scope_called_with_string():
     assert isinstance(scope.known_scopes["hi"], Scope), "`hi` is a scope"
     assert scope.known_scopes["hi"].name == "hi", "`hi` Scope is named `hi`"
 
-    foo = scope("foo")
+    scope("foo")
     foo_scope = scope.known_scopes["foo"]
     assert scope("foo")(Foo) is Foo, "decorator returns class in tact"
     assert scope.known_scopes["foo"] is foo_scope, \

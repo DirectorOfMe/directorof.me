@@ -13,7 +13,7 @@ from directorofme.orm import Model
 from directorofme.authorization.groups import scope
 
 from . import GroupTypes, Group, InstalledApp, License
-from .exceptions import NoProfileError, MisconfiguredProfileError
+from .exceptions import NoProfileError
 
 __all__ = [ "Profile" ]
 
@@ -31,7 +31,9 @@ class Profile(Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.id is None:
-            raise NoProfileError("new profiles may only be created with Profile.create_profile")
+            raise NoProfileError(
+                "new profiles may only be created with Profile.create_profile"
+            )
 
     #: the name of the person using this profile
     name = Column(String(255), nullable=False)
@@ -50,15 +52,14 @@ class Profile(Model):
 
     @classmethod
     def create_profile(cls, name, email, valid_through=None,
-                       additional_groups=tuple(), install_apps=tuple()):
+                       preferences=None, additional_groups=tuple(),
+                       install_apps=tuple()):
         '''Factory for generating a profile with all of the necessary related
            objects to make it useful. This is *the way* to create a new user.
         '''
-        if not cls.id.default.is_callable:
-            raise MisconfiguredProfileError("id default should be a callable")
-
         # setup the profile and force the id to be allocated
-        profile = cls(id=cls.id.default.arg({}), name=name, email=email)
+        profile = cls(id=cls.id.default.arg({}), name=name, email=email,
+                      preferences=preferences)
 
         # create the group-of-one using the UUID as the display_name
         profile.group_of_one = Group(

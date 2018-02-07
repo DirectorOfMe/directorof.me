@@ -1,11 +1,11 @@
 from sqlalchemy import Table, Column, String, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.event import listen
-from sqlalchemy_utils import URLType, JSONType, UUIDType, observes
+from sqlalchemy_utils import URLType, JSONType, UUIDType
 from slugify import slugify
 
 from directorofme.orm import Model
-from directorofme.authorization.groups import scope, Scope, Group as AuthGroup
+from directorofme.authorization.groups import scope, Group as AuthGroup
 
 from . import Group
 

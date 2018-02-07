@@ -3,8 +3,7 @@ import pytest
 from directorofme import specify
 from directorofme.specify import Attribute, Spec
 
-# unspec'ed
-class Foo:
+class Foo(Spec):
     attr = Attribute()
     typed_attr = Attribute(str)
     typed_and_defaulted = Attribute(str, default="hi")
@@ -34,12 +33,6 @@ class TestAttribute:
 
         assert isinstance(Foo.attr, Attribute), "class var not overridden by set"
 
-# spec'ed
-class Foo(Spec):
-    attr = Attribute()
-    typed_attr = Attribute(str)
-    typed_and_defaulted = Attribute(str, default="hi")
-    defaulted = Attribute(default="hi")
 
 class Bar:
     pass
