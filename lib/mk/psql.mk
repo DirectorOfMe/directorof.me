@@ -26,10 +26,10 @@ postgresql: .setup.postgresql.$(PSQL_DB).out
 			  DROP TABLE test;" | \
 			 PGPASSWORD="$(PSQL_PASS)" psql -h $(PSQL_HOST) $(PSQL_DB) $(PSQL_USER) \
 			   || exit 1; \
-	 } | tee $<
+	 } && touch $<
 
 .postgresql.apt.out:
-	apt install postgresql-$(PSQL_VERSION) libpq-dev | tee $<
+	sudo apt -y install postgresql-$(PSQL_VERSION) libpq-dev && touch $@
 
 .PHONY: dropdb
 dropdb: clean-postgresql.$(PSQL_DB).out
