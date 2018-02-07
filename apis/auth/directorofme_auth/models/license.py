@@ -52,7 +52,8 @@ class License(Model):
     seats = Column(Integer, nullable=False)
 
     #: profiles attached to this license (up to :attr:`.seats`)
-    profiles = relationship("Profile", secondary=profiles_to_license, lazy="dynamic")
+    profiles = relationship("Profile", secondary=profiles_to_license,
+                            back_populates="licenses", lazy="dynamic")
 
     # TODO: reconsider this default
     #: this profile is valid through (null is good forever)

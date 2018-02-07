@@ -13,6 +13,7 @@ from directorofme.orm import Model
 from directorofme.authorization.groups import scope
 
 from . import GroupTypes, Group, InstalledApp, License
+from .license import profiles_to_license
 from .exceptions import NoProfileError
 
 __all__ = [ "Profile" ]
@@ -50,10 +51,15 @@ class Profile(Model):
     #: all members of this :class:`.Group` are also members of parent.
     group_of_one = relationship("Group")
 
+    # TODO: Quota enforcement
+    #: all licenses associated with this profile, active or inactive
+    licenses = relationship("License", secondary=profiles_to_license,
+                            back_populates="profiles", lazy="dynamic")
+
+
     @classmethod
     def create_profile(cls, name, email, valid_through=None,
-                       preferences=None, additional_groups=tuple(),
-                       install_apps=tuple()):
+                       preferences=None, additional_groups=tuple()):
         '''Factory for generating a profile with all of the necessary related
            objects to make it useful. This is *the way* to create a new user.
         '''
@@ -68,16 +74,11 @@ class Profile(Model):
         )
 
         # allocate a default license for this user (required for login)
-        License(
+        profile.licenses.append(License(
             valid_through = valid_through,
-            profiles = [ profile ],
             groups = [ profile.group_of_one ] + list(additional_groups),
             managing_group = profile.group_of_one,
             seats = 1
-        )
-
-        # install apps for this user if requested
-        for app in install_apps:
-            InstalledApp.install_for_group(app, profile.group_of_one)
+        ))
 
         return profile
