@@ -14,13 +14,15 @@ setup(
 
         "flask==0.12.2",
         "flask-restful==0.3.5",
-		"flask-jwt-extended[asymmetric_crypto]>=3.6",
+	"flask-jwt-extended[asymmetric_crypto]>=3.6",
         "flask-sqlalchemy>=2.3.2",
         "flask-migrate>=2.1.1",
 
         "python-slugify>=1.2.4",
         "gunicorn==19.7",
 
+        "pytest>=3.2.3",
+        "pytest-cov>=2.5",
         "pytest-runner>=3.0",
     ],
     tests_require=[

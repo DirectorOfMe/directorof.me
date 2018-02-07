@@ -1,3 +1,4 @@
+APT       ?= sudo apt -y
 PIP       ?= pip3
 PYTHON    ?= python3
 SRC_DIR   ?= .
@@ -29,5 +30,13 @@ clean-setup-py:
 clean.requirements.out:
 	rm -f .requirements.out
 
-.requirements.out: requirements.txt
-	$(PIP) install -r $< | tee $@
+.requirements.out: requirements.txt pip
+	$(PIP) install -r requirements.txt && touch $@ 
+
+.PHONY: pip
+pip: python3
+	$(APT) install python3-pip
+
+.PHONY: python3 
+python3:
+	$(APT) install $(PYTHON)

@@ -11,10 +11,10 @@ SUBMAKE             ?= sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd 
 
 # build targets
 .PHONY: default
-default: | py-libs apis apps jwt_keys
+default: python py-libs apis apps jwt_keys
 
 .PHONY: all
-all: | default install upgrade-db
+all: default install upgrade-db
 
 .PHONY: python
 python: .requirements.out
@@ -33,7 +33,7 @@ apps:
 
 # install targets
 .PHONY: install
-install: | python postgresql install-py-libs install-apis install-apps
+install: postgresql install-py-libs install-apis install-apps
 
 .PHONY: install-py-libs
 install-py-libs:

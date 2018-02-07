@@ -5,6 +5,7 @@ setup(
     version="0.1",
     packages=find_packages(),
     setup_requires=[
+        "pytest>=3.2.3",
         "pytest-runner>=3.0",
         "sqlalchemy>=1.2",
         "sqlalchemy-utils>=0.32",

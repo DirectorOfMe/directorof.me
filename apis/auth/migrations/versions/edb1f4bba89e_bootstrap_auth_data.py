@@ -64,14 +64,10 @@ def build_profiles(groups, main_app):
     profiles = []
     for (name, email) in (("Matt Story", "matt@directorof.me"),
                           ("Barb Blakley", "barb@directorof.me")):
-        profiles.append(Profile.create_profile(
-            name=name, email=email,
-            additional_groups=[
-                groups["f-user"],
-                groups["0-admin"],
-            ],
-            install_apps=[main_app]))
-
+        profile = Profile.create_profile(name=name, email=email)
+        profile.licenses[0].groups.extend([ groups["f-user"], groups["0-admin"] ])
+        InstalledApp.install_for_group(main_app, profile.group_of_one)
+        profiles.append(profile)
 
     return profiles
 

@@ -16,7 +16,7 @@ Build
 To get started:
 
 ```
-sudo make all
+./install
 ```
 
 If you are in a development environment, this will install all your
