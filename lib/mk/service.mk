@@ -1,12 +1,78 @@
-SERVICE_OWNER        = root
-DAEMONTOOLS_SRC      = http://untroubled.org/daemontools-encore/daemontools-encore-1.10.tar.gz
-DAEMONTOOLS_CHECKSUM = a9b22e9eff5c690cd1c37e780d30cd78
-CURL                 = curl
+DAEMONTOOLS_SRC      ?= http://untroubled.org/daemontools-encore/daemontools-encore-1.10.tar.gz
+DAEMONTOOLS_CHECKSUM ?= a9b22e9eff5c690cd1c37e780d30cd78
+CURL                 ?= curl
 
+SERVICE_NAME         ?=
+SERVICE_OWNER        ?=
+SLASH_SERVICE_OWNER  ?= root
+REAL_LOG_DIR         ?= /var/log/service
+RUN_FILE_TPL         ?=
+RUN_FILE_EXPORTS     ?=
+LOG_RUN_FILE_TPL     ?= run.multilog
+LOG_RUN_FILE_EXPORTS ?= DAEMON_USER="$(SERVICE_OWNER)"
 
-/service/.d:
-	install -d -o $(SERVICE_OWNER) -g $(SERVICE_OWNER) -m 0755 /service
+#### INSTALL BITS
+# TODO: check target to see if it exists
+.PHONY: install-service
+install-service: /service/.d /service-versions/.d service/run real-log-dir
+	service_name=$(SERVICE_NAME)_`date +%Y%m%d%H%M%S`; \
+		cp -rf service /service-versions/$$service_name && \
+		chown -R $(SLASH_SERVICE_OWNER):$(SERVICE_OWNER) \
+			     /service-versions/$$service_name && \
+		ln -sf /service-versions/$$service_name /service-versions/$(SERVICE_NAME) && \
+		mv /service-versions/$(SERVICE_NAME) /service/ && \
+		find /service-versions/ -mindepth 1 -maxdepth 1 \
+								-name '$(SERVICE_NAME)*' \
+								-not -name "$$service_name" \
+								-type d  | xargs -r -- rm -r
+
+.PHONY: clean-service
+clean-service:
+	rm -rf service/
+
+.PHONY: real-log-dir
+real-log-dir:
+	install -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0755 \
+			-d $(REAL_LOG_DIR)
+	install -o $(SLASH_SERVICE_OWNER) -g $(SERVICE_OWNER) -m 0775 \
+		    -d $(REAL_LOG_DIR)/$(SERVICE_NAME)
+
+/service/.d: daemontools-check /service-versions/.d
+	install -d -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0755 /service
 	touch $@
+
+/service-versions/.d: daemontools-check
+	install -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0755 \
+		    -d /service-versions
+	touch $@
+
+### BUILD BITS
+service/run: service/log/run
+	$(RUN_FILE_EXPORTS) $(RENDER) $(RUN_FILE_TPL) > $@.tmp
+	install -m 0755 $@.tmp $@
+	rm -f $@.tmp
+
+service/log/run: service/log/main service-owner-check
+	$(LOG_RUN_FILE_EXPORTS) $(RENDER) $(LOG_RUN_FILE_TPL) > $@.tmp
+	install -m 0755 $@.tmp $@
+	rm -f $@.tmp
+
+service/log/main: service/log/.d service-name-check
+	rm -f $@ && ln -sf $(REAL_LOG_DIR)/$(SERVICE_NAME) $@
+
+service/log/.d: service/.d
+	install -d service/log && touch $@
+
+service/.d:
+	install -d service && touch $@
+
+.PHONY: service-name-check
+service-name-check:
+	[ "$(SERVICE_NAME)" ] || { echo "SERVICE_NAME must be set" >&2; exit 1; }
+
+.PHONY: service-owner-check
+service-owner-check:
+	[ "$(SERVICE_OWNER)" ] || { echo "SERVICE_OWNER must be set" >&2; exit 1; }
 
 .PHONY: daemontools-check
 daemontools-check:
@@ -15,6 +81,8 @@ daemontools-check:
 		exit 1; \
 	}
 
+
+### DAEMONTOOLS BITS
 .PHONY: daemontools
 daemontools: .daemontools/daemontools/.made
 	cd .daemontools/daemontools && sudo make install
@@ -39,3 +107,5 @@ daemontools: .daemontools/daemontools/.made
 .PHONY: clean-daemontools
 clean-daemontools:
 	rm -rf .daemontools/
+
+include $(LIB_DIR)/mk/conf.mk

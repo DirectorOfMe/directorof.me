@@ -4,6 +4,7 @@
 .requirements.out
 __pycache__
 build
+service
 dist
 *.egg-info
 .eggs/

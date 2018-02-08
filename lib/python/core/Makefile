@@ -20,3 +20,4 @@ install: install-setup-py
 test: run-py-test
 
 include $(LIB_DIR)/mk/python.mk
+include $(LIB_DIR)/mk/flask.mk

@@ -6,19 +6,13 @@ LIB_DIR         ?= ../../lib
 SHARE_DIR       ?= ../../share
 TPL_DIR         ?= $(SHARE_DIR)/templates
 
-SQLALCHEMY_DEPS  = psycopg2>=2.7.3,\
+SQLALCHEMY_DEPS ?= psycopg2>=2.7.3,\
 				   sqlalchemy>=1.2,\
                    sqlalchemy-utils>=0.32,
-FLASK_PKG_DEPS   = $(SQLALCHEMY_DEPS),\
-                   directorofme_flask_restful,\
-                   flask==0.12.2,\
-                   flask-restful==0.3.5,\
-                   flask-jwt-extended[asymmetric_crypto]>=3.6,\
-                   flask-sqlalchemy>=2.3.2,\
-                   flask-migrate>=2.1.1,
-PKG_DEPS        ?= ""
-PKG_NAME        ?= ""
-PKG_VERSION     ?= ""
+
+PKG_DEPS        ?=
+PKG_NAME        ?=
+PKG_VERSION     ?=
 
 #TODO: this isn't working
 PY_FILES  ?= $(find $(SRC_DIR) -type f -name '*.py')
