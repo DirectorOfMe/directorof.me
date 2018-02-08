@@ -1,5 +1,11 @@
-LIB_DIR :=   ../../
-SHARE_DIR := ../../../share
+LIB_DIR     ?= ../../
+SHARE_DIR   ?= ../../../share
+TPL_DIR     ?= $(SHARE_DIR)/templates
+BIN_DIR     ?= ../../../bin
+
+PKG_NAME    ?= directorofme
+PKG_VERSION ?= 0.1
+PKG_DEPS    ?= $(FLASK_PKG_DEPS),
 
 .PHONY: default
 default: build-setup-py

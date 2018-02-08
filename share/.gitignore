@@ -1,1 +1,3 @@
 jwt_keys/
+!setup.py
+!setup.cfg

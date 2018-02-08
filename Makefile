@@ -1,5 +1,8 @@
 LIB_DIR             ?= ./lib
 SHARE_DIR           ?= ./share
+TPL_DIR             ?= $(SHARE_DIR)/templates
+LIB_DIR             ?= ./lib
+BIN_DIR             ?= ./bin
 API_DIR             ?= ./apis
 APP_DIR             ?= ./apps
 
@@ -33,7 +36,7 @@ apps:
 
 # install targets
 .PHONY: install
-install: postgresql install-py-libs install-apis install-apps
+install: postgresql daemontools install-py-libs install-apis install-apps
 
 .PHONY: install-py-libs
 install-py-libs:
@@ -49,7 +52,7 @@ install-apps:
 
 # clean targets
 .PHONY: clean
-clean: clean-py-libs clean-python clean-apis clean-apps
+clean: clean-py-libs clean-python clean-apis clean-apps clean-daemontools
 
 .PHONY: clean-py-libs
 clean-py-libs:
@@ -71,5 +74,6 @@ upgrade-db:
 	$(SUBMAKE) $@ $(APIS)
 
 include $(LIB_DIR)/mk/python.mk
+include $(LIB_DIR)/mk/service.mk
 include $(LIB_DIR)/mk/psql.mk
 include $(LIB_DIR)/mk/jwt.mk

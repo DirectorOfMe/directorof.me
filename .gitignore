@@ -10,3 +10,8 @@ dist
 .cache/
 .coverage
 .*postgresql.*.out
+setup.py
+setup.cfg
+setup.py.tmp
+setup.cfg.tmp
+.daemontools

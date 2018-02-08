@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+
+from jinja2 import FileSystemLoader, Environment, StrictUndefined, TemplateNotFound, \
+                   UndefinedError
+
+def render(tpl, variables, template_dirs=tuple()):
+    env = Environment(loader=FileSystemLoader(template_dirs), undefined=StrictUndefined)
+    return env.get_template(tpl).render(**variables)
+
+if __name__ == "__main__":
+    import os
+    import sys
+    rc = 0
+
+    prog = sys.argv[0]
+    err = lambda x: print("{}: {}".format(sys.argv[0], x), file=sys.stderr)
+
+    try:
+        tpl = sys.argv[1]
+        tpl_dirs = sys.argv[2:]
+        print(render(tpl, os.environ, template_dirs=tpl_dirs))
+    except IndexError:
+        err("usage: render_from_env tpl_file [tpl_dir [tpldir [...]]]")
+        rc = 100
+    except TemplateNotFound:
+        err("could not find `{}` in paths `{}`".format(tpl, tuple(tpl_dirs)))
+        rc = 1
+    except UndefinedError as e:
+        err(e)
+        rc=1
+
+    sys.exit(rc)

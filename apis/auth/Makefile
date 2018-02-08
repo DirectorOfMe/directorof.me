@@ -5,6 +5,14 @@ FLASK_APP          ?= directorofme_auth:app
 TEST_PSQL_DB       ?= test
 TEST_MAKE          ?= PSQL_DB=$(TEST_PSQL_DB) $(MAKE)
 
+PKG_NAME           ?= directorofme_auth
+PKG_VERSION        ?= 0.1
+PKG_DEPS           ?= directorofme,\
+				      $(FLASK_PKG_DEPS),\
+					  python-slugify>=1.2.4,\
+					  gunicorn==19.7,\
+
+
 .PHONY: default
 default: build-setup-py postgresql
 
