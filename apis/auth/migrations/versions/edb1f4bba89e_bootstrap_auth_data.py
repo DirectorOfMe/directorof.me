@@ -88,6 +88,8 @@ def get_session():
     return sa.orm.session.Session(bind=op.get_bind())
 
 def upgrade():
+    ### HACK:
+    op.add_column('profile_to_license', sa.Column('created', sa.DateTime(), nullable=True))
     session = get_session()
     groups = build_groups()
     session.add_all(groups.values())
@@ -100,6 +102,7 @@ def upgrade():
 
     session.add(build_dom_license(groups, profiles))
     session.commit()
+    op.drop_column('profile_to_license', 'created')
 
 def downgrade():
     # TODO:

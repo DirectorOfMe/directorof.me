@@ -4,6 +4,7 @@ models/license.py -- License system
 @author: Matt Story <matt@directorof.me>
 '''
 from sqlalchemy import Table, Column, Integer, DateTime, Text, ForeignKey
+from sqlalchemy.sql.expression import func
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
@@ -25,7 +26,8 @@ profiles_to_license = Table(
     'profile_to_license',
     Model.metadata,
     Column('license_id', UUIDType, ForeignKey('license.id')),
-    Column('profile_id', UUIDType, ForeignKey('profile.id'))
+    Column('profile_id', UUIDType, ForeignKey('profile.id')),
+    Column('created', DateTime, default=func.now(), nullable=False)
 )
 
 @scope
@@ -53,7 +55,8 @@ class License(Model):
 
     #: profiles attached to this license (up to :attr:`.seats`)
     profiles = relationship("Profile", secondary=profiles_to_license,
-                            back_populates="licenses", lazy="dynamic")
+                            back_populates="licenses", lazy="dynamic",
+                            order_by=profiles_to_license.c.created)
 
     # TODO: reconsider this default
     #: this profile is valid through (null is good forever)
