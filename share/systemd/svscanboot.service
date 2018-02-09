@@ -1,0 +1,14 @@
+[Unit]
+Description=Daemontools Boot Loader
+After=sshd.service
+
+[Service]
+ExecStart=/usr/local/bin/svscanboot
+KillMode=process
+Restart=on-failure
+RestartPreventExitStatus=100
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+Alias=svscanboot.service

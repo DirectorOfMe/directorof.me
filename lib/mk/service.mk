@@ -18,7 +18,7 @@ LOG_RUN_FILE_EXPORTS ?= DAEMON_USER="$(SERVICE_OWNER)"
 # TODO: check target to see if it exists
 .PHONY: install-service
 install-service: /service/.d /service-versions/.d service/run real-log-dir \
-				service-owner
+				service-owner /etc/systemd/service/svscanboot.service
 	service_name=$(SERVICE_NAME)_`date +%Y%m%d%H%M%S`; \
 		cp -rf service /service-versions/$$service_name && \
 		chown -R $(SLASH_SERVICE_OWNER):$(SERVICE_OWNER) \
@@ -97,6 +97,12 @@ daemontools-check:
 .PHONY: daemontools
 daemontools: .daemontools/daemontools/.made
 	cd .daemontools/daemontools && sudo make install
+
+/etc/systemd/system/svscanboot.service: $(SHARE_DIR)/systemd/svscanboot.service
+	sudo install -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0644 \
+				 $(SHARE_DIR)/systemd/svscanboot.service $@
+	sudo systemctl daemon-reload
+	sudo systemctl start svscanboot.service
 
 .daemontools/daemontools/.made: .daemontools/daemontools
 	cd $< && make && touch .made
