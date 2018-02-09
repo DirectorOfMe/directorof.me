@@ -98,11 +98,12 @@ daemontools-check:
 daemontools: .daemontools/daemontools/.made
 	cd .daemontools/daemontools && sudo make install
 
-/etc/systemd/system/svscanboot.service: $(SHARE_DIR)/systemd/svscanboot.service
-	sudo install -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0644 \
-				 $(SHARE_DIR)/systemd/svscanboot.service $@
+/etc/systemd/system/svscanboot.service: /lib/systemd/system/svscanboot.service
 	sudo systemctl daemon-reload
-	sudo systemctl start svscanboot.service
+	sudo systemctl enable svscanboot.service
+
+/lib/systemd/system/svscanboot.service: $(SHARE_DIR)/systemd/svscanboot.service
+	sudo install -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0644 $< $@
 
 .daemontools/daemontools/.made: .daemontools/daemontools
 	cd $< && make && touch .made
