@@ -1,5 +1,5 @@
 APT             ?= sudo apt -y
-PIP             ?= pip3
+PIP             ?= sudo pip3
 PYTHON          ?= python3
 SRC_DIR         ?= .
 LIB_DIR         ?= ../../lib
@@ -42,7 +42,7 @@ run-py-test: setup.py
 
 .PHONY: install-setup-py
 install-setup-py: setup.py build/.d
-	$(PYTHON) setup.py install
+	sudo $(PYTHON) setup.py install
 
 .PHONY: clean-setup-py
 clean-setup-py:

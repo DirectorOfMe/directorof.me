@@ -24,7 +24,10 @@ install-service: /service/.d /service-versions/.d service/run real-log-dir
 		find /service-versions/ -mindepth 1 -maxdepth 1 \
 								-name '$(SERVICE_NAME)*' \
 								-not -name "$$service_name" \
-								-type d  | xargs -r -- rm -r
+								-type d  | xargs -r -n1 -- sh -c ' \
+									cd $$1; svc -dx . ./log; \
+									cd /; rm -r $$1; \
+								' cleanup
 
 .PHONY: clean-service
 clean-service:
