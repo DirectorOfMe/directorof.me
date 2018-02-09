@@ -33,7 +33,7 @@ setup.cfg: $(TPL_DIR)/setup.cfg
 	mv $@.tmp $@
 
 build/.d: setup.py $(PY_FILES)
-	$(PYTHON) setup.py build && touch $@
+	$(PYTHON) setup.py build && $(PYTHON) setup.py bdist && touch $@
 
 #TODO: automatically hook up py.test for projects
 .PHONY: run-py-test

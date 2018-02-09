@@ -13,6 +13,6 @@ dist
 .*postgresql.*.out
 setup.py
 setup.cfg
-setup.py.tmp
-setup.cfg.tmp
+*.tmp
+directorofme.conf
 .daemontools

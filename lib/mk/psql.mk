@@ -1,10 +1,9 @@
-### NEEDS TO BE TEMPLATED INTO app.py
-PSQL_DB         ?= dom
-PSQL_USER       ?= dom
-PSQL_PASS       ?= password
-PSQL_HOST       ?= localhost
+### Must be provided
+PSQL_DB         ?=
+PSQL_USER       ?=
+PSQL_PASSWORD   ?=
+PSQL_HOST       ?=
 
-# XXX: This needs to move to ansible or similar
 PSQL_SHELL_USER ?= postgres
 PSQL_VERSION    ?= 9.5
 PSQL            ?= sudo -u "$(PSQL_SHELL_USER)" psql
@@ -15,7 +14,7 @@ postgresql: .setup.postgresql.$(PSQL_DB).out
 .setup.postgresql.$(PSQL_DB).out: .postgresql.apt.out
 	{ \
 		sudo -u "$(PSQL_SHELL_USER)" createdb "$(PSQL_DB)"; \
-		echo "CREATE USER $(PSQL_USER) PASSWORD '$(PSQL_PASS)';" | $(PSQL); \
+		echo "CREATE USER $(PSQL_USER) PASSWORD '$(PSQL_PASSWORD)';" | $(PSQL); \
 		echo "GRANT ALL ON ALL TABLES IN SCHEMA public TO $(PSQL_USER);" | \
 			$(PSQL) $(PSQL_DB); \
 		echo "CREATE TABLE test (test INTEGER); \
@@ -24,7 +23,7 @@ postgresql: .setup.postgresql.$(PSQL_DB).out
 			  SELECT * FROM test; \
 			  DELETE FROM test; \
 			  DROP TABLE test;" | \
-			 PGPASSWORD="$(PSQL_PASS)" psql -h $(PSQL_HOST) $(PSQL_DB) $(PSQL_USER) \
+			 PGPASSWORD="$(PSQL_PASSWORD)" psql -h $(PSQL_HOST) $(PSQL_DB) $(PSQL_USER) \
 			   || exit 1; \
 	 } && touch $<
 

@@ -14,7 +14,7 @@ SUBMAKE             ?= sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd 
 
 # build targets
 .PHONY: default
-default: python py-libs apis apps jwt_keys
+default: conf python py-libs apis apps jwt_keys
 
 .PHONY: all
 all: default install upgrade-db
@@ -36,7 +36,7 @@ apps:
 
 # install targets
 .PHONY: install
-install: postgresql daemontools install-py-libs install-apis install-apps
+install: daemontools install-py-libs install-apis install-apps
 
 .PHONY: install-py-libs
 install-py-libs:
@@ -73,7 +73,15 @@ clean-python: clean.requirements.out
 upgrade-db:
 	$(SUBMAKE) $@ $(APIS)
 
+.PHONY: conf
+conf: directorofme.conf
+
+directorofme.conf: $(TPL_DIR)/directorofme.conf
+	RENDER_FLAGS="-p" $(RENDER) $@ > $@.tmp
+	mv $@.tmp $@
+
 include $(LIB_DIR)/mk/python.mk
 include $(LIB_DIR)/mk/service.mk
-include $(LIB_DIR)/mk/psql.mk
 include $(LIB_DIR)/mk/jwt.mk
+include $(LIB_DIR)/mk/conf.mk
+include directorofme.conf

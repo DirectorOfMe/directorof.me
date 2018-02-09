@@ -1,5 +1,7 @@
 #!/bin/sh
 
-sudo apt update
-sudo apt install make
-sudo make all
+safe() { "$@" || exit $?; }
+
+safe sudo apt update
+safe sudo apt install make
+safe sudo make all

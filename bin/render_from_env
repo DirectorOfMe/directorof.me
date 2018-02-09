@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
+import getopt
+import getpass
 
 from jinja2 import FileSystemLoader, Environment, StrictUndefined, TemplateNotFound, \
-                   UndefinedError
+                   UndefinedError, meta
+
+def get_env(template_dirs=tuple()):
+    return Environment(
+        loader=FileSystemLoader(template_dirs), undefined=StrictUndefined
+    )
+
+def get_vars(tpl, variables, template_dirs=tuple()):
+    env = get_env(template_dirs)
+    return meta.find_undeclared_variables(
+        env.parse(env.loader.get_source(env, tpl)[0])
+    ) - set(variables.keys())
 
 def render(tpl, variables, template_dirs=tuple()):
-    env = Environment(loader=FileSystemLoader(template_dirs), undefined=StrictUndefined)
-    return env.get_template(tpl).render(**variables)
+    return get_env(template_dirs).get_template(tpl).render(**variables)
 
 if __name__ == "__main__":
     import os
@@ -16,11 +28,31 @@ if __name__ == "__main__":
     err = lambda x: print("{}: {}".format(sys.argv[0], x), file=sys.stderr)
 
     try:
-        tpl = sys.argv[1]
-        tpl_dirs = sys.argv[2:]
-        print(render(tpl, os.environ, template_dirs=tpl_dirs))
-    except IndexError:
-        err("usage: render_from_env tpl_file [tpl_dir [tpldir [...]]]")
+        opts, args = getopt.getopt(sys.argv[1:], "p")
+        prompt_for_vars = bool(opts)
+
+        tpl = args[0]
+        tpl_dirs = args[1:]
+        variables = os.environ
+
+        if prompt_for_vars:
+            for v in get_vars(tpl, variables, template_dirs=tpl_dirs):
+                while not variables.get(v):
+                    # input prompts to stdout even if it's not a TTY
+                    def prompt(msg):
+                        import os
+                        f = os.fdopen(os.open("/dev/tty", os.O_RDWR|os.O_NOCTTY), "w")
+                        f.write("Value for {}:".format(v))
+                        f.flush()
+
+                        return input()
+
+                    prompt = getpass.getpass if "password" in v.lower() else prompt
+                    variables[v] = prompt("Value for {}:".format(v)).strip()
+
+        print(render(tpl, variables, template_dirs=tpl_dirs))
+    except (IndexError, getopt.GetoptError):
+        err("usage: render_from_env [-p] tpl_file [tpl_dir [tpldir [...]]]")
         rc = 100
     except TemplateNotFound:
         err("could not find `{}` in paths `{}`".format(tpl, tuple(tpl_dirs)))
