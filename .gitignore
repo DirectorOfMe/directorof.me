@@ -1,22 +1,44 @@
+# Master config file (built)
+directorofme.conf
+
+# Intermediate build artifacts
+*.tmp
+
+# Editors
 .*.sw[lmnop]
 .DS_Store
-*.pyc
+*.un~
+
+# Python
 .requirements.out
-__pycache__
-build
-service
-dist
 *.egg-info
 .eggs/
+*.pyc
+__pycache__
+build
+dist
 .cache/
 .coverage
-.*postgresql.*.out
+.pytest_cache
+
+# Built python files
 setup.py
 setup.cfg
-*.tmp
-directorofme.conf
+
+
+# Javascript
+apps/**/build
+apps/**/node_modules
+apps/**/package-lock.json
+apps/**/yarn.lock
+
+# Daemontools artifacts
+service
 .daemontools
-.pytest_cache
+
+# PostgreSQL artifacts
+.*postgresql.*.out
+
+# nginx build artifacts
 www-errors
 www
-*.un~
