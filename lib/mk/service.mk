@@ -18,7 +18,7 @@ LOG_RUN_FILE_EXPORTS ?= DAEMON_USER="$(SERVICE_OWNER)"
 # TODO: check target to see if it exists
 .PHONY: install-service
 install-service: /service/.d /service-versions/.d service/run real-log-dir \
-				service-owner /etc/systemd/service/svscanboot.service
+				service-owner /etc/systemd/system/svscan.service
 	service_name=$(SERVICE_NAME)_`date +%Y%m%d%H%M%S`; \
 		cp -rf service /service-versions/$$service_name && \
 		chown -R $(SLASH_SERVICE_OWNER):$(SERVICE_OWNER) \
@@ -48,11 +48,11 @@ real-log-dir: service-owner
 service-owner:
 	id $(SERVICE_OWNER) || useradd -u "$(SERVICE_OWNER_UID)" "$(SERVICE_OWNER)"
 
-/service/.d: daemontools-check /service-versions/.d
+/service/.d: check-daemontools /service-versions/.d
 	install -d -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0755 /service
 	touch $@
 
-/service-versions/.d: daemontools-check
+/service-versions/.d: check-daemontools
 	install -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0755 \
 		    -d /service-versions
 	touch $@
@@ -63,12 +63,12 @@ service/run: service/log/run
 	install -m 0755 $@.tmp $@
 	rm -f $@.tmp
 
-service/log/run: service/log/main service-owner-check
+service/log/run: service/log/main check-service-owner
 	$(LOG_RUN_FILE_EXPORTS) $(RENDER) $(LOG_RUN_FILE_TPL) > $@.tmp
 	install -m 0755 $@.tmp $@
 	rm -f $@.tmp
 
-service/log/main: service/log/.d service-name-check
+service/log/main: service/log/.d check-service-name
 	rm -f $@ && ln -sf $(REAL_LOG_DIR)/$(SERVICE_NAME) $@
 
 service/log/.d: service/.d
@@ -77,32 +77,34 @@ service/log/.d: service/.d
 service/.d:
 	install -d service && touch $@
 
-.PHONY: service-name-check
-service-name-check:
+.PHONY: check-service-name
+check-service-name:
 	[ "$(SERVICE_NAME)" ] || { echo "SERVICE_NAME must be set" >&2; exit 1; }
 
-.PHONY: service-owner-check
-service-owner-check:
+.PHONY: check-service-owner
+check-service-owner:
 	[ "$(SERVICE_OWNER)" ] || { echo "SERVICE_OWNER must be set" >&2; exit 1; }
 
-.PHONY: daemontools-check
-daemontools-check:
-	which svscan > /dev/null 2>&1 || { \
-		echo "please install daemontools before proceeding"; \
-		exit 1; \
-	}
-
+.PHONY: check-daemontools
+check-daemontools:
+	$(CHECK_PROG) svscan
 
 ### DAEMONTOOLS BITS
 .PHONY: daemontools
 daemontools: .daemontools/daemontools/.made
-	cd .daemontools/daemontools && sudo make install
+	cd .daemontools/daemontools && { \
+		sudo service svscan stop; \
+		sudo make install; \
+		sudo service svscan start; \
+		exit 0; \
+	}
 
-/etc/systemd/system/svscanboot.service: /lib/systemd/system/svscanboot.service
+
+/etc/systemd/system/svscan.service: /lib/systemd/system/svscan.service
 	sudo systemctl daemon-reload
-	sudo systemctl enable svscanboot.service
+	sudo systemctl enable svscan.service
 
-/lib/systemd/system/svscanboot.service: $(SHARE_DIR)/systemd/svscanboot.service
+/lib/systemd/system/svscan.service: $(SHARE_DIR)/systemd/svscan.service
 	sudo install -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0644 $< $@
 
 .daemontools/daemontools/.made: .daemontools/daemontools
@@ -127,3 +129,4 @@ clean-daemontools:
 	rm -rf .daemontools/
 
 include $(LIB_DIR)/mk/conf.mk
+include $(LIB_DIR)/mk/shared.mk

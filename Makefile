@@ -14,10 +14,14 @@ SUBMAKE             ?= sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd 
 
 # build targets
 .PHONY: default
-default: conf python py-libs apis apps jwt_keys
+default: conf pip python py-libs apis apps jwt_keys
 
 .PHONY: all
 all: default install upgrade-db
+
+.PHONY: dev
+dev: conf
+	$(SUBMAKE) dev $(APIS)
 
 .PHONY: python
 python: .requirements.out
@@ -83,5 +87,6 @@ directorofme.conf: $(TPL_DIR)/directorofme.conf
 include $(LIB_DIR)/mk/python.mk
 include $(LIB_DIR)/mk/service.mk
 include $(LIB_DIR)/mk/jwt.mk
+include $(LIB_DIR)/mk/web.mk
 include $(LIB_DIR)/mk/conf.mk
 include directorofme.conf

@@ -1,4 +1,3 @@
-APT             ?= sudo apt -y
 PIP             ?= sudo pip3
 PYTHON          ?= python3
 SRC_DIR         ?= .
@@ -32,16 +31,16 @@ setup.cfg: $(TPL_DIR)/setup.cfg
 	    $(RENDER) $@ > $@.tmp
 	mv $@.tmp $@
 
-build/.d: setup.py $(PY_FILES)
+build/.d: setup.py $(PY_FILES) check-python3
 	$(PYTHON) setup.py build && $(PYTHON) setup.py bdist && touch $@
 
 #TODO: automatically hook up py.test for projects
 .PHONY: run-py-test
-run-py-test: setup.py
+run-py-test: setup.py check-python3
 	$(PYTHON) setup.py test
 
 .PHONY: install-setup-py
-install-setup-py: setup.py build/.d
+install-setup-py: setup.py build/.d check-python3
 	sudo $(PYTHON) setup.py install
 
 .PHONY: clean-setup-py
@@ -50,17 +49,27 @@ clean-setup-py:
 
 .PHONY: clean.requirements.out
 clean.requirements.out:
-	rm -f .requirements.out
+	rm -f .requirements.out .requirements.out.tmp
 
-.requirements.out: requirements.txt pip
-	$(PIP) install -r requirements.txt && touch $@
+.requirements.out: requirements.txt check-pip
+	$(PIP) install -r requirements.txt 2>&1 | tee $@.tmp
+	mv $@.tmp $@
 
 .PHONY: pip
 pip: python3
-	$(APT) install python3-pip
+	$(INSTALL) python3-pip
+
+.PHONY: check-pip
+check-pip:
+	$(CHECK_PROG) $(PIP)
 
 .PHONY: python3
 python3:
-	$(APT) install $(PYTHON)
+	$(INSTALL) $(PYTHON)
+
+.PHONY: check-python3
+check-python3:
+	$(CHECK_PROG) $(PYTHON)
 
 include $(LIB_DIR)/mk/conf.mk
+include $(LIB_DIR)/mk/shared.mk

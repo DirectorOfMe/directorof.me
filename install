@@ -4,4 +4,5 @@ safe() { "$@" || exit $?; }
 
 safe sudo apt update
 safe sudo apt install make
+safe sudo make dev
 safe sudo make all

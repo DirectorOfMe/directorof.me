@@ -23,13 +23,16 @@ PSQL_PASSWORD      ?= $(AUTH_PSQL_PASSWORD)
 PSQL_HOST          ?= $(AUTH_PSQL_HOST)
 
 .PHONY: default
-default: build-setup-py postgresql gunicorn-service
+default: build-setup-py gunicorn-service
 
 .PHONY: clean
 clean: clean-setup-py clean-postgresql clean-gunicorn-service
 
 .PHONY: install
-install: postgresql default install-setup-py  install-gunicorn-service
+install: default install-setup-py install-gunicorn-service
+
+.PHONY: dev
+dev: postgresql
 
 .PHONY: test
 test: run-flask-test-with-db

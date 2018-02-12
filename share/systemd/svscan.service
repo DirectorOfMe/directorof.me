@@ -4,8 +4,9 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/svscanboot
-KillMode=process
+ExecStartPre=/usr/local/bin/svc -dx /service/* /service/*/log
+ExecStart=/usr/local/bin/svscan /service
+ExecStop=/usr/local/bin/svc -dx /service/* /service/*/log && kill $MAINPID
 Restart=on-failure
 RestartPreventExitStatus=100
 Type=simple
