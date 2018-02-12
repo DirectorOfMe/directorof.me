@@ -1,0 +1,20 @@
+.Auth {
+  text-align: center;
+  width: 400px;
+  padding: 20px;
+  background: #DCDCDD;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.Auth button.pill {
+  margin: 12px;
+  background: #FFFFFF;
+  border: 1px solid #C5C3C6;
+  font-size: 18px;
+  padding: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+
+}
