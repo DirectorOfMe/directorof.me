@@ -1,0 +1,9 @@
+{
+  "name": "Apps",
+  "version": "0.0.1",
+  "description": "The app generator",
+  "private": true,
+  "devDependencies": {
+    "plop": "^1.9.1"
+  }
+}
