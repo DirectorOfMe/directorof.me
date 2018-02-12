@@ -1,18 +1,20 @@
-DAEMONTOOLS_SRC      ?= http://untroubled.org/daemontools-encore/daemontools-encore-1.10.tar.gz
-DAEMONTOOLS_CHECKSUM ?= a9b22e9eff5c690cd1c37e780d30cd78
-CURL                 ?= curl
+DAEMONTOOLS_SRC       ?= http://untroubled.org/daemontools-encore/daemontools-encore-1.10.tar.gz
+DAEMONTOOLS_CHECKSUM  ?= a9b22e9eff5c690cd1c37e780d30cd78
+CURL                  ?= curl
 
-SERVICE_NAME         ?=
-SERVICE_OWNER        ?=
-SERVICE_OWNER_UID    ?=
-SLASH_SERVICE_OWNER  ?= root
-REAL_LOG_DIR         ?= /var/log/service
+SERVICE_NAME          ?=
+SERVICE_OWNER         ?=
+SERVICE_OWNER_UID     ?=
+LOG_SERVICE_OWNER     ?=
+LOG_SERVICE_OWNER_UID ?=
+SLASH_SERVICE_OWNER   ?= root
+REAL_LOG_DIR          ?= /var/log/service
 
-RUN_FILE_TPL         ?=
-RUN_FILE_EXPORTS     ?=
+RUN_FILE_TPL          ?=
+RUN_FILE_EXPORTS      ?=
 
-LOG_RUN_FILE_TPL     ?= run.multilog
-LOG_RUN_FILE_EXPORTS ?= DAEMON_USER="$(SERVICE_OWNER)"
+LOG_RUN_FILE_TPL      ?= run.multilog
+LOG_RUN_FILE_EXPORTS  ?= DAEMON_USER="$(LOG_SERVICE_OWNER)"
 
 #### INSTALL BITS
 # TODO: check target to see if it exists
@@ -38,15 +40,21 @@ clean-service:
 	rm -rf service/
 
 .PHONY: real-log-dir
-real-log-dir: service-owner
+real-log-dir: service-owner log-service-owner
 	install -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0755 \
 			-d $(REAL_LOG_DIR)
-	install -o $(SLASH_SERVICE_OWNER) -g $(SERVICE_OWNER) -m 0775 \
+	install -o $(SLASH_SERVICE_OWNER) -g $(LOG_SERVICE_OWNER) -m 0775 \
 		    -d $(REAL_LOG_DIR)/$(SERVICE_NAME)
+	find $(REAL_LOG_DIR)/$(SERVICE_NAME) -mindepth 1 | \
+		xargs -r -- chown $(LOG_SERVICE_OWNER):$(LOG_SERVICE_OWNER)
 
 .PHONY: service-owner
 service-owner:
-	id $(SERVICE_OWNER) || useradd -u "$(SERVICE_OWNER_UID)" "$(SERVICE_OWNER)"
+	$(ADD_USER) "$(SERVICE_OWNER)" "$(SERVICE_OWNER_UID)"
+
+.PHONY: log-service-owner
+log-service-owner:
+	$(ADD_USER) "$(LOG_SERVICE_OWNER)" "$(LOG_SERVICE_OWNER_UID)"
 
 /service/.d: check-daemontools /service-versions/.d
 	install -d -o $(SLASH_SERVICE_OWNER) -g $(SLASH_SERVICE_OWNER) -m 0755 /service
