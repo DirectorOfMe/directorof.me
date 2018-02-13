@@ -1,32 +1,45 @@
-LIB_DIR         ?= ../
-SHARE_DIR       ?= ../../share/
+LIB_DIR           ?= ../
+SHARE_DIR         ?= ../../share/
 
 # these must be provided
-WEB_USER        ?=
-WEB_UID         ?=
-WEB_SERVER_NAME ?=
-WEB_CONF_DIR    ?=
-WEB_LOG_DIR     ?=
-WEB_FILES_DIR   ?=
-WEB_USE_SSL     ?=
+WEB_USER          ?=
+WEB_UID           ?=
+WEB_SERVER_NAME   ?=
+WEB_CONF_DIR      ?=
+WEB_LOG_DIR       ?=
+WEB_FILES_DIR     ?=
+WEB_USE_SSL       ?=
 
-PROXY_NAME      ?=
-PROXY_HOST      ?=
-PROXY_PORT      ?=
-WEB_LOCATION    ?=
+PROXY_NAME        ?=
+PROXY_HOST        ?=
+PROXY_PORT        ?=
+WEB_LOCATION      ?=
 
-RENDER_EXPORTS  ?= WEB_SERVER_NAME="$(WEB_SERVER_NAME)" \
-				   WEB_USER="$(WEB_USER)" \
-				   WEB_CONF_DIR="$(WEB_CONF_DIR)" \
-				   WEB_LOG_DIR="$(WEB_LOG_DIR)" \
-				   WEB_FILES_DIR="$(WEB_FILES_DIR)" \
-				   WEB_USE_SSL="$(WEB_USE_SSL)"
+INSTALL_WEB_PAGES ?= sh -c '\
+	dir_name=/var/www-versions/$$2_`date +%Y%m%d%H%M%S`; \
+		cp -rf $$1 $$dir_name && \
+		chown -R $(WEB_USER):$(WEB_USER) $$dir_name && \
+		find $$dir_name -type f | xargs -r -- chmod 0644 && \
+		find $$dir_name -type d | xargs -r -- chmod 0755 && \
+		ln -sf $$dir_name /var/www-versions/$$2 && \
+		mv /var/www-versions/$$2 /var/www/ && \
+		find /var/www-versions/ -mindepth 1 -maxdepth 1 \
+							    -name "$$2*" -not -name "$${dir_name\#\#*/}" \
+								-type d | xargs -r -- rm -rf;' install-web-pages
 
-PROXY_EXPORTS   ?= PROXY_NAME="$(PROXY_NAME)" \
-				   PROXY_HOST="$(PROXY_HOST)" \
-				   PROXY_PORT="$(PROXY_PORT)" \
-				   WEB_LOCATION="$(WEB_LOCATION)"
+RENDER_EXPORTS    ?= WEB_SERVER_NAME="$(WEB_SERVER_NAME)" \
+				     WEB_USER="$(WEB_USER)" \
+				     WEB_CONF_DIR="$(WEB_CONF_DIR)" \
+				     WEB_LOG_DIR="$(WEB_LOG_DIR)" \
+				     WEB_FILES_DIR="$(WEB_FILES_DIR)" \
+				     WEB_USE_SSL="$(WEB_USE_SSL)"
 
+PROXY_EXPORTS     ?= PROXY_NAME="$(PROXY_NAME)" \
+				     PROXY_HOST="$(PROXY_HOST)" \
+				     PROXY_PORT="$(PROXY_PORT)" \
+				     WEB_LOCATION="$(WEB_LOCATION)"
+
+#### Targets used by apps and apis
 .PHONY: install-proxy-conf
 install-proxy.conf: /etc/nginx/locations/.d proxy.conf
 	install -o root -g root -m 0644 proxy.conf \
@@ -36,6 +49,14 @@ install-proxy.conf: /etc/nginx/locations/.d proxy.conf
 proxy.conf: $(SHARE_DIR)/templates/nginx/locations/proxy.conf
 	$(PROXY_EXPORTS) $(RENDER) nginx/locations/proxy.conf > $@.tmp && mv $@.tmp $@
 
+.PHONY: install-www
+install-www: www/.d
+	$(INSTALL_WEB_PAGES) www $(WEB_LOCATION)
+
+www/.d:
+	mkdir www && touch $@;
+
+#### Targets used by main installer to configure nginx itself
 .PHONY: clean-proxy.conf
 clean-proxy.conf:
 	rm -f $@
@@ -82,24 +103,31 @@ configure-nginx: nginx \
 /var/log/nginx/.d:
 	sudo install -o root -g root -m 0755 -d /var/log/nginx && sudo touch $@
 
-/var/www/errors/%.html: $(SHARE_DIR)/web/errors/%.html /var/www/errors/.d web-user
-	sudo install -o root -g $(WEB_USER) -m 0644 $< $@
-
-/var/www/errors/.d: /var/www/.d web-user
-	sudo install -o root -g $(WEB_USER) -m 0755 -d /var/www/errors && sudo touch $@
-
-/var/www/.d: web-user
-	sudo install -o root -g $(WEB_USER) -m 0755 -d /var/www/ && sudo touch $@
-
-.PHONY: install-error-pages
-install-error-pages: /var/www/errors/404.html /var/www/errors/500.html
-
 /etc/nginx/sites-enabled/default.conf: /etc/nginx/sites-enabled/.d \
 									   install-error-pages \
 									   $(SHARE_DIR)/templates/nginx/default.conf
 	$(RENDER_EXPORTS) $(RENDER) nginx/default.conf | \
 		sudo sh -c 'cat > $@.tmp || rm $@.tmp'
 	sudo install -o root -g root -m 0644 $@.tmp $@; sudo rm -f $@.tmp
+
+.PHONY: install-error-pages
+install-error-pages: error-pages web-user /var/www-versions/.d
+	$(INSTALL_WEB_PAGES) www-errors errors
+
+.PHONY: error-pages
+error-pages: www-errors/404.html www-errors/500.html
+
+www-errors/%.html: $(SHARE_DIR)/web/errors/%.html www-errors/.d
+	install -m 0644 $< $@
+
+www-errors/.d:
+	mkdir -p www-errors && touch $@
+
+/var/www-versions/.d:
+	sudo install -o root -g $(WEB_USER) -m 0755 -d /var/www-versions/ && sudo touch $@
+
+/var/www/.d: web-user
+	sudo install -o root -g $(WEB_USER) -m 0755 -d /var/www/ && sudo touch $@
 
 .PHONY: web-user
 web-user:

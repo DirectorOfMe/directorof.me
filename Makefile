@@ -14,13 +14,13 @@ SUBMAKE             ?= sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd 
 
 # build targets
 .PHONY: default
-default: conf pip python py-libs apis apps jwt_keys
+default: conf pip python py-libs apis apps error-pages
 
 .PHONY: all
 all: default install upgrade-db
 
 .PHONY: dev
-dev: conf
+dev: conf jwt_keys self-signed-cert
 	$(SUBMAKE) dev $(APIS)
 
 .PHONY: python

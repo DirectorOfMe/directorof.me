@@ -29,12 +29,3 @@ app.json_encoder = json.JSONEncoder
 api = flask_restful.Api(app)
 db = SQLAlchemy(app, model_class=orm.Model)
 migrate = Migrate(app, db)
-
-from flask_restful import Resource
-from directorofme_flask_restful import resource_url
-
-@resource_url(api, "/hi/<string:name>/", endpoint="hi_api")
-class Hi(Resource):
-    def get(self, name):
-        return { "Hi": name }
-
