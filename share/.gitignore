@@ -1,3 +1,4 @@
 jwt_keys/
+ssl/
 !setup.py
 !setup.cfg

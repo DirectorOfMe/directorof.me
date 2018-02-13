@@ -15,6 +15,13 @@ PROXY_HOST        ?=
 PROXY_PORT        ?=
 WEB_LOCATION      ?=
 
+SSL_COUNTRY       ?=
+SSL_STATE         ?=
+SSL_LOCATION      ?=
+SSL_ORGANIZATION  ?=
+SSL_COMMON_NAME   ?=
+SSL_DH_PARAM_LEN  ?=
+
 INSTALL_WEB_PAGES ?= sh -c '\
 	dir_name=/var/www-versions/$$2_`date +%Y%m%d%H%M%S`; \
 		cp -rf $$1 $$dir_name && \
@@ -97,6 +104,33 @@ configure-nginx: nginx \
 /etc/nginx/sites-enabled/.d: /etc/nginx/.d
 	sudo install -o root -g root -m 0755 -d /etc/nginx/sites-enabled && sudo touch $@
 
+.PHONY: install-ssl
+install-ssl: /etc/nginx/ssl/nginx.crt \
+			 /etc/nginx/ssl/nginx.key \
+			 /etc/nginx/ssl/dhparam.pem
+
+/etc/nginx/ssl/%: $(SHARE_DIR)/ssl/% /etc/nginx/ssl/.d
+	sudo install -o root -g root -m 0600 $< $@
+
+/etc/nginx/ssl/.d:
+	sudo install -o root -g root -m 0700 -d /etc/nginx/ssl && sudo touch $@
+
+# SSL settings
+.PHONY: ssl
+ssl: $(SHARE_DIR)/ssl/dhparam.pem
+$(SHARE_DIR)/ssl/dhparam.pem: $(SHARE_DIR)/ssl/nginx.key
+	openssl dhparam -out $@ $(SSL_DH_PARAM_LEN)
+
+$(SHARE_DIR)/ssl/nginx.key: $(SHARE_DIR)/ssl/nginx.crt
+$(SHARE_DIR)/ssl/nginx.crt: $(SHARE_DIR)/ssl/.d
+	openssl req -x509 -nodes -sha256 -days 365 -newkey rsa:2048 \
+		 -keyout $(SHARE_DIR)/ssl/nginx.key \
+		 -out $@ -subj "/C=$(SSL_COUNTRY)/ST=$(SSL_STATE)/L=$(SSL_LOCATION)/O=$(SSL_ORGANIZATION)/CN=$(SSL_COMMON_NAME)"
+
+$(SHARE_DIR)/ssl/.d:
+	install -m 0700 -d $(SHARE_DIR)/ssl && touch $@
+
+
 /etc/nginx/.d:
 	sudo install -o root -g root -m 0755 -d /etc/nginx && sudo touch $@
 
@@ -104,7 +138,7 @@ configure-nginx: nginx \
 	sudo install -o root -g root -m 0755 -d /var/log/nginx && sudo touch $@
 
 /etc/nginx/sites-enabled/default.conf: /etc/nginx/sites-enabled/.d \
-									   install-error-pages \
+									   install-error-pages install-ssl \
 									   $(SHARE_DIR)/templates/nginx/default.conf
 	$(RENDER_EXPORTS) $(RENDER) nginx/default.conf | \
 		sudo sh -c 'cat > $@.tmp || rm $@.tmp'

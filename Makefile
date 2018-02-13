@@ -14,7 +14,7 @@ SUBMAKE             ?= sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd 
 
 # build targets
 .PHONY: default
-default: conf pip python py-libs apis apps error-pages
+default: conf pip python py-libs apis apps error-pages ssl
 
 .PHONY: all
 all: default install upgrade-db
