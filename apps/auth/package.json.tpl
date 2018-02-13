@@ -2,6 +2,7 @@
   "name": "auth",
   "version": "0.1.0",
   "private": true,
+  "homepage": "/{{ WEB_LOCATION }}/",
   "dependencies": {
     "history": "^4.7.2",
     "react": "^16.2.0",

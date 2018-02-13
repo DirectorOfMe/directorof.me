@@ -26,10 +26,11 @@ setup.cfg
 
 
 # Javascript
-apps/**/build
-apps/**/node_modules
-apps/**/package-lock.json
-apps/**/yarn.lock
+build
+node_modules
+package-lock.json
+yarn.lock
+coverage
 
 # Daemontools artifacts
 service

@@ -11,11 +11,11 @@ PKG_DEPS           ?= directorofme,\
 FLASK_APP          ?= $(PKG_NAME):app
 SERVICE_NAME       ?= $(PKG_NAME)
 
-SERVER_ADDR        ?= $(AUTH_SERVICE_ADDR)
-SERVER_PORT        ?= $(AUTH_SERVICE_PORT)
-SERVER_FORKS       ?= $(AUTH_SERVICE_FORKS)
-SERVICE_OWNER      ?= $(AUTH_SERVICE_USER)
-SERVICE_OWNER_UID  ?= $(AUTH_SERVICE_UID)
+SERVER_ADDR        ?= $(AUTH_API_SERVICE_ADDR)
+SERVER_PORT        ?= $(AUTH_API_SERVICE_PORT)
+SERVER_FORKS       ?= $(AUTH_API_SERVICE_FORKS)
+SERVICE_OWNER      ?= $(AUTH_API_SERVICE_USER)
+SERVICE_OWNER_UID  ?= $(AUTH_API_SERVICE_UID)
 
 PROXY_NAME         ?= $(PKG_NAME)
 PROXY_HOST         ?= $(SERVER_ADDR)
@@ -23,10 +23,10 @@ PROXY_PORT         ?= $(SERVER_PORT)
 #: TODO factor api part
 WEB_LOCATION       ?= /api/-/auth
 
-PSQL_DB            ?= $(AUTH_PSQL_DB)
-PSQL_USER          ?= $(AUTH_PSQL_USER)
-PSQL_PASSWORD      ?= $(AUTH_PSQL_PASSWORD)
-PSQL_HOST          ?= $(AUTH_PSQL_HOST)
+PSQL_DB            ?= $(AUTH_API_PSQL_DB)
+PSQL_USER          ?= $(AUTH_API_PSQL_USER)
+PSQL_PASSWORD      ?= $(AUTH_API_PSQL_PASSWORD)
+PSQL_HOST          ?= $(AUTH_API_PSQL_HOST)
 
 .PHONY: default
 default: build-setup-py gunicorn-service proxy.conf
