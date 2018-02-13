@@ -89,4 +89,5 @@ include $(LIB_DIR)/mk/service.mk
 include $(LIB_DIR)/mk/jwt.mk
 include $(LIB_DIR)/mk/web.mk
 include $(LIB_DIR)/mk/conf.mk
+include $(LIB_DIR)/mk/js.mk
 include directorofme.conf
