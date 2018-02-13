@@ -40,7 +40,7 @@ apps:
 
 # install targets
 .PHONY: install
-install: daemontools install-py-libs install-apis install-apps
+install: daemontools install-py-libs install-apis install-apps configure-nginx
 
 .PHONY: install-py-libs
 install-py-libs:

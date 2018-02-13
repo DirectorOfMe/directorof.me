@@ -1,4 +1,7 @@
 ### THESE MUST BE PROVIDED
+LIB_DIR          ?= ../
+SHARE_DIR        ?= ../../share/
+
 SERVER_ADDR      ?=
 SERVER_PORT      ?=
 SERVER_FORKS     ?=
