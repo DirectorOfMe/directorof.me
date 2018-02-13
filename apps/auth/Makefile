@@ -7,7 +7,7 @@ default: build/asset-manifest.json
 
 install: install-www
 
-clean: clean-yarn
+clean: clean-yarn clean-package.json
 
 include $(LIB_DIR)/mk/js.mk
 include $(LIB_DIR)/mk/web.mk

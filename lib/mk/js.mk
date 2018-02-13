@@ -13,6 +13,9 @@ build/asset-manifest.json: yarn.lock
 yarn.lock: package.json
 	yarn
 
+clean-package.json:
+	rm -f package.json
+
 package.json: package.json.tpl
 	$(PACKAGE_JSON_ENV) $(RENDER) ./$< > $@.tmp
 	mv $@.tmp $@
