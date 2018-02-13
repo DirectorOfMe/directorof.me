@@ -10,12 +10,35 @@ WEB_LOG_DIR     ?=
 WEB_FILES_DIR   ?=
 WEB_USE_SSL     ?=
 
+PROXY_NAME      ?=
+PROXY_HOST      ?=
+PROXY_PORT      ?=
+WEB_LOCATION    ?=
+
 RENDER_EXPORTS  ?= WEB_SERVER_NAME="$(WEB_SERVER_NAME)" \
 				   WEB_USER="$(WEB_USER)" \
 				   WEB_CONF_DIR="$(WEB_CONF_DIR)" \
 				   WEB_LOG_DIR="$(WEB_LOG_DIR)" \
 				   WEB_FILES_DIR="$(WEB_FILES_DIR)" \
 				   WEB_USE_SSL="$(WEB_USE_SSL)"
+
+PROXY_EXPORTS   ?= PROXY_NAME="$(PROXY_NAME)" \
+				   PROXY_HOST="$(PROXY_HOST)" \
+				   PROXY_PORT="$(PROXY_PORT)" \
+				   WEB_LOCATION="$(WEB_LOCATION)"
+
+.PHONY: install-proxy-conf
+install-proxy.conf: /etc/nginx/locations/.d proxy.conf
+	install -o root -g root -m 0644 proxy.conf \
+		/etc/nginx/locations/$(PROXY_NAME).conf
+	sudo service nginx restart
+
+proxy.conf: $(SHARE_DIR)/templates/nginx/locations/proxy.conf
+	$(PROXY_EXPORTS) $(RENDER) nginx/locations/proxy.conf > $@.tmp && mv $@.tmp $@
+
+.PHONY: clean-proxy.conf
+clean-proxy.conf:
+	rm -f $@
 
 .PHONY: configure-nginx
 configure-nginx: nginx \
@@ -46,6 +69,9 @@ configure-nginx: nginx \
 
 /etc/nginx/includes/.d:
 	sudo install -o root -g root -m 0755 -d /etc/nginx/includes && sudo touch $@
+
+/etc/nginx/locations/.d:
+	sudo install -o root -g root -m 0755 -d /etc/nginx/locations && sudo touch $@
 
 /etc/nginx/sites-enabled/.d: /etc/nginx/.d
 	sudo install -o root -g root -m 0755 -d /etc/nginx/sites-enabled && sudo touch $@

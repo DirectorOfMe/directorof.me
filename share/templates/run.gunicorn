@@ -18,4 +18,7 @@ export APP_DEBUG=TRUE
 exec setuidgid "$DAEMON_USER" \
        gunicorn -b "$SERVER_ADDR:$SERVER_PORT" \
                 -w "$NUMBER_OF_FORKS" \
+                --capture-output \
+                --access-logfile - \
+                --error-logfile - \
                 "$APP" 2>&1

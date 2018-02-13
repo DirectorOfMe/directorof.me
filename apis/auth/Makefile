@@ -17,19 +17,25 @@ SERVER_FORKS       ?= $(AUTH_SERVICE_FORKS)
 SERVICE_OWNER      ?= $(AUTH_SERVICE_USER)
 SERVICE_OWNER_UID  ?= $(AUTH_SERVICE_UID)
 
+PROXY_NAME         ?= $(PKG_NAME)
+PROXY_HOST         ?= $(SERVER_ADDR)
+PROXY_PORT         ?= $(SERVER_PORT)
+#: TODO factor api part
+WEB_LOCATION       ?= /api/auth
+
 PSQL_DB            ?= $(AUTH_PSQL_DB)
 PSQL_USER          ?= $(AUTH_PSQL_USER)
 PSQL_PASSWORD      ?= $(AUTH_PSQL_PASSWORD)
 PSQL_HOST          ?= $(AUTH_PSQL_HOST)
 
 .PHONY: default
-default: build-setup-py gunicorn-service
+default: build-setup-py gunicorn-service proxy.conf
 
 .PHONY: clean
-clean: clean-setup-py clean-postgresql clean-gunicorn-service
+clean: clean-setup-py clean-postgresql clean-gunicorn-service clean-proxy.conf
 
 .PHONY: install
-install: default install-setup-py install-gunicorn-service
+install: default install-setup-py install-gunicorn-service install-proxy.conf
 
 .PHONY: dev
 dev: postgresql
@@ -38,4 +44,5 @@ dev: postgresql
 test: run-flask-test-with-db
 
 include $(LIB_DIR)/mk/flask.mk
+include $(LIB_DIR)/mk/web.mk
 include ../../directorofme.conf
