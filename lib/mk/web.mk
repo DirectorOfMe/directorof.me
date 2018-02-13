@@ -14,6 +14,7 @@ PROXY_NAME        ?=
 PROXY_HOST        ?=
 PROXY_PORT        ?=
 WEB_LOCATION      ?=
+WEB_FILES_SRC     ?=
 
 SSL_COUNTRY       ?=
 SSL_STATE         ?=
@@ -57,11 +58,8 @@ proxy.conf: $(SHARE_DIR)/templates/nginx/locations/proxy.conf
 	$(PROXY_EXPORTS) $(RENDER) nginx/locations/proxy.conf > $@.tmp && mv $@.tmp $@
 
 .PHONY: install-www
-install-www: www/.d
-	$(INSTALL_WEB_PAGES) www $(WEB_LOCATION)
-
-www/.d:
-	mkdir www && touch $@;
+install-www:
+	$(INSTALL_WEB_PAGES) $(WEB_FILES_SRC) $(WEB_LOCATION)
 
 #### Targets used by main installer to configure nginx itself
 .PHONY: clean-proxy.conf
