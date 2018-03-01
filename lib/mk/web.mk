@@ -66,7 +66,7 @@ www/.d:
 #### Targets used by main installer to configure nginx itself
 .PHONY: clean-proxy.conf
 clean-proxy.conf:
-	rm -f $@
+	rm -f proxy.conf
 
 .PHONY: configure-nginx
 configure-nginx: nginx \

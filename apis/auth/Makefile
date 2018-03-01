@@ -21,7 +21,7 @@ PROXY_NAME         ?= $(PKG_NAME)
 PROXY_HOST         ?= $(SERVER_ADDR)
 PROXY_PORT         ?= $(SERVER_PORT)
 #: TODO factor api part
-WEB_LOCATION       ?= /api/auth
+WEB_LOCATION       ?= /api/-/auth
 
 PSQL_DB            ?= $(AUTH_PSQL_DB)
 PSQL_USER          ?= $(AUTH_PSQL_USER)
