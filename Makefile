@@ -10,7 +10,7 @@ PY_LIBS             ?= $(shell find $(LIB_DIR)/python -maxdepth 1 -mindepth 1 -t
 APIS                ?= $(shell find $(API_DIR) -maxdepth 1 -mindepth 1 -type d)
 APPS                ?= $(shell find $(APP_DIR) -maxdepth 1 -mindepth 1 -type d)
 
-SUBMAKE             ?= sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd $$dir && [ -f Makefile ] && { make $$target || exit $$?; }"; done' submake
+SUBMAKE             ?= sh -c 'target=$$1; shift; for dir in "$$@"; do sh -c "cd $$dir && [ -f Makefile ]  || exit 0; make $$target"; done' submake
 
 # build targets
 .PHONY: default
@@ -20,7 +20,7 @@ default: conf pip python py-libs apis apps error-pages ssl
 all: default install upgrade-db
 
 .PHONY: dev
-dev: conf jwt_keys self-signed-cert
+dev: conf jwt_keys install-ssl
 	$(SUBMAKE) dev $(APIS)
 
 .PHONY: python
