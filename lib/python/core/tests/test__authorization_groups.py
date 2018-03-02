@@ -125,7 +125,7 @@ class TestScope:
         two = Scope(name="test", __perms__=("two",))
 
         merged = one.merge(two)
-        assert merged.__perms__ == ("one", "two"), "both sets of permissions present"
+        assert sorted(merged.__perms__) == ["one", "two"], "both sets of permissions present"
         assert merged.perms["one"] is one.perms["one"], "permission one is correct"
         assert merged.perms["two"] is two.perms["two"], "permission two is correct"
 
