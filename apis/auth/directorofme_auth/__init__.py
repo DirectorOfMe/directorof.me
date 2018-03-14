@@ -5,13 +5,18 @@ authentication and authorization functionality for directorofme.
 @author: Matthew Story <matt@directorof.me>
 '''
 
-__all__ = [ "app", "api", "db", "migrate", "resources", "models" ]
+__all__ = [ "app", "api", "config", "db", "migrate", "resources", "models" ]
 
 # ORDER MATTERS HERE
-from .app import app, api, db, migrate
+from .config import config
+config = config()
 
-# TODO: Hook this back up
-# from . import resources
+from .models import db
 from . import models
+
+from .resources import api
+from . import resources
+
+from .app import app, migrate
 
 #TODO: add in JWT or OpenID based auth headers

@@ -7,5 +7,6 @@ __init__.py -- The directorofme_flask_restful package, extending the
 
 from . import fields
 from .utils import resource_url
+from .versioned_api import versioned_api
 
-__all__ = [ "fields", "resource_url" ]
+__all__ = [ "fields", "resource_url", "versioned_api" ]

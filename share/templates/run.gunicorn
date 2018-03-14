@@ -12,10 +12,8 @@ PSQL_HOST="{{ PSQL_HOST|default("localhost") }}"
 PSQL_DB="{{ PSQL_DB }}"
 PSQL_USER="{{ PSQL_USER }}:{{ PSQL_PASSWORD }}"
 
-export APP_DB_ENGINE="postgresql:///${PSQL_USER}@${PSQL_HOST}/${PSQL_DB}"
-export APP_DEBUG=TRUE
-
 exec setuidgid "$DAEMON_USER" \
+       env {{ FLASK_ENV_VARS }} \
        gunicorn -b "$SERVER_ADDR:$SERVER_PORT" \
                 -w "$NUMBER_OF_FORKS" \
                 --capture-output \

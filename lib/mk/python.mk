@@ -37,7 +37,7 @@ build/.d: setup.py $(PY_FILES) check-python3
 #TODO: automatically hook up py.test for projects
 .PHONY: run-py-test
 run-py-test: setup.py check-python3
-	$(PYTHON) setup.py test
+	PYTHONPATH=".:$$PYTHONPATH" $(PYTHON) setup.py test
 
 .PHONY: install-setup-py
 install-setup-py: setup.py build/.d check-python3

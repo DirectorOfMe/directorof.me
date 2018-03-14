@@ -8,7 +8,7 @@ from sqlalchemy_utils import UUIDType, generic_repr
 from directorofme.orm import Model
 from directorofme.authorization.groups import GroupTypes, Group as AuthGroup, Scope, scope
 
-from .. import db
+from . import db
 
 __all__ = [ "Group", "GroupTypes" ]
 

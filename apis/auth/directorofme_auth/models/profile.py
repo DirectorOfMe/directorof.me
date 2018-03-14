@@ -12,7 +12,7 @@ from sqlalchemy_utils import JSONType, EmailType, UUIDType, generic_repr
 from directorofme.orm import Model
 from directorofme.authorization.groups import scope
 
-from . import GroupTypes, Group, InstalledApp, License
+from . import GroupTypes, Group, License
 from .license import profiles_to_license
 from .exceptions import NoProfileError
 

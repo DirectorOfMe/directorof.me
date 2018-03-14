@@ -1,5 +1,10 @@
-__all__ = [ "Group", "GroupTypes", "License", "Profile", "App", "InstalledApp",
-            "exceptions" ]
+from flask_sqlalchemy import SQLAlchemy
+
+from directorofme import orm
+
+__all__ = ["db", "Group", "GroupTypes", "License", "Profile", "App", "InstalledApp", "exceptions"]
+
+db = SQLAlchemy(model_class=orm.Model)
 
 from . import exceptions
 from .group import Group, GroupTypes

@@ -16,8 +16,6 @@ class SessionInterface(FlaskSessionInterface):
             app=session.SessionApp(jwt_claims.get("app", {})),
             environment=jwt_claims.get("environment", {}))
 
-
-
     ###: TODO: this isn't setup
     def null_session(self, *args, **kwargs):
         return session.Session.anonymous()
