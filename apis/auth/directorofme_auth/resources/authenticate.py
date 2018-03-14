@@ -1,13 +1,17 @@
 import flask
+import itertools
 import functools
 
 from requests_oauthlib import OAuth2Session
 from flask_restful import Resource, fields, marshal_with, abort, reqparse
 from oauthlib.oauth2 import OAuth2Error
 
+from directorofme.authorization import session, groups
 from directorofme_flask_restful import resource_url
 
 from . import api, config
+from ..models import Profile
+from ..exceptions import EmailNotVerified, NoUserForEmail
 
 ### TODO: offline for integrations, but not for auth
 def with_service_client(fn):
@@ -43,19 +47,46 @@ class OAuthCallback(Resource):
             return abort(400, message=error)
 
         try:
-            email, verified = client.confirm_email(
-                client.session.fetch_token(
-                    client.token_url,
-                    client_secret=client.client_secret,
-                    authorization_response=flask.request.url))
-            if not verified:
-                abort(400, message="{} hasn't verified your email ({})".format(service, email))
-
+            email = self.get_verified_email(client)
+            session = self.make_session_from_email(email)
+            return session
             return { "email": email }
-
         except OAuth2Error as e:
             return abort(400, message=str(e))
+        except EmailNotVerified as e:
+            return abort(400, message="Email ({}) not verified".format(str(e)))
+        except NoUserForEmail as e:
+            return abort(404, message="No user associated with email ({})".format(email))
 
+    @staticmethod
+    def get_verified_email(client):
+        token = client.session.fetch_token(client.token_url, client_secret=client.client_secret,
+                                           authorization_response=flask.request.url)
+        email, verified = client.confirm_email(token)
+        if not verified:
+            raise EmailNotVerified(email)
+
+        return email
+
+    @staticmethod
+    def make_session_from_email(email):
+        ### TODO: build session token, set headers/cookies and return success
+        profile = Profile.query.filter(Profile.email == email).first()
+        if not profile:
+            raise NoUserForEmail(email)
+
+        primary_groups = [ profile.group_of_one ]
+        for license in profile.licenses:
+            primary_groups += license.groups
+        ### XXX: mix in app groups
+
+        return session.Session(
+            id=None, # XXX: get_jti
+            environment=profile.preferences or {},
+            profile=session.SessionProfile.from_conforming_type(profile),
+            groups=[groups.Group.from_conforming_type(g) for group in primary_groups for g in group.expand()],
+            app=None, # XXX: App
+        )
 
 class Client:
     def __init__(self, service, client_id, client_secret, auth_url, token_url, auth_kwargs, session_kwargs):

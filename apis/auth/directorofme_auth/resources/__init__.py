@@ -1,6 +1,9 @@
-from .. import config
+from directorofme.authorization.jwt import JWTManager
 from directorofme_flask_restful import versioned_api
+
+from .. import config
 api = versioned_api(config.get("API_NAME"))
+jwt = JWTManager()
 
 #from .group import Group
 #from .profile import Profile
@@ -10,4 +13,4 @@ api = versioned_api(config.get("API_NAME"))
 #from .authenticate import google
 from . import authenticate
 
-__all__ = [ "api", "Session", "Group", "Profile", "App", "InstalledApp", "License", "api", "autheticate" ]
+__all__ = [ "api", "jwt", "Session", "Group", "Profile", "App", "InstalledApp", "License", "api", "autheticate" ]

@@ -33,7 +33,9 @@ FLASK_ENV_VARS   ?= $(FLASK_EXTRA_VARS) \
 					FLASK_APP="$(FLASK_APP)" \
 				    APP_DB_ENGINE="$(APP_DB_ENGINE)" \
 					API_NAME="$(API_NAME)" \
-					SERVER_NAME="$(WEB_SERVER_NAME)"
+					SERVER_NAME="$(WEB_SERVER_NAME)" \
+					JWT_PUBLIC_KEY_FILE=$(SHARE_DIR)/$(KEY_DIR)/jwt_ec512_pub.pem \
+					JWT_PRIVATE_KEY_FILE=$(SHARE_DIR)/$(KEY_DIR)/jwt_ec512.pem
 FLASK            ?= $(FLASK_ENV_VARS) PYTHONPATH=".:$$PYTHONPATH" flask
 
 
@@ -105,3 +107,4 @@ clean-gunicorn-service: clean-service
 include $(LIB_DIR)/mk/service.mk
 include $(LIB_DIR)/mk/psql.mk
 include $(LIB_DIR)/mk/python.mk
+include $(LIB_DIR)/mk/jwt.mk

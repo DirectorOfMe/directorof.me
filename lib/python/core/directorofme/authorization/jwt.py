@@ -10,7 +10,8 @@ class SessionInterface(FlaskSessionInterface):
     def open_session(self, app, request):
         jwt_claims = jwt.get_jwt_claims()
         return session.Session(
-            id = uuid.UUID(jwt.get_jti()),
+            #id = uuid.UUID(jwt.get_jti()),
+            id=None,
             profile=session.SessionProfile(**jwt.get_jwt_identity()),
             groups=[session.SessionGroup(**g) for g in jwt_claims.get("groups", [])],
             app=session.SessionApp(jwt_claims.get("app", {})),

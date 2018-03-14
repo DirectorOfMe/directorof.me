@@ -27,6 +27,10 @@ class GroupTypes(enum.Enum):
     feature = 'f'
     data = 'd'
 
+    def __json_encode__(self):
+        return self.name
+
+
 ### TODO: docs
 class Group(Spec):
     name = Attribute(str, default=None)

@@ -13,6 +13,9 @@ def config():
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
             "PREFERRED_URL_SCHEME": "https",
             "SERVER_NAME": os.environ.get("SERVER_NAME"),
+            "JWT_PUBLIC_KEY_FILE": os.environ.get("JWT_PUBLIC_KEY_FILE"),
+            "JWT_PRIVATE_KEY_FILE": os.environ.get("JWT_PRIVATE_KEY_FILE"),
+            "IS_AUTH_SERVER": True
         },
 
         "API_NAME": os.environ.get("API_NAME"),

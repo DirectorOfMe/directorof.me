@@ -5,16 +5,17 @@ authentication and authorization functionality for directorofme.
 @author: Matthew Story <matt@directorof.me>
 '''
 
-__all__ = [ "app", "api", "config", "db", "migrate", "resources", "models" ]
+__all__ = [ "app", "api", "config", "db", "exceptions", "migrate", "resources", "models" ]
 
 # ORDER MATTERS HERE
+from . import exceptions
 from .config import config
 config = config()
 
 from .models import db
 from . import models
 
-from .resources import api
+from .resources import api, jwt
 from . import resources
 
 from .app import app, migrate

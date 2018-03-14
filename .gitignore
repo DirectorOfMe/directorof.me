@@ -16,5 +16,6 @@ setup.cfg
 *.tmp
 directorofme.conf
 .daemontools
+.pytest_cache
 www-errors
 www
