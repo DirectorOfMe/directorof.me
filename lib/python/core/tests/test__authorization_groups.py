@@ -1,11 +1,18 @@
 import pytest
+import json
 
+from directorofme.json import JSONEncoder
 from directorofme.authorization import standard_permissions
 from directorofme.authorization.groups import GroupTypes, Group, Scope, scope
 
-def test__GroupTypes_spec():
-    for kk, vv in {"system": "0", "scope": "s", "feature": "f", "data": "d"}.items():
-        assert getattr(GroupTypes, kk).value == vv, "scope prefix is correct"
+class TestGroupTypes:
+    def test__GroupTypes_spec(self):
+        for kk, vv in {"system": "0", "scope": "s", "feature": "f", "data": "d"}.items():
+            assert getattr(GroupTypes, kk).value == vv, "scope prefix is correct"
+
+    def test__GroupTypes_spec(self):
+        for name in ("system", "scope", "feature", "data"):
+            assert json.loads(json.dumps(getattr(GroupTypes, name), cls=JSONEncoder)) == name, "json encoding"
 
 class TestGroup:
     def test__init__(self):
