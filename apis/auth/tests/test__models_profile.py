@@ -2,9 +2,6 @@ import uuid
 
 import pytest
 
-from sqlalchemy import Column
-from sqlalchemy_utils import UUIDType
-
 from directorofme.testing import existing, commit_with_integrity_error
 
 from directorofme_auth.models import Profile, Group, GroupTypes, License
