@@ -9,6 +9,7 @@ from flask_restful import fields
 
 __all__ = [ "AttributedUrl", "ModelUrlList" ]
 
+### TODO: Test
 class ModelUrlList(fields.List):
     def __init__(self, *url_args, **url_kwargs):
         return super().__init__(fields.Url(*url_args, **url_kwargs))
