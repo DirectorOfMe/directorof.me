@@ -12,9 +12,10 @@ PSQL_DB          ?=
 PSQL_USER        ?=
 PSQL_PASSWORD    ?=
 PSQL_HOST        ?=
+EXTRA_PYTHONPATH ?=
 
 TEST_PSQL_DB     ?= $(PSQL_DB)-test
-TEST_MAKE        ?= PYTHONPATH=".:$$PYTHONPATH" PSQL_DB=$(TEST_PSQL_DB) $(MAKE)
+TEST_MAKE        ?= PYTHONPATH=".:$(EXTRA_PYTHONPATH):$$PYTHONPATH" PSQL_DB=$(TEST_PSQL_DB) $(MAKE)
 ### END
 
 ### Vars we need for this make file
@@ -36,7 +37,7 @@ FLASK_ENV_VARS   ?= $(FLASK_EXTRA_VARS) \
 					SERVER_NAME="$(WEB_SERVER_NAME)" \
 					JWT_PUBLIC_KEY_FILE=$(SHARE_DIR)/$(KEY_DIR)/jwt_ec512_pub.pem \
 					JWT_PRIVATE_KEY_FILE=$(SHARE_DIR)/$(KEY_DIR)/jwt_ec512.pem
-FLASK            ?= $(FLASK_ENV_VARS) PYTHONPATH=".:$$PYTHONPATH" flask
+FLASK            ?= $(FLASK_ENV_VARS) PYTHONPATH=".:$(EXTRA_PYTHONPATH):$$PYTHONPATH" flask
 
 
 ### Service bits
@@ -57,7 +58,7 @@ FLASK_PKG_DEPS  ?= $(SQLALCHEMY_DEPS),\
                    directorofme_flask_restful,\
                    flask==0.12.2,\
                    flask-restful==0.3.5,\
-                   flask-jwt-extended[asymmetric_crypto]>=3.6,\
+                   flask-jwt-extended[asymmetric_crypto]>=3.8.1,\
                    flask-sqlalchemy>=2.3.2,\
                    flask-migrate>=2.1.1,\
 				   gunicorn==19.7,\

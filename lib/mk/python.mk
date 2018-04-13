@@ -1,9 +1,10 @@
-PIP             ?= sudo pip3
-PYTHON          ?= python3
-SRC_DIR         ?= .
-LIB_DIR         ?= ../../lib
-SHARE_DIR       ?= ../../share
-TPL_DIR         ?= $(SHARE_DIR)/templates
+PIP              ?= sudo pip3
+PYTHON           ?= python3
+EXTRA_PYTHONPATH ?=
+SRC_DIR          ?= .
+LIB_DIR          ?= ../../lib
+SHARE_DIR        ?= ../../share
+TPL_DIR          ?= $(SHARE_DIR)/templates
 
 SQLALCHEMY_DEPS ?= psycopg2>=2.7.3,\
 				   sqlalchemy>=1.2,\
@@ -37,7 +38,7 @@ build/.d: setup.py $(PY_FILES) check-python3
 #TODO: automatically hook up py.test for projects
 .PHONY: run-py-test
 run-py-test: setup.py check-python3
-	PYTHONPATH=".:$$PYTHONPATH" $(PYTHON) setup.py test
+	PYTHONPATH=".:$(EXTRA_PYTHONPATH):$$PYTHONPATH" $(PYTHON) setup.py test
 
 .PHONY: install-setup-py
 install-setup-py: setup.py build/.d check-python3
