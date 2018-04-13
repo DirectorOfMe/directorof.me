@@ -1,4 +1,6 @@
 import typing
+import functools
+import operator
 
 __all__ = [ "Attribute", "AttributeMeta", "Spec", "undefaulted" ]
 
@@ -19,8 +21,14 @@ class Attribute:
         return self
 
 class AttributeMeta(type):
+    @staticmethod
+    def combine(name, dict_, bases):
+        return functools.reduce(operator.or_, [set(dict_.get(name, []))] + [getattr(b, name) for b in bases])
+
     def __new__(cls, name, bases, __dict__):
-        attrs = __dict__.setdefault("attributes", set())
+        attrs = __dict__["attributes"] = cls.combine("attributes", __dict__, bases)
+        __dict__["ignored"] = cls.combine("ignored", __dict__, bases)
+
         for attr_name, attr in __dict__.items():
             if isinstance(attr, Attribute):
                 attrs.add(attr_name)
@@ -30,7 +38,8 @@ class AttributeMeta(type):
 
 class Spec(metaclass=AttributeMeta):
     # convention
-    attributes = []
+    attributes = set()
+    ignored = set()
 
     def __init__(self, **kwargs):
         seen_attrs = set()
@@ -45,7 +54,7 @@ class Spec(metaclass=AttributeMeta):
                 setattr(self, unseen, attr.default)
 
     def __json_encode__(self):
-        return {name: getattr(self, name) for name in self.attributes}
+        return {name: getattr(self, name) for name in self.attributes - self.ignored}
 
     @classmethod
     def from_conforming_type(cls, model: typing.Any) -> typing.Any:

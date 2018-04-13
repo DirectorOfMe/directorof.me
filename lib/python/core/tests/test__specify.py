@@ -9,6 +9,10 @@ class Foo(Spec):
     typed_and_defaulted = Attribute(str, default="hi")
     defaulted = Attribute(default="hi")
 
+
+class FooIgnoredAttr(Foo):
+    ignored = ("attr",)
+
 class TestAttribute:
     def test__attr_contract(self):
         assert Foo.attr.type is None, "type defaults to None"
@@ -63,6 +67,9 @@ class TestSpec:
         kwargs = {name: name for name in self.attrs}
         assert kwargs == Foo(**kwargs).__json_encode__(), "encoder works"
 
+    def test__ignored(self):
+        kwargs = {name: name for name in self.attrs if name != "attr"}
+        assert kwargs == FooIgnoredAttr(**kwargs).__json_encode__(), "ignores works"
 
     def test__from_conforming_type(self):
         bar = Bar()
