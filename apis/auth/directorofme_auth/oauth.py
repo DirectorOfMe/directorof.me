@@ -33,12 +33,13 @@ class Client(metaclass=ClientMeta):
         return type(cls).registry.get(name)
 
     def __init__(self, callback_url, client_id, client_secret, auth_url, token_url, auth_kwargs,
-                 session_kwargs):
+                 session_kwargs, offline=False):
         self.client_id = client_id
         self.client_secret = client_secret
         self.auth_url = auth_url
         self.token_url = token_url
         self.auth_kwargs = auth_kwargs
+        self.offline = offline
 
         self.session = OAuth2Session(self.client_id, redirect_uri=callback_url, **session_kwargs)
 
@@ -62,17 +63,22 @@ class Google(Client):
     '''Google OAuth client, pulling from flask config'''
     name = "google"
 
-    def __init__(self, callback_url):
+    def __init__(self, callback_url, offline=False):
+        auth_kwargs = { "prompt": "consent" }
+        if offline:
+            auth_kwargs["access_type"] ="offline"
+
         super().__init__(
             callback_url,
             config.get("GOOGLE_CLIENT_ID"),
             config.get("GOOGLE_CLIENT_SECRET"),
             config.get("GOOGLE_AUTH_URL"),
             config.get("GOOGLE_TOKEN_URL"),
-            { "prompt": "select_account" },
+            auth_kwargs,
             { "scope": [ "https://www.googleapis.com/auth/userinfo.email",
                          "https://www.googleapis.com/auth/userinfo.profile" ]
-            }
+            },
+            offline=offline
         )
 
     def confirm_email(self, token=None):

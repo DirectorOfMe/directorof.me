@@ -13,15 +13,20 @@ def clean_clientmeta():
     original_registry = copy.deepcopy(type(Client).registry)
     yield
     type(Client).registry = original_registry
-@pytest.fixture
-def oauth_client():
+
+def _oauth_client(extra_kwargs=None):
     return Client(callback_url="https://example.com/us/callback",
                   client_id="client-id-123",
                   client_secret="client-secret",
                   auth_url="https://example.com/them/auth",
                   token_url="https://example.com/them/token",
                   auth_kwargs={},
-                  session_kwargs={})
+                  session_kwargs={},
+                  **(extra_kwargs or {}))
+
+@pytest.fixture
+def oauth_client():
+    return _oauth_client()
 
 @pytest.fixture
 def google_config():
@@ -42,7 +47,7 @@ class TestClient:
         assert Client.client_by_name("sub") is None, "no sub if not created yet"
 
         class SubClient(Client):
-            name = "sub" 
+            name = "sub"
         assert Client.client_by_name("sub") is SubClient, "SubClient registered properly"
 
         with pytest.raises(TypeError):
@@ -56,7 +61,10 @@ class TestClient:
         assert oauth_client.auth_url == "https://example.com/them/auth", "auth_url is set"
         assert oauth_client.token_url == "https://example.com/them/token", "token_url is set"
         assert oauth_client.auth_kwargs == {}, "auth_kwargs are set"
+        assert not oauth_client.offline, "offline defaults to False"
         assert isinstance(oauth_client.session, OAuth2Session), "session set"
+
+        assert _oauth_client({ "offline": True }).offline, "if offline passed, offline is set"
 
     def test__getattr__(self, oauth_client):
         with mock.patch("requests_oauthlib.OAuth2Session.get") as get:
@@ -95,8 +103,13 @@ class TestGoogle:
         assert client.client_secret == "google-secret", "google secret set from config"
         assert client.auth_url == "https://google.com/auth", "google auth_url set from config"
         assert client.token_url == "https://google.com/token", "google token_url set from config"
+        assert not client.offline, "offline defaults to False"
         assert tuple(client.auth_kwargs.keys()) == ("prompt",), "auth_kwargs set from config"
         SessionMock.assert_called_with(OAuth2Session, "google-id", redirect_uri="/callback", **google_scopes)
+
+        client = Google("/callback", offline=True)
+        assert client.offline, "offline set by __init__"
+        assert sorted(client.auth_kwargs.keys()) == ["access_type", "prompt"], "access_type sent with auth_kwargs"
 
     @mock.patch("requests_oauthlib.oauth2_session.OAuth2Session.__new__")
     def test__confirm_email(self, SessionMock, google_config):
