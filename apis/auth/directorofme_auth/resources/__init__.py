@@ -13,4 +13,4 @@ jwt = JWTManager()
 #from .authenticate import google
 from . import authenticate
 
-__all__ = [ "api", "jwt", "Session", "Group", "Profile", "App", "InstalledApp", "License", "api", "autheticate" ]
+__all__ = [ "api", "jwt", "Session", "Group", "Profile", "App", "InstalledApp", "License", "api", "authenticate" ]

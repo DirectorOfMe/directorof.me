@@ -1,10 +1,10 @@
-import json
 import flask
 import pytest
 
 from unittest import mock
 from flask_restful import Resource
 
+from directorofme.testing import dict_from_response
 from directorofme_flask_restful import resource_url, versioned_api
 
 def test__resource_url(app, api):
@@ -35,8 +35,7 @@ class TestVersionedApi:
 
         with app.test_client() as client:
             resp = client.get("/api/2/test/foo")
-            assert json.loads(resp.get_data().decode("utf-8")) == { "url": "/api/2/test/foo" }, \
-                   "url fetched correctly"
+            assert dict_from_response(resp) == { "url": "/api/2/test/foo" }, "url fetched correctly"
 
     def test__no_api_version(self, app, v_api):
         @resource_url(v_api, "/bar", endpoint="bar")
@@ -47,8 +46,7 @@ class TestVersionedApi:
 
         with app.test_client() as client:
             resp = client.get("/api/2/test/bar")
-            assert json.loads(resp.get_data().decode("utf-8")) == { "url": "/api/-/test/bar" }, \
-                   "url fetched correctly"
+            assert dict_from_response(resp) == { "url": "/api/-/test/bar" }, "url fetched correctly"
 
 
     def test__custom_setters_and_getters(self, app, api):
@@ -69,5 +67,4 @@ class TestVersionedApi:
             assert setter.called_with("2"), "setter called"
             assert getter.called, "getter was called"
 
-            assert json.loads(resp.get_data().decode("utf-8")) == { "url": "/api/custom/test/baz" }, \
-                   "url used custom getter correctly"
+            assert dict_from_response(resp) == { "url": "/api/custom/test/baz" }, "url used custom getter"

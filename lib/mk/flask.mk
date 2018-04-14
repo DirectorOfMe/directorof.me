@@ -90,7 +90,7 @@ db:
 
 .PHONY: run-flask-test
 run-flask-test:
-	APP_DB_ENGINE="$(APP_DB_ENGINE)" $(MAKE) run-py-test
+	$(FLASK_ENV_VARS) $(MAKE) run-py-test
 
 .PHONY: run-flask-test-with-db
 run-flask-test-with-db:

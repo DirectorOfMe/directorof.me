@@ -1,8 +1,6 @@
 import flask
-import flask_restful
 
 from werkzeug.contrib.fixers import ProxyFix
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
 from directorofme import json
@@ -30,8 +28,7 @@ app.register_blueprint(api.blueprint)
 db.init_app(app)
 db.app = app
 
-### XXX - Hook up
-#jwt.init_app(app)
-#jwt.app = app
+jwt.init_app(app)
+jwt.app = app
 
 migrate = Migrate(app, db)
