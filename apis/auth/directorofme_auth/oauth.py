@@ -1,3 +1,4 @@
+from flask_restful import reqparse
 from requests_oauthlib import OAuth2Session
 
 from . import config
@@ -49,6 +50,9 @@ class Client(metaclass=ClientMeta):
     def confirm_email(self, token=None):
         raise NotImplementedError("Subclass must implement")
 
+    def check_callback_request_for_errors(self, request):
+        raise NotImplementedError("Subclass must implement")
+
     def authorization_url(self):
         return self.session.authorization_url(self.auth_url, **self.auth_kwargs)[0]
 
@@ -85,3 +89,6 @@ class Google(Client):
         params = { "id_token": token.get("id_token") }
         id_ = self.get("https://www.googleapis.com/oauth2/v3/tokeninfo", params=params).json()
         return id_["email"], id_["email_verified"]
+
+    def check_callback_request_for_errors(self, request):
+        return request.args.get("error")

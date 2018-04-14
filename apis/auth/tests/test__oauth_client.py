@@ -1,4 +1,6 @@
 import pytest
+import flask
+import werkzeug
 import copy
 
 from unittest import mock
@@ -78,6 +80,10 @@ class TestClient:
         with pytest.raises(NotImplementedError):
             oauth_client.confirm_email()
 
+    def test__check_callback_request_for_errors(self, oauth_client):
+        with pytest.raises(NotImplementedError):
+            oauth_client.check_callback_request_for_errors(None)
+
     def test__authorization_url(self, oauth_client):
         with mock.patch("requests_oauthlib.OAuth2Session.authorization_url") as authorization_url:
             oauth_client.authorization_url()
@@ -96,8 +102,10 @@ class TestClient:
 
 
 class TestGoogle:
-    @mock.patch("requests_oauthlib.oauth2_session.OAuth2Session.__new__")
+    @mock.patch("requests_oauthlib.oauth2_session.OAuth2Session.__init__")
     def test__init__(self, SessionMock, google_config):
+        SessionMock.return_value = None
+
         client = Google("/callback")
         assert client.client_id == "google-id", "google id set from config"
         assert client.client_secret == "google-secret", "google secret set from config"
@@ -105,19 +113,19 @@ class TestGoogle:
         assert client.token_url == "https://google.com/token", "google token_url set from config"
         assert not client.offline, "offline defaults to False"
         assert tuple(client.auth_kwargs.keys()) == ("prompt",), "auth_kwargs set from config"
-        SessionMock.assert_called_with(OAuth2Session, "google-id", redirect_uri="/callback", **google_scopes)
+        SessionMock.assert_called_with("google-id", redirect_uri="/callback", **google_scopes)
 
         client = Google("/callback", offline=True)
         assert client.offline, "offline set by __init__"
         assert sorted(client.auth_kwargs.keys()) == ["access_type", "prompt"], "access_type sent with auth_kwargs"
 
-    @mock.patch("requests_oauthlib.oauth2_session.OAuth2Session.__new__")
-    def test__confirm_email(self, SessionMock, google_config):
+    def test__confirm_email(self, google_config):
         client = Google("/callback")
 
         ResponseMock = mock.MagicMock()
         ResponseMock.json.return_value =  { "email": "me@example.com", "email_verified": True }
-        client.session.get= mock.MagicMock()
+
+        client.session = mock.MagicMock()
         client.session.get.return_value = ResponseMock
 
         assert client.confirm_email(token={ "id_token": "token" }) == ("me@example.com", True), \
@@ -125,3 +133,11 @@ class TestGoogle:
         client.session.get.assert_called_with("https://www.googleapis.com/oauth2/v3/tokeninfo",
                                               params={ "id_token": "token" })
         assert ResponseMock.json.called, "json mock was correctly installed"
+
+    def test__check_callback_request_for_errors(self, request_context):
+        client = Google("/callback")
+        assert client.check_callback_request_for_errors(flask.request) is None, "no errors returns None"
+
+        flask.request.args = werkzeug.ImmutableMultiDict((("error", "Bad Error"),))
+        assert client.check_callback_request_for_errors(flask.request) == "Bad Error", \
+               "error msg returned when there is an error"
