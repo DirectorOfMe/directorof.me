@@ -30,6 +30,7 @@ def with_service_client(fn):
                                       "supported".format(service, supported_methods))
 
         callback_url = api.url_for(OAuthCallback, api_version="-", service=service, method=method, _external=True)
+        print(callback_url)
         return fn(obj, ClientForService(callback_url, offline=(method == "token")), method, *args, **kwargs)
 
     return inner

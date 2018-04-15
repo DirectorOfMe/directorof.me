@@ -12,7 +12,7 @@ PSQL_HOST="{{ PSQL_HOST|default("localhost") }}"
 PSQL_DB="{{ PSQL_DB }}"
 PSQL_USER="{{ PSQL_USER }}:{{ PSQL_PASSWORD }}"
 
-exec setuidgid "$DAEMON_USER" \
+exec setuidgid -s "$DAEMON_USER" \
        env {{ FLASK_ENV_VARS }} \
        gunicorn -b "$SERVER_ADDR:$SERVER_PORT" \
                 -w "$NUMBER_OF_FORKS" \

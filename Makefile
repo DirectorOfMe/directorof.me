@@ -23,7 +23,7 @@ SUBMAKE             ?= sh -c '\
 default: conf pip python yarn py-libs apis apps error-pages ssl
 
 .PHONY: all
-all: default install upgrade-db
+all: default install upgrade-app-dbs
 
 .PHONY: dev
 dev: conf jwt_keys install-ssl
@@ -46,7 +46,7 @@ apps:
 
 # install targets
 .PHONY: install
-install: daemontools install-py-libs install-apis install-apps configure-nginx
+install: daemontools install-py-libs install-jwt_keys install-apis install-apps configure-nginx
 
 .PHONY: install-py-libs
 install-py-libs:
@@ -79,9 +79,9 @@ clean-apis:
 .PHONY: clean-python
 clean-python: clean.requirements.out
 
-.PHONY: upgrade-db
-upgrade-db:
-	$(SUBMAKE) $@ $(APIS)
+.PHONY: upgrade-app-dbs
+upgrade-app-dbs:
+	$(SUBMAKE) upgrade-db $(APIS)
 
 .PHONY: conf
 conf: directorofme.conf
@@ -90,9 +90,7 @@ directorofme.conf: $(TPL_DIR)/directorofme.conf
 	RENDER_FLAGS="-p" $(RENDER) $@ > $@.tmp
 	mv $@.tmp $@
 
-include $(LIB_DIR)/mk/python.mk
-include $(LIB_DIR)/mk/service.mk
-include $(LIB_DIR)/mk/jwt.mk
+include $(LIB_DIR)/mk/flask.mk
 include $(LIB_DIR)/mk/web.mk
 include $(LIB_DIR)/mk/conf.mk
 include $(LIB_DIR)/mk/js.mk

@@ -5,6 +5,9 @@ CURL                  ?= curl
 SERVICE_NAME          ?=
 SERVICE_OWNER         ?=
 SERVICE_OWNER_UID     ?=
+SERVICE_OWNER_GROUPS  ?=
+SERVICE_OWNER_GIDS    ?=
+
 LOG_SERVICE_OWNER     ?=
 LOG_SERVICE_OWNER_UID ?=
 SLASH_SERVICE_OWNER   ?= root
@@ -50,7 +53,13 @@ real-log-dir: service-owner log-service-owner
 
 .PHONY: service-owner
 service-owner:
-	$(ADD_USER) "$(SERVICE_OWNER)" "$(SERVICE_OWNER_UID)"
+	awk -v groups="$(SERVICE_OWNER_GROUPS)" -v ids="$(SERVICE_OWNER_GIDS)" 'BEGIN { \
+		split(groups, g_array); \
+		split(ids, i_array); \
+		for (i in g_array) \
+			print(g_array[i], i_array[i]); \
+	}' | xargs sh -c 'getent group $$1 || addgroup --gid "$$2" "$$1"' worker
+	$(ADD_USER) "$(SERVICE_OWNER)" "$(SERVICE_OWNER_UID)" $(SERVICE_OWNER_GROUPS)
 
 .PHONY: log-service-owner
 log-service-owner:
