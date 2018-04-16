@@ -21,7 +21,7 @@ config = config()
 from .resources import api, jwt
 from . import resources
 
-app = flask_app.api(config)
+app = flask_app.api(config["name"], config)
 
 app.register_blueprint(api.blueprint)
 

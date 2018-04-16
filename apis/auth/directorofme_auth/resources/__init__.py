@@ -2,7 +2,7 @@ from directorofme.authorization.jwt import JWTManager
 from directorofme_flask_restful import versioned_api
 
 from .. import config
-api = versioned_api(config.get("API_NAME"))
+api = versioned_api(config.get("api_name"))
 jwt = JWTManager()
 
 #from .group import Group
