@@ -18,17 +18,15 @@ __all__ = [ "License" ]
 groups_to_license = Table(
     Model.prefix_name('group_to_license'),
     Model.metadata,
-    Column('license_id', UUIDType, ForeignKey(Model.prefix_name('license.id'))),
-    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')))
-)
+    Column('license_id', UUIDType, ForeignKey(Model.prefix_name('license.id')), nullable=False),
+    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False))
 
 profiles_to_license = Table(
     Model.prefix_name('profile_to_license'),
     Model.metadata,
-    Column('license_id', UUIDType, ForeignKey(Model.prefix_name('license.id'))),
-    Column('profile_id', UUIDType, ForeignKey(Model.prefix_name('profile.id'))),
-    Column('created', DateTime, default=func.now(), nullable=False)
-)
+    Column('license_id', UUIDType, ForeignKey(Model.prefix_name('license.id')), nullable=False),
+    Column('profile_id', UUIDType, ForeignKey(Model.prefix_name('profile.id')), nullable=False),
+    Column('created', DateTime, default=func.now(), nullable=False))
 
 @scope
 class License(Model):

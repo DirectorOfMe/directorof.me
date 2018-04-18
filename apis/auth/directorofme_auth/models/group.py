@@ -16,9 +16,8 @@ __all__ = [ "Group", "GroupTypes" ]
 group_to_group = Table(
     Model.prefix_name('group_to_group'),
     Model.metadata,
-    Column('parent_group_id', UUIDType, ForeignKey(Model.prefix_name('group.id'))),
-    Column('member_group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')))
-)
+    Column('parent_group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False),
+    Column('member_group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False))
 
 @scope
 @generic_repr("name")

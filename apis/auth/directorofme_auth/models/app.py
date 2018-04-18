@@ -13,14 +13,14 @@ __all__ = [ "App", "InstalledApp" ]
 requested_access_groups = Table(
     Model.prefix_name('requested_scopes'),
     Model.metadata,
-    Column('app_id', UUIDType, ForeignKey(Model.prefix_name('app.id'))),
-    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id'))))
+    Column('app_id', UUIDType, ForeignKey(Model.prefix_name('app.id')), nullable=False),
+    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False))
 
 granted_access_groups = Table(
     Model.prefix_name('granted_scopes'),
     Model.metadata,
-    Column('installed_app_id', UUIDType, ForeignKey(Model.prefix_name('installed_app.id'))),
-    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id'))))
+    Column('installed_app_id', UUIDType, ForeignKey(Model.prefix_name('installed_app.id')), nullable=False),
+    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False))
 
 @scope
 @slugify_on_change("name", "slug")
