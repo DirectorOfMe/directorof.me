@@ -117,7 +117,7 @@ class TestInstalledApp:
         assert existing(app, "name") is None, "no app pre-save"
 
         installed_app = InstalledApp(app=app)
-        installed_app.app == app, "app setup correctly"
+        assert installed_app.app == app, "app setup correctly"
         assert installed_app.app_id is None, "app_id None until saved"
         assert installed_app.id is None, "id None until saved"
 

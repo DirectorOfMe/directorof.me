@@ -8,13 +8,14 @@ from directorofme.authorization.jwt import JWTManager
 __all__ = [ "app", "db", "jwt", "migrate", "models" ]
 
 
-app = flask_app.api(os.path.basename(os.path.dirname(__file__)), {})
+app = flask_app.api(os.path.basename(os.path.dirname(__file__)), { "api_name": "event" })
 orm.Model.__tablename_prefix__ = app.name
 
 from . import models
 
 db = SQLAlchemy(model_class=orm.Model)
 db.init_app(app)
+db.app = app
 
 jwt = JWTManager()
 jwt.init_app(app)

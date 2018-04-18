@@ -12,6 +12,7 @@ __all__ = [ "EventType", "Event" ]
 
 #TODO: hook up to perms
 #TODO: hook up to app
+#TODO: tests
 
 @scope
 @slugify_on_change("name", "slug")
