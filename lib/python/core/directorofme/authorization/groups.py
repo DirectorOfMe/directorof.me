@@ -5,7 +5,8 @@ import slugify
 from ..specify import Spec, Attribute
 from ..authorization import standard_permissions
 
-__all__ = [ "GroupTypes", "Group", "Scope", "scope" ]
+__all__ = [ "GroupTypes", "Group", "Scope", "scope", "root", "admin", "nobody",\
+            "everybody", "user", "staff", "base_groups" ]
 
 class GroupTypes(enum.Enum):
     '''GroupTypes defines the three types of group that are available. Groups
@@ -42,6 +43,21 @@ class Group(Spec):
         # will throw if name is not set and either display name or type are not set
         self.name = self.generate_name()
 
+    def __str__(self):
+        return self.name
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        if not isinstance(other, Group):
+            return NotImplemented
+        return hash(self) == hash(other)
+
+    def __ne__(self, other):
+        ret = self.__eq__(other)
+        return ret if ret is NotImplemented else not ret
+
     def generate_name(self):
         if self.name is None:
             try:
@@ -72,8 +88,6 @@ class Scope(Spec):
                     display_name=self.perm_name(perm_name),
                     type=GroupTypes.scope
                 )
-
-
 
     def __getattr__(self, attr):
         try:
@@ -131,3 +145,13 @@ def scope(scope_name_or_cls):
     return inner
 
 scope.known_scopes = {}
+
+### Pre-defined groups
+root = Group(display_name="root", type=GroupTypes.system)
+admin = Group(display_name="admin", type=GroupTypes.system)
+nobody = Group(display_name="nobody", type=GroupTypes.system)
+everybody = Group(display_name="everybody", type=GroupTypes.system)
+user = Group(display_name="user", type=GroupTypes.feature)
+staff = Group(display_name="staff", type=GroupTypes.feature)
+
+base_groups = [ root, admin, nobody, everybody, user, staff ]

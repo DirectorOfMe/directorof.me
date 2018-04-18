@@ -18,34 +18,13 @@ depends_on = None
 from slugify import slugify
 
 from directorofme import orm
-from directorofme.authorization.groups import scope
-from directorofme_auth.models import Group, GroupTypes, License, Profile,\
-                                     App, InstalledApp
+from directorofme.authorization.groups import scope, base_groups, admin, staff
+from directorofme_auth.models import Group, GroupTypes, License, Profile, App, InstalledApp
 
 ### GROUPS
 # TODO: DEFAULT OWNERSHIP
 def build_groups():
-
-    groups = {
-        ### 0-root and 0-admin members can selectively skip access controls
-        # this group can never be added to a signed session
-        "0-root": Group(display_name="root", type=GroupTypes.system),
-        # group members of this group may temporarily add root to a session
-        "0-admin": Group(display_name="admin", type=GroupTypes.system),
-
-        # used to delete things, anybody can set to this group
-        "0-nobody": Group(display_name="nobody", type=GroupTypes.system),
-
-        # everybody, logged in or otherwise
-        "0-everybody": Group(display_name="everybody", type=GroupTypes.system),
-
-        # anyone with an account
-        "f-user": Group(display_name="user", type=GroupTypes.feature),
-
-        # dom admins
-        "f-dom-admin": Group(display_name="dom-admin", type=GroupTypes.feature)
-    }
-
+    groups = {g.name: Group(display_name=g.display_name, type=g.type) for g in base_groups}
     for s in scope.known_scopes.values():
         for g in Group.create_scope_groups(s):
             groups[g.name] = g
@@ -77,13 +56,13 @@ def build_profiles(groups, main_app):
 def build_dom_license(groups, profiles):
     # dom-admin license
     return License(
-        managing_group=groups["0-admin"],
-        groups=[groups["f-dom-admin"]],
+        managing_group=groups[admin.name],
+        groups=[groups[staff.name]],
         seats=-1,
         profiles=profiles,
         valid_through=None,
-        read=[groups["f-dom-admin"].name, groups["0-admin"].name],
-        write=[groups["0-admin"].name],
+        read=[staff.name, admin.name],
+        write=[admin.name],
         notes="License for site-admins."
     )
 

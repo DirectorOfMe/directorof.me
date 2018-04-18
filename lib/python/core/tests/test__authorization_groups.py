@@ -3,7 +3,8 @@ import json
 
 from directorofme.json import JSONEncoder
 from directorofme.authorization import standard_permissions
-from directorofme.authorization.groups import GroupTypes, Group, Scope, scope
+from directorofme.authorization.groups import GroupTypes, Group, Scope, scope, root, admin, nobody, \
+                                              everybody, user, staff, base_groups
 
 class TestGroupTypes:
     def test__GroupTypes_spec(self):
@@ -65,6 +66,28 @@ class TestGroup:
         with pytest.raises(ValueError):
             # test uninitialized type raises
             Group(**kwargs)
+
+    def test__str__(self):
+        group = Group(display_name="foo", type=GroupTypes.system)
+        assert str(group) == group.name, "str works"
+
+    def test__hash__(self):
+        group = Group(display_name="foo", type=GroupTypes.system)
+        assert group.__hash__() == hash(group.name), "hash function returns name"
+        assert group in {group}, "works with sets & dicts"
+
+    def test__eq___and___ne__(self):
+        group = Group(display_name="foo", type=GroupTypes.system)
+        group2 = Group(display_name="foo", type=GroupTypes.system)
+        other = Group(display_name="bar", type=GroupTypes.system)
+
+        assert group is not group2, "instances are different"
+        assert group == group2, "instances are equivalent"
+        assert not group == other, "different names are not equivalent"
+        assert group != other, "different names are !="
+
+        assert group.__eq__(object()) is NotImplemented, "__eq__ against object isn't implemented"
+        assert group.__ne__(object()) is NotImplemented, "__ne__ against object isn't implemented"
 
 class TestScope:
     def test__init__(self):
@@ -192,3 +215,13 @@ def test__scope_called_with_class():
            "scope called with model class shouldreturn the class"
     assert "model" in scope.known_scopes, \
            "class registration by __tablename__ attribute works"
+
+
+def test__base_groups():
+    assert set(base_groups) == {root, admin, nobody, everybody, user, staff}, "base groups has all base groups"
+    assert root.name == "0-root", "root name is correct"
+    assert admin.name == "0-admin", "admin name is correct"
+    assert nobody.name == "0-nobody", "admin name is correct"
+    assert everybody.name == "0-everybody", "admin name is correct"
+    assert user.name == "f-user", "admin name is correct"
+    assert staff.name == "f-staff", "staff name is correct"

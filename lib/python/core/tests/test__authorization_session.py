@@ -2,9 +2,29 @@ import pytest
 import uuid
 import json
 
-from directorofme.authorization.session import Session, SessionProfile, SessionApp
+import flask
+
+from unittest import mock
+
+from flask.sessions import SessionInterface
+
+from directorofme.authorization.session import Session, SessionProfile, SessionApp, SessionDecorator, \
+                                               do_with_groups, do_as_root
+from directorofme.authorization import groups
 from directorofme.json import JSONEncoder
 
+### Fixtures
+class TestSessionInterface(SessionInterface):
+    def open_session(self, *args):
+        return Session(save=False, app=None, profile=None, groups=[], environment={})
+
+@pytest.fixture
+def request_context_with_session(app):
+    app.session_interface = TestSessionInterface()
+    with app.test_request_context() as ctx:
+        yield ctx
+
+### Tests
 def test__SessionApp():
     assert SessionApp.attributes == {"id", "app_id", "app_name", "config"}, "attributes correct"
 
@@ -62,3 +82,89 @@ class TestSession:
         assert isinstance(session.profile, SessionProfile), "profile is set by overwrite"
         assert session.groups == [], "groups is set by overwrite"
         assert session.environment == {}, "environment is set by overwrite"
+
+class TestSessionDecorator:
+    def test__basic(self, request_context_with_session):
+        # basic
+        profile = mock.Mock()
+        decorator = SessionDecorator(profile=profile)
+        assert flask.session.profile is None, "profile is unset"
+        with decorator:
+            assert flask.session.profile is profile, "profile is set after entry"
+        assert flask.session.profile is None, "profile is unset"
+
+        # groups test
+        flask.session.groups.append(groups.everybody)
+        assert flask.session.groups == [groups.everybody], "only everybody in groups list"
+
+        decorator = SessionDecorator(groups=[groups.admin])
+        assert flask.session.groups == [groups.everybody], "only everybody in groups list when not in context"
+        with decorator:
+            assert set(flask.session.groups) == set([groups.admin, groups.everybody]), \
+                   "everybody in groups list in context"
+        assert flask.session.groups == [groups.everybody], "groups list correctly reset on exit"
+
+        decorator = SessionDecorator(extend_groups=False, groups=[groups.admin])
+        assert flask.session.groups == [groups.everybody], "groups list correctly reset on exit"
+        with decorator:
+            assert flask.session.groups == [groups.admin], "groups list replaced in context if asked to"
+
+        # different session
+        real_session = Session(groups=[], profile=None, environment={}, app=None, save=False)
+        assert flask.session.groups == [groups.everybody], "groups list correctly reset on exit"
+
+        decorator = SessionDecorator(extend_groups=True, groups=[groups.root], real_session=real_session)
+        with decorator:
+            assert flask.session.groups == [groups.everybody], "if flask is not the passed session, it's untouched"
+            assert real_session.groups == [groups.root], "real session modified"
+
+        assert real_session.groups == [], "real session reset after __exit__"
+        assert flask.session.groups == [groups.everybody], "flask session still unmodified"
+
+    def test__nested(self, request_context_with_session):
+        # not sure if there is a legit practical reason for this
+        decorator = SessionDecorator(groups=[groups.root])
+
+        flask.session.groups.append(groups.everybody)
+        assert flask.session.groups == [groups.everybody], "groups list correctly set"
+        with decorator:
+            assert set(flask.session.groups) == set([groups.everybody, groups.root]), "groups list correct"
+
+            with decorator:
+                assert set(flask.session.groups) == set([groups.everybody, groups.root]), \
+                       "groups list correct when nested"
+
+            assert set(flask.session.groups) == set([groups.everybody, groups.root]), \
+                   "groups list correct on first exit"
+
+        assert flask.session.groups == [groups.everybody], "groups list correctly reset on exit"
+
+    def test__as_decorator(self, request_context_with_session):
+        ensure_call = mock.Mock()
+
+        @SessionDecorator(groups=[groups.root])
+        def test_decoration():
+            assert flask.session.groups == [groups.root], "session modified in function"
+            ensure_call()
+
+        assert flask.session.groups == [], "list empty before test"
+
+        test_decoration()
+        assert ensure_call.called, "function was actually called"
+
+        assert flask.session.groups == [], "list empty after test"
+
+
+def test__do_with_groups(request_context_with_session):
+    assert flask.session.groups == [], "test set"
+    with do_with_groups(groups.root, groups.admin):
+        assert set(flask.session.groups) == set([groups.root, groups.admin]), "passed groups set by helper"
+    assert flask.session.groups == [], "test reset"
+
+
+def test__do_as_root(request_context_with_session):
+    assert flask.session.groups == [], "test set right"
+    with do_as_root:
+        flask.session.groups == [groups.root], "root installed"
+
+    assert flask.session.groups == [], "test reset"
