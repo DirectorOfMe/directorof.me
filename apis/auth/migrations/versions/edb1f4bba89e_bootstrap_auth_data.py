@@ -11,10 +11,13 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'edb1f4bba89e'
-down_revision = 'b4b5d1ef9c65'
+down_revision = '29b7f139356a'
 branch_labels = None
 depends_on = None
 
+from slugify import slugify
+
+from directorofme import orm
 from directorofme.authorization.groups import scope
 from directorofme_auth.models import Group, GroupTypes, License, Profile,\
                                      App, InstalledApp
@@ -55,7 +58,7 @@ def build_main_app(groups):
         name="Main",
         desc="DirectorOf.Me's main app. Everyone should have this installed.",
         url="/",
-        requested_access_groups = [groups["s-profile-read"]]
+        requested_access_groups = [groups["s-{}-read".format(slugify(orm.Model.prefix_name("profile")))]]
     )
 
 
@@ -88,8 +91,6 @@ def get_session():
     return sa.orm.session.Session(bind=op.get_bind())
 
 def upgrade():
-    ### HACK:
-    op.add_column('profile_to_license', sa.Column('created', sa.DateTime(), nullable=True))
     session = get_session()
     groups = build_groups()
     session.add_all(groups.values())
@@ -102,7 +103,6 @@ def upgrade():
 
     session.add(build_dom_license(groups, profiles))
     session.commit()
-    op.drop_column('profile_to_license', 'created')
 
 def downgrade():
     # TODO:

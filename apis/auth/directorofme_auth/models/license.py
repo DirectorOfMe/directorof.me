@@ -16,17 +16,17 @@ from . import Group
 __all__ = [ "License" ]
 
 groups_to_license = Table(
-    'group_to_license',
+    Model.prefix_name('group_to_license'),
     Model.metadata,
-    Column('license_id', UUIDType, ForeignKey('license.id')),
-    Column('group_id', UUIDType, ForeignKey('group.id'))
+    Column('license_id', UUIDType, ForeignKey(Model.prefix_name('license.id'))),
+    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')))
 )
 
 profiles_to_license = Table(
-    'profile_to_license',
+    Model.prefix_name('profile_to_license'),
     Model.metadata,
-    Column('license_id', UUIDType, ForeignKey('license.id')),
-    Column('profile_id', UUIDType, ForeignKey('profile.id')),
+    Column('license_id', UUIDType, ForeignKey(Model.prefix_name('license.id'))),
+    Column('profile_id', UUIDType, ForeignKey(Model.prefix_name('profile.id'))),
     Column('created', DateTime, default=func.now(), nullable=False)
 )
 

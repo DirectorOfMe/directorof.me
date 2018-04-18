@@ -1,12 +1,13 @@
+import pytest
+
+from unittest import mock
+
 from sqlalchemy import Column, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy_utils import UUIDType
 
 from directorofme import orm
-
-import pytest
-
 
 ### Fixtures
 class RandomPermission(orm.Permission):
@@ -29,6 +30,58 @@ class RandomlyPermissionedObject:
         self._RANDOMarandoma2 = None
         self._RANDOMarandoma3 = None
         self._RANDOMarandoma4 = None
+
+
+def test__slugify_on_change():
+    init_mock = mock.Mock()
+
+    @orm.slugify_on_change("name", "slug")
+    class Slugify(declarative_base()):
+        __tablename__ = "slugify_test"
+
+        name = Column(String, primary_key=True)
+        slug = Column(String)
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            init_mock()
+
+    @orm.slugify_on_change("name2", "slug2")
+    class SlugifyNoInit(Slugify):
+        name2 = Column(String)
+        slug2 = Column(String)
+
+
+    slugified = Slugify()
+    assert init_mock.called, "Slugify.__init__ was called"
+
+    assert slugified.name is None, "slug none if name not set"
+    assert slugified.slug is None, "slug none if name not set"
+
+    slugified.name = "test_Foo"
+    assert slugified.slug == "test-foo", "slugified name set to slug"
+    assert slugified.name == "test_Foo", "un-sluggified name set to name"
+
+    slugified.name = "test_Bar"
+    assert slugified.slug == "test-bar", "slugified name set on update to attr"
+
+    slugified = Slugify(name="test_Baz")
+    assert slugified.name == "test_Baz", "__init__ sets up name"
+    assert slugified.slug == "test-baz", "__init__ sets up slug when not passed"
+
+    slugified = Slugify(name="test_Foo_again", slug="slug")
+    assert slugified.slug == "test-foo-again", "passed slug is overridden by slugified name"
+
+    init_mock.reset_mock()
+    no_init = SlugifyNoInit(name="test_Name", name2="test_Name 2")
+    assert init_mock.called, "super().__init__ called by decorated sub-class"
+    assert no_init.slug2 == "test-name-2", "sub-class slugger works"
+
+    no_init.name2 = "test_Name2 again"
+    assert no_init.slug2 == "test-name2-again", "update works on superclass"
+
+    with pytest.raises(ValueError):
+        orm.slugify_on_change("name", "slugged")(declarative_base())
 
 class TestPermission:
     def test__is_abstract(self):
@@ -163,6 +216,19 @@ class TestPermissionedModelMeta:
             class ExtraPermissioned(Permissioned):
                 something_else = my_name_is
 
+    def test__tablename_prefix(self):
+        class NonPrefixedNonAbstract(Base):
+            __tablename__ = "non_prefixed"
+            id = Column(UUIDType, primary_key=True)
+
+        class PrefixedNonAbstract(Base):
+            __tablename__ = "test"
+            __tablename_prefix__ = "prefix"
+            id = Column(UUIDType, primary_key=True)
+
+        assert NonPrefixedNonAbstract.__tablename__ == "non_prefixed", "non-prefixed tablename works"
+        assert PrefixedNonAbstract.__tablename__ == "prefix_test", "prefixed tablename works"
+
 
 def test__PermissionedBase_works():
     perm = orm.GroupBasedPermission()
@@ -184,9 +250,41 @@ def test__PermissionedBase_works():
     assert concrete._permissions_read_1 == None, "permission attrs set correctly"
 
 
+class Prefixed(orm.PrefixedModel):
+    __tablename_prefix__ = "prefix"
+    __tablename__ = "test_prefix"
+    id = Column(UUIDType, primary_key = True)
+
+class NonPrefixed(orm.PrefixedModel):
+    __tablename__ = "test_non_prefixed"
+    id = Column(UUIDType, primary_key = True)
+
+class TestPrefixedModel:
+    def test__tablename_basic(self):
+        assert Prefixed.__tablename__ == "prefix_test_prefix", "PrefixedModel __tablename__ is prefixed"
+        assert NonPrefixed.__tablename__ == "test_non_prefixed", "NonPrefixedModel __tablename__ is not prefixed"
+
+    def test__version_table(self):
+        assert Prefixed.version_table() == "prefix_versions", "versions directory is prefixed"
+        assert NonPrefixed.version_table() == "versions", "versions directory is not prefixed"
+
+    def test__prefix_name(self):
+        assert Prefixed.prefix_name("foo") == "prefix_foo", "prefix_name with prefix set works"
+        assert NonPrefixed.prefix_name("foo") == "foo", "prefix_name without prefix works"
+
+    def test__include_symbol(self):
+        assert Prefixed.include_symbol("prefix_foo"), "prefixed tablename returns true"
+        assert not Prefixed.include_symbol("foo"), "non-prefixed tablename returns False"
+        assert not Prefixed.include_symbol("different_foo"), "differently prefixed tablename returns False"
+
+        assert NonPrefixed.include_symbol("prefix_foo"), "prefixed tablename returns true"
+        assert NonPrefixed.include_symbol("foo"), "non-prefixed tablename returns true"
+
+
 class Permed(orm.PermissionedModel):
     __tablename__ = "permisionedconcrete"
     id = Column(UUIDType, primary_key = True)
+
 
 class TestPermissionedModel:
     def test__PermissionedModel_contract(self):
@@ -195,6 +293,7 @@ class TestPermissionedModel:
         assert isinstance(Permed.delete, orm.GroupBasedPermission), "delete installed"
 
         concrete = Permed()
+        assert isinstance(concrete, orm.PrefixedModel), "permissionedmodel inherits prefixedmodel"
         concrete.read == tuple(), "read installed to instance"
         concrete.write == tuple(), "read installed to instance"
         concrete.delete == tuple(), "read installed to instance"

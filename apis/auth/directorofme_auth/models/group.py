@@ -14,10 +14,11 @@ __all__ = [ "Group", "GroupTypes" ]
 
 # through table for group -< groups
 group_to_group = Table(
-    'group_to_group',
+    Model.prefix_name('group_to_group'),
     Model.metadata,
-    Column('parent_group_id', UUIDType, ForeignKey('group.id')),
-    Column('member_group_id', UUIDType, ForeignKey('group.id')))
+    Column('parent_group_id', UUIDType, ForeignKey(Model.prefix_name('group.id'))),
+    Column('member_group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')))
+)
 
 @scope
 @generic_repr("name")
@@ -29,10 +30,10 @@ class Group(Model):
         UniqueConstraint("scope_name", "scope_permission"),
     )
     #: unique name of this :class:`.Group`, derived from Type/Display-Name
-    name = Column(String(34), unique=True, nullable=False, index=True)
+    name = Column(String(50), unique=True, nullable=False, index=True)
 
     #: user-defined name of this :class:`.Group`
-    display_name = Column(String(32), nullable=False)
+    display_name = Column(String(48), nullable=False)
 
     #: the group type determines which authorization objects are responsible
     #: for and authorized to add this group to a session.
@@ -43,17 +44,17 @@ class Group(Model):
     members = relationship(
         "Group",
         secondary=group_to_group,
-        primaryjoin="Group.id == group_to_group.c.parent_group_id",
-        secondaryjoin="Group.id == group_to_group.c.member_group_id",
+        primaryjoin="Group.id == {}.c.parent_group_id".format(Model.prefix_name("group_to_group")),
+        secondaryjoin="Group.id == {}.c.member_group_id".format(Model.prefix_name("group_to_group")),
         backref="member_of"
     )
 
     #: used by feature groups to identify a scope (realm) for discovery
-    scope_name = Column(String(34), nullable=True, index=True)
+    scope_name = Column(String(48), nullable=True, index=True)
 
     #: used by feature groups to identify the permission associated with this
     #: group/scope (realm) for discovery
-    scope_permission = Column(String(20), nullable=True)
+    scope_permission = Column(String(46), nullable=True)
 
     def __init__(self, *args, **kwargs):
         '''Standard Model setup + generate a URL safe name if we have enough

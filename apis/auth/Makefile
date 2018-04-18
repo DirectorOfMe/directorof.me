@@ -4,8 +4,7 @@ BIN_DIR              ?= ../../bin
 
 PKG_NAME             ?= directorofme_auth
 PKG_VERSION          ?= 0.1
-PKG_DEPS             ?= directorofme,\
-				        $(FLASK_PKG_DEPS),\
+PKG_DEPS             ?= $(FLASK_PKG_DEPS),\
 					    python-slugify>=1.2.4,\
 						requests-oauthlib>=0.8.0,
 

@@ -4,15 +4,47 @@ orm.py -- Auth support for a SQLAlchemy-based ORM.
 @author: Matt Story <matt.story@directorof.me>
 '''
 import uuid
+import functools
 
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy import Column, String
+from sqlalchemy.event import listen
 from sqlalchemy_utils import Timestamp, UUIDType, generic_repr
+from slugify import slugify
 
 from .authorization import standard_permissions
 
 __all__ = [ "Permission", "GroupBasedPermission", "PermissionedModelMeta",
-            "PermissionedModel", "Model" ]
+            "PrefixedModel", "PermissionedModel", "Model", "slugify_on_change" ]
+
+def slugify_on_change(src, target, default=True):
+    '''Class decorator that slugs an attribute when it changes and stores it
+       to another attribute. By default it will automatically initialize the
+       target value as well.
+
+       NB: this does not play well with abstract classes or inheritence, and should only be used by
+       concrete models.
+    '''
+    @functools.wraps(slugify_on_change)
+    def inner(cls):
+        if not hasattr(cls, "__table__") and not hasattr(cls, "__tablename__"):
+            raise ValueError("May not be used with non-concrete models")
+
+        old_init = cls.__init__
+        def __init__(self, *args, **kwargs):
+            old_init(self, *args, **kwargs)
+            src_value = getattr(self, src, None)
+
+            if src_value is not None:
+                setattr(self, target, slugify(src_value))
+
+        cls.__init__ = __init__
+
+        listen(getattr(cls, src), "set", lambda obj, v, x, y: setattr(obj, target, slugify(v)))
+        return cls
+
+    return inner
 
 class Permission:
     col_type = UUIDType
@@ -104,6 +136,15 @@ class PermissionedModelMeta(DeclarativeMeta):
 
         return super().__new__(cls, object_or_name, bases, __dict__)
 
+    def __init__(cls, object_or_name, bases, __dict__):
+        prefix = getattr(cls, "__tablename_prefix__", None)
+        table_name = getattr(cls, "__tablename__", None)
+
+        if prefix is not None and table_name is not None:
+            cls.__tablename__ = "_".join([prefix, table_name])
+
+        super().__init__(object_or_name, bases, __dict__)
+
     @classmethod
     def make_permissions(cls, perm):
         perms = {}
@@ -114,7 +155,29 @@ class PermissionedModelMeta(DeclarativeMeta):
 
 PermissionedBase = declarative_base(metaclass=PermissionedModelMeta)
 
-class PermissionedModel(PermissionedBase):
+class PrefixedModel(PermissionedBase):
+    __abstract__ = True
+    __tablename_prefix__ = None
+
+    @classmethod
+    def version_table(cls):
+        return cls.prefix_name("versions")
+
+    @classmethod
+    def include_symbol(cls, tablename, *args):
+        prefix = cls.__tablename_prefix__
+        if prefix:
+            return tablename.startswith("_".join([prefix, ""]))
+        return True
+
+    @classmethod
+    def prefix_name(cls, name):
+        prefix = cls.__tablename_prefix__
+        if prefix is not None:
+            return "_".join([prefix, name])
+        return name
+
+class PermissionedModel(PrefixedModel):
     __abstract__ = True
     __standard_permissions__ = True
 

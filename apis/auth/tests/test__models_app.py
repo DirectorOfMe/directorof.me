@@ -43,27 +43,6 @@ class TestApp:
 
         assert isinstance(app.id, uuid.UUID), "id set after commit"
 
-    def test__slug_autogenerates_when_name_set(self, db):
-        app = App()
-
-        assert app.name is None, "slug none if name not set"
-        assert app.slug is None, "slug none if name not set"
-
-        app.name = "test_Foo"
-        assert app.slug == "test-foo", "slugified name set to slug"
-        assert app.name == "test_Foo", "un-sluggified name set to name"
-
-        app.name = "test_Bar"
-        assert app.slug == "test-bar", "slugified name set on update to attr"
-
-        app = App(name="test_Baz")
-        assert app.name == "test_Baz", "__init__ sets up name"
-        assert app.slug == "test-baz", "__init__ sets up slug when not passed"
-
-        app = App(name="test_Foo_again", slug="slug")
-        assert app.slug == "test-foo-again", \
-               "passed slug is overridden by slugified name"
-
     def test__unique_name_and_slug(self, db):
         app = App(name="foo", desc="r", url="https://directorof.me/")
         assert existing(app, "name") is None, "app not saved"

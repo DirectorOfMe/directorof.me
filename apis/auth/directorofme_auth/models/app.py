@@ -1,10 +1,9 @@
 from sqlalchemy import Table, Column, String, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.event import listen
 from sqlalchemy_utils import URLType, JSONType, UUIDType
 from slugify import slugify
 
-from directorofme.orm import Model
+from directorofme.orm import Model, slugify_on_change
 from directorofme.authorization.groups import scope, Group as AuthGroup
 
 from . import Group
@@ -12,18 +11,19 @@ from . import Group
 __all__ = [ "App", "InstalledApp" ]
 
 requested_access_groups = Table(
-    'requested_scopes',
+    Model.prefix_name('requested_scopes'),
     Model.metadata,
-    Column('app_id', UUIDType, ForeignKey('app.id')),
-    Column('group_id', UUIDType, ForeignKey('group.id')))
+    Column('app_id', UUIDType, ForeignKey(Model.prefix_name('app.id'))),
+    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id'))))
 
 granted_access_groups = Table(
-    'granted_scopes',
+    Model.prefix_name('granted_scopes'),
     Model.metadata,
-    Column('installed_app_id', UUIDType, ForeignKey('installed_app.id')),
-    Column('group_id', UUIDType, ForeignKey('group.id')))
+    Column('installed_app_id', UUIDType, ForeignKey(Model.prefix_name('installed_app.id'))),
+    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id'))))
 
 @scope
+@slugify_on_change("name", "slug")
 class App(Model):
     '''An App is an application that can be installed and run on the DOM
        platform as an :class:`.InstalledApp`.
@@ -51,19 +51,10 @@ class App(Model):
     #: Groups this app would like to add into the session
     requested_access_groups = relationship("Group", secondary=requested_access_groups)
 
-    def __init__(self, *args, **kwargs):
-        '''Standard Model setup + generate a URL safe slug if we have enough
-           information to do so.
-        '''
-        super().__init__(*args, **kwargs)
-        self.slug = None if self.name is None else slugify(self.name)
-
     @property
     def requested_scopes(self):
         return Group.scopes(self.requested_access_groups)
 
-
-listen(App.name, "set", lambda app, v, x, y: setattr(app, "slug", slugify(v)))
 
 @scope
 class InstalledApp(Model):
