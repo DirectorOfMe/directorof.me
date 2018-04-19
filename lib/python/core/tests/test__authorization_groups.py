@@ -3,7 +3,7 @@ import json
 
 from directorofme.json import JSONEncoder
 from directorofme.authorization import standard_permissions
-from directorofme.authorization.groups import GroupTypes, Group, Scope, scope, root, admin, nobody, \
+from directorofme.authorization.groups import GroupTypes, Group, Scope, root, admin, nobody, \
                                               everybody, user, staff, base_groups
 
 class TestGroupTypes:
@@ -181,40 +181,6 @@ class TestScope:
                "take right-side display name if only right-side is set"
         assert display_named_one.merge(display_named_two).display_name == "two", \
                "take right-side display name if both are set"
-
-class Foo:
-    pass
-
-def test__scope_called_with_string():
-    assert "hi" not in scope.known_scopes
-    assert callable(scope("hi")), "scope with a name should return a decorator"
-    assert 'hi' in scope.known_scopes, "scope `hi` registered with known_scopes"
-
-    assert isinstance(scope.known_scopes["hi"], Scope), "`hi` is a scope"
-    assert scope.known_scopes["hi"].name == "hi", "`hi` Scope is named `hi`"
-
-    scope("foo")
-    foo_scope = scope.known_scopes["foo"]
-    assert scope("foo")(Foo) is Foo, "decorator returns class in tact"
-    assert scope.known_scopes["foo"] is foo_scope, \
-           "initial registration not overwritten by subsequent registration"
-
-class Bar:
-    pass
-
-class Modelish:
-    __tablename__ = "model"
-
-def test__scope_called_with_class():
-    assert "bar" not in scope.known_scopes
-    assert scope(Bar) is Bar, "scope called with class should return the class"
-    assert "bar" in scope.known_scopes, "scope registration by class name works"
-
-    assert "model" not in scope.known_scopes
-    assert scope(Modelish) is Modelish, \
-           "scope called with model class shouldreturn the class"
-    assert "model" in scope.known_scopes, \
-           "class registration by __tablename__ attribute works"
 
 
 def test__base_groups():

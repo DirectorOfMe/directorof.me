@@ -17,17 +17,16 @@ depends_on = None
 
 from slugify import slugify
 
-from directorofme import orm
-from directorofme.authorization.groups import scope, base_groups, admin, staff
+from directorofme.authorization import orm
+from directorofme.authorization.groups import base_groups, admin, staff
 from directorofme_auth.models import Group, GroupTypes, License, Profile, App, InstalledApp
 
 ### GROUPS
 # TODO: DEFAULT OWNERSHIP
 def build_groups():
     groups = {g.name: Group(display_name=g.display_name, type=g.type) for g in base_groups}
-    for s in scope.known_scopes.values():
-        for g in Group.create_scope_groups(s):
-            groups[g.name] = g
+    for g in Group.create_scope_groups(orm.Model.__scope__):
+        groups[g.name] = g
 
     return groups
 
@@ -37,7 +36,7 @@ def build_main_app(groups):
         name="Main",
         desc="DirectorOf.Me's main app. Everyone should have this installed.",
         url="/",
-        requested_access_groups = [groups["s-{}-read".format(slugify(orm.Model.prefix_name("profile")))]]
+        requested_access_groups = [groups["s-{}-read".format(slugify(orm.Model.__scope__.display_name))]]
     )
 
 

@@ -1,6 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-
-from directorofme import orm
+from directorofme.authorization import orm
 
 __all__ = ["db", "Group", "GroupTypes", "License", "Profile", "App", "InstalledApp", "exceptions"]
 

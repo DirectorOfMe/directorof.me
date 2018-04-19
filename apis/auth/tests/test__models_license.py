@@ -5,7 +5,7 @@ from directorofme.testing import existing, commit_with_integrity_error
 from directorofme_auth.models import License, Group, GroupTypes, Profile
 
 class TestModel:
-    def test__mininum_well_formed(self, db):
+    def test__mininum_well_formed(self, db, disable_permissions):
         group = Group(display_name="test", type=GroupTypes.feature)
         license = License(managing_group=group, seats=1)
 
@@ -21,7 +21,7 @@ class TestModel:
         assert license.notes == "", "notes defaults to empty string"
 
 
-    def test__required_fields(self, db):
+    def test__required_fields(self, db, disable_permissions):
         no_managing_group = License(seats=1)
         commit_with_integrity_error(db, no_managing_group)
 
@@ -53,7 +53,7 @@ class TestModel:
         db.session.commit()
         assert existing(no_notes).notes == "hi", "save works if notes set"
 
-    def test__groups(self, db):
+    def test__groups(self, db, disable_permissions):
         mgmt = Group(display_name="test", type=GroupTypes.data)
         license = License(seats=2, managing_group=mgmt)
 
@@ -71,7 +71,7 @@ class TestModel:
         assert from_db[1].name == "f-core", "group 1 corect"
 
 
-    def test__profiles_and_active_profiles(self, db):
+    def test__profiles_and_active_profiles(self, db, disable_permissions):
         mgmt = Group(display_name="test", type=GroupTypes.data)
         license = License(seats=2, managing_group=mgmt)
 

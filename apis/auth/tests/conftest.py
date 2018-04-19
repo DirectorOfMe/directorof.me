@@ -4,7 +4,8 @@ import requests
 
 from directorofme_auth import db as real_db, app
 from directorofme_auth.models import Group, GroupTypes, Profile
-from directorofme.testing import DBFixture
+from directorofme.testing import DBFixture, disable_permissions
+from directorofme.authorization.orm import Model
 
 # setup the db fixture
 # TODO: autouse?
@@ -29,3 +30,5 @@ def request_context():
 def test_client():
     with app.test_client() as client:
         yield client
+
+disable_permissions = pytest.fixture(disable_permissions)

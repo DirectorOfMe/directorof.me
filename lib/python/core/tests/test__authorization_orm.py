@@ -7,7 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy_utils import UUIDType
 
-from directorofme import orm
+from directorofme.authorization import orm
 
 ### Fixtures
 class RandomPermission(orm.Permission):

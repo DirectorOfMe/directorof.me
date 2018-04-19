@@ -5,8 +5,8 @@ from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.event import listen
 from sqlalchemy_utils import UUIDType, generic_repr
 
-from directorofme.orm import Model
-from directorofme.authorization.groups import GroupTypes, Group as AuthGroup, Scope, scope
+from directorofme.authorization.orm import Model
+from directorofme.authorization.groups import GroupTypes, Group as AuthGroup, Scope
 
 from . import db
 
@@ -19,7 +19,6 @@ group_to_group = Table(
     Column('parent_group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False),
     Column('member_group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False))
 
-@scope
 @generic_repr("name")
 class Group(Model):
     '''The basic building block of access control.'''

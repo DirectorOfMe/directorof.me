@@ -6,7 +6,7 @@ from directorofme.testing import existing, commit_with_integrity_error
 from directorofme_auth.models import Group, GroupTypes
 
 class TestGroup:
-    def test__mininum_well_formed(self, db):
+    def test__mininum_well_formed(self, db, disable_permissions):
         group = Group(display_name="test", type=GroupTypes.feature)
         assert group.display_name == "test", "display_name set"
         assert group.type == GroupTypes.feature, "type set"
@@ -18,7 +18,7 @@ class TestGroup:
 
         assert isinstance(group.id, uuid.UUID), "id set after commit"
 
-    def test__name_auto_generates_when_display_name_and_type_set(self, db):
+    def test__name_auto_generates_when_display_name_and_type_set(self, db, disable_permissions):
         incomplete = Group()
         assert incomplete.name is None, "name is none when neither is set"
 
@@ -44,7 +44,7 @@ class TestGroup:
         named_two.type = GroupTypes.feature
         assert named_two.name == "different-two", "observer doesn't change name"
 
-    def test__unique_name(self, db):
+    def test__unique_name(self, db, disable_permissions):
         assert Group.query.filter(Group.name == "name").first() is None, \
                "no group with name name"
 
@@ -56,7 +56,7 @@ class TestGroup:
         db.session.add(Group(name="name", display_name="no", type=GroupTypes.data))
         commit_with_integrity_error(db)
 
-    def test__unique_display_name_and_type(self, db):
+    def test__unique_display_name_and_type(self, db, disable_permissions):
         assert Group.query.filter(Group.name == "uniq").first() is None, \
                "uniq group does not exist"
         assert Group.query.filter(
@@ -74,7 +74,7 @@ class TestGroup:
         db.session.add(Group(name="uniq2", display_name="test", type=GroupTypes.data))
         commit_with_integrity_error(db)
 
-    def test__required_fields(self, db):
+    def test__required_fields(self, db, disable_permissions):
         # missing type
         commit_with_integrity_error(db, Group(name="hi", display_name="hi"))
 
@@ -85,7 +85,7 @@ class TestGroup:
         nameless.name = None
         commit_with_integrity_error(db, nameless)
 
-    def test__members_and_members_of(self, db):
+    def test__members_and_members_of(self, db, disable_permissions):
         assert Group.query.filter(
             Group.display_name.like("child-%")
         ).first() is None, "no children in DB"
@@ -110,7 +110,7 @@ class TestGroup:
         db.session.commit()
         assert parent2.members == parent.members, "setting parent on child works"
 
-    def test__slugify_name(self, db):
+    def test__slugify_name(self, db, disable_permissions):
         group = Group()
         assert group.slugify_name() is None, "nothing set, nothign passed is None"
 
@@ -146,7 +146,7 @@ class TestGroup:
         assert group.name is None, "no side-effects"
         assert group.display_name == "foo", "no side-effects"
 
-    def test__scope(self, db):
+    def test__scope(self, db, disable_permissions):
         scoped = Group(display_name="not_scoped", type=GroupTypes.data)
         assert scoped.scope() is None, "missing scope & scope_perimssion returns None"
 
@@ -165,7 +165,7 @@ class TestGroup:
         assert scope_.perms["test"].name == scoped.name, "group installed"
 
 
-    def test__scopes(self, db):
+    def test__scopes(self, db, disable_permissions):
         assert Group.scopes([]) == [], "empty groups list returns empty scopes list"
         assert Group.scopes([Group(display_name="dom", type=GroupTypes.data)]) == [],\
                "Groups with no scope returns empty list"
@@ -209,7 +209,7 @@ class TestGroup:
                             ("this", two_scopes_groups[3])):
             assert two_scopes[1].perms[perm].name == group.name, "groups installed"
 
-    def test__expand(self, db):
+    def test__expand(self, db, disable_permissions):
         dom = Group(display_name="dom", type=GroupTypes.data)
         dom_employees = Group(display_name="dom-emp", type=GroupTypes.data)
         dom_employees.member_of = [dom]
@@ -239,7 +239,7 @@ class TestGroup:
         assert list(dom_prog.expand(max_depth=2).order_by(Group.name)) == expanded, \
                "max_depth 2 restricts to self and parents"
 
-    def test__expand_does_not_infinitely_recurse(self, db):
+    def test__expand_does_not_infinitely_recurse(self, db, disable_permissions):
         everybody = Group(display_name="everybody", type=GroupTypes.data)
         anybody = Group(display_name="anybody", type=GroupTypes.data)
 
@@ -257,7 +257,7 @@ class TestGroup:
         assert list(anybody.expand().order_by(Group.name)) == [anybody, everybody],\
                "expand does not infinitely recurse when there are cycles"
 
-    def test__create_scope_groups(self, db):
+    def test__create_scope_groups(self, db, disable_permissions):
         scope_groups = Group.create_scope_groups(Scope(display_name="test-scope"))
         db.session.add_all(scope_groups)
 

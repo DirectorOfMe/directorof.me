@@ -9,6 +9,7 @@ def config():
         "GOOGLE_CLIENT_SECRET": os.environ.get("GOOGLE_CLIENT_SECRET"),
         "GOOGLE_AUTH_URL": os.environ.get("GOOGLE_AUTH_URL"),
         "GOOGLE_TOKEN_URL": os.environ.get("GOOGLE_TOKEN_URL"),
+        "MODELS_SCOPE_NAME": "auth"
     })
 
     return dflt

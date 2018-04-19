@@ -125,27 +125,6 @@ class Scope(Spec):
         # return a new scope
         return self.__class__(**new_kwargs)
 
-def scope(scope_name_or_cls):
-    scope_name = scope_name_or_cls
-    if callable(scope_name_or_cls):
-        scope_name = getattr(
-            scope_name_or_cls,
-            "__tablename__",
-            scope_name_or_cls.__name__
-        )
-
-        # recurse
-        return scope(scope_name)(scope_name_or_cls)
-
-    new_scope = Scope(display_name=scope_name)
-    scope.known_scopes.setdefault(new_scope.name, new_scope)
-    ###: TODO hook this up to do authorization things
-    def inner(cls):
-        return cls
-    return inner
-
-scope.known_scopes = {}
-
 ### Pre-defined groups
 root = Group(display_name="root", type=GroupTypes.system)
 admin = Group(display_name="admin", type=GroupTypes.system)

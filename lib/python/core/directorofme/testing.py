@@ -3,6 +3,8 @@ import json
 import pytest
 import sqlalchemy
 
+from .authorization.orm import Model
+
 # TODO ironically, tests
 __all__ = [ "DBFixture", "existing", "commit_with_integrity_error", "dict_from_response" ]
 
@@ -57,3 +59,13 @@ def existing(model, query_on="id"):
 
 def dict_from_response(response):
     return json.loads(response.get_data().decode("utf-8"))
+
+
+def disable_permissions():
+    def false():
+        return False
+
+    original_checker = Model.permissions_enabled
+    Model.permissions_enabled = false
+    yield
+    Model.original_checker= original_checker

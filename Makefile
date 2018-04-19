@@ -79,6 +79,21 @@ clean-apis:
 .PHONY: clean-python
 clean-python: clean.requirements.out
 
+.PHONY: test
+test: test-libs test-apps test-apis
+
+.PHONY: test-libs
+test-libs:
+	$(SUBMAKE) test $(PY_LIBS)
+
+.PHONY: test-apps
+test-libs:
+	$(SUBMAKE) test $(APPS)
+
+.PHONY: test-apis
+test-libs:
+	$(SUBMAKE) test $(APIS)
+
 .PHONY: upgrade-app-dbs
 upgrade-app-dbs:
 	$(SUBMAKE) upgrade-db $(APIS)

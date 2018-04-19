@@ -28,7 +28,7 @@ def scopes_helper(cls, group_attr, scope_attr):
 
 
 class TestApp:
-    def test__mininum_well_formed(self, db):
+    def test__mininum_well_formed(self, db, disable_permissions):
         app = App(name="test", desc="test app", url="https://directorof.me/")
         assert app.name == "test", "name set"
         assert app.slug == "test", "slug generated from name by __init__"
@@ -43,7 +43,7 @@ class TestApp:
 
         assert isinstance(app.id, uuid.UUID), "id set after commit"
 
-    def test__unique_name_and_slug(self, db):
+    def test__unique_name_and_slug(self, db, disable_permissions):
         app = App(name="foo", desc="r", url="https://directorof.me/")
         assert existing(app, "name") is None, "app not saved"
 
@@ -64,7 +64,7 @@ class TestApp:
         assert existing(app_duplicate_slug, "name") is None, "name is unique"
         commit_with_integrity_error(db, app_duplicate_slug)
 
-    def test__required_fields(self, db):
+    def test__required_fields(self, db, disable_permissions):
         #: TODO - factor this
         missing_name = App(slug="foo", desc="r", url="https://directorof.me/")
         assert existing(missing_name, "slug") is None, "slug is unique"
@@ -107,12 +107,12 @@ class TestApp:
         assert existing(missing_url, "name").url == "https://example.com/", \
                "save works if url set"
 
-    def test__requested_scopes(self, db):
+    def test__requested_scopes(self, db, disable_permissions):
         scopes_helper(App, "requested_access_groups", "requested_scopes")
 
 
 class TestInstalledApp:
-    def test__minimum_well_formed(self, db):
+    def test__minimum_well_formed(self, db, disable_permissions):
         app = App(name="test", desc="test app", url="https://directorof.me/")
         assert existing(app, "name") is None, "no app pre-save"
 
@@ -127,7 +127,7 @@ class TestInstalledApp:
         assert isinstance(installed_app.id, uuid.UUID), "id set after commit"
         assert isinstance(app.id, uuid.UUID), "id set after commit"
 
-    def test__required_fields(self, db):
+    def test__required_fields(self, db, disable_permissions):
         missing_app = InstalledApp()
         assert existing(missing_app, "app") is None, "app does not exist"
         commit_with_integrity_error(db, missing_app)
@@ -137,10 +137,10 @@ class TestInstalledApp:
         db.session.commit()
         assert existing(missing_app, "app").app.name == "test", "works if app set"
 
-    def test__scopes(self, db):
+    def test__scopes(self, db, disable_permissions):
         scopes_helper(InstalledApp, "access_groups", "scopes")
 
-    def test__install_for_group(self, db):
+    def test__install_for_group(self, db, disable_permissions):
         # basic setup
         owner = Group(display_name="tester", type=GroupTypes.data)
         app = App(name="basic", desc="basic app", url="http://example.com")

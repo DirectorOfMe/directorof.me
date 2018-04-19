@@ -8,6 +8,9 @@ Create Date: 2018-04-18 01:44:40.701239
 from alembic import op
 import sqlalchemy as sa
 
+from directorofme.authorization.orm import Model
+
+###: TODO add scope via API call to scope endpoint
 
 # revision identifiers, used by Alembic.
 revision = '2ff0ef4fc4ef'
@@ -21,12 +24,12 @@ def upgrade():
     op.create_table('directorofme_event_event_type',
     sa.Column('created', sa.DateTime(), nullable=False),
     sa.Column('updated', sa.DateTime(), nullable=False),
-    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_write_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_write_1', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_delete_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_delete_1', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_0', sa.String(length=50), nullable=True),
+    sa.Column('_permissions_read_1', sa.String(length=50), nullable=True),
+    sa.Column('_permissions_write_0', sa.String(length=50), nullable=True),
+    sa.Column('_permissions_write_1', sa.String(length=50), nullable=True),
+    sa.Column('_permissions_delete_0', sa.String(length=50), nullable=True),
+    sa.Column('_permissions_delete_1', sa.String(length=50), nullable=True),
     sa.Column('id', sa.dialects.postgresql.UUID(), nullable=False),
     sa.Column('name', sa.String(length=50), nullable=False),
     sa.Column('slug', sa.String(length=50), nullable=False),
@@ -45,12 +48,12 @@ def upgrade():
     op.create_table('directorofme_event_event',
     sa.Column('created', sa.DateTime(), nullable=False),
     sa.Column('updated', sa.DateTime(), nullable=False),
-    sa.Column('_permissions_read_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_read_1', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_write_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_write_1', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_delete_0', sa.String(length=20), nullable=True),
-    sa.Column('_permissions_delete_1', sa.String(length=20), nullable=True),
+    sa.Column('_permissions_read_0', sa.String(length=50), nullable=True),
+    sa.Column('_permissions_read_1', sa.String(length=50), nullable=True),
+    sa.Column('_permissions_write_0', sa.String(length=50), nullable=True),
+    sa.Column('_permissions_write_1', sa.String(length=50), nullable=True),
+    sa.Column('_permissions_delete_0', sa.String(length=50), nullable=True),
+    sa.Column('_permissions_delete_1', sa.String(length=50), nullable=True),
     sa.Column('id', sa.dialects.postgresql.UUID(), nullable=False),
     sa.Column('event_type_id', sa.dialects.postgresql.UUID(), nullable=False),
     sa.Column('event_time', sa.DateTime(), nullable=False),
@@ -65,6 +68,10 @@ def upgrade():
     op.create_index(op.f('ix_directorofme_event_event__permissions_write_0'), 'directorofme_event_event', ['_permissions_write_0'], unique=False)
     op.create_index(op.f('ix_directorofme_event_event__permissions_write_1'), 'directorofme_event_event', ['_permissions_write_1'], unique=False)
     # ### end Alembic commands ###
+
+    session = sa.orm.session.Session(bind=op.get_bind())
+    session.commit()
+
 
 
 def downgrade():

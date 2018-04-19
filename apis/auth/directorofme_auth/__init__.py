@@ -4,15 +4,22 @@ authentication and authorization functionality for directorofme.
 
 @author: Matthew Story <matt@directorof.me>
 '''
+import flask
+
 from flask_migrate import Migrate
-from directorofme import flask_app, orm
+from directorofme import flask_app
+from directorofme.authorization import groups, orm
 
 __all__ = [ "app", "api", "config", "db", "exceptions", "jwt", "migrate", "resources", "models" ]
 
 # ORDER MATTERS HERE
 from .config import config
 config = config()
+
+###: TODO: this should be factored to a flask app ext or base model factory
 orm.Model.__tablename_prefix__ = config["name"]
+orm.Model.__scope__ = groups.Scope(display_name=config["name"])
+orm.Model.load_groups = orm.Model.load_groups_from_flask_session
 
 from . import exceptions
 from .models import db

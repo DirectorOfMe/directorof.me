@@ -6,14 +6,16 @@ orm.py -- Auth support for a SQLAlchemy-based ORM.
 import uuid
 import functools
 
+import flask
+
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, or_, orm
 from sqlalchemy.event import listen
 from sqlalchemy_utils import Timestamp, UUIDType, generic_repr
 from slugify import slugify
 
-from .authorization import standard_permissions
+from . import standard_permissions, groups
 
 __all__ = [ "Permission", "GroupBasedPermission", "PermissionedModelMeta",
             "PrefixedModel", "PermissionedModel", "Model", "slugify_on_change" ]
@@ -110,7 +112,7 @@ class Permission:
 
 class GroupBasedPermission(Permission):
     ### without any foreign keys, this is just idiomatic for now
-    col_type = String(20)
+    col_type = String(50)
 
 ### Permissions Model Classes
 class PermissionedModelMeta(DeclarativeMeta):
@@ -180,6 +182,13 @@ class PrefixedModel(PermissionedBase):
 class PermissionedModel(PrefixedModel):
     __abstract__ = True
     __standard_permissions__ = True
+    __scope__ = None
+
+    # map of query-type to permission name
+    __select_perm__ = "read"
+    __insert_perm__ = "write"
+    __update_perm__ = "write"
+    __delete_perm__ = "delete"
 
     ### TODO: populate these defaults from session
     def __init__(self, *args, **kwargs):
@@ -189,6 +198,59 @@ class PermissionedModel(PrefixedModel):
                 setattr(self, perm_name, perm)
 
         super().__init__(*args, **kwargs)
+
+    @classmethod
+    def permissions_enabled(cls):
+        return True
+
+    @classmethod
+    def load_groups(cls):
+        return []
+
+    @classmethod
+    def load_groups_from_flask_session(cls):
+        return flask.session.groups
+
+    @classmethod
+    def permission_criterion(cls, permission_name, groups_list):
+        # if the groups list is empty, return a literal boolean FALSE criterion
+        if not groups_list:
+            return False
+
+        # root group in session subverts access controls
+        if groups.root in groups_list:
+            return True
+
+        criterion = []
+
+        # if this model is scoped
+        scope_group = getattr(cls.__scope__, permission_name, None)
+        if scope_group is not None and scope_group not in groups_list:
+            # if we don't have access we return a literal boolean FALSE criterion and short-circuit anything else
+            return False
+
+        # if we aren't root, we have groups and scope is OK
+        perm = getattr(cls, permission_name)
+        if perm:
+            parts = []
+            for col_number in range(perm.max_permissions):
+                parts.extend([getattr(type_, perm.column_name(col_number)) == name for name in groups_list])
+
+            return or_(*parts)
+
+        return True
+
+    @classmethod
+    def compile_handler(cls, query):
+        for desc in query.column_descriptions:
+            type_ = desc.get("type")
+            if isinstance(type_, PermissionedModelMeta) and type_.permissions_enabled():
+                permissions_criterion = type_.permission_criterion(type_.__select_perm__, type_.load_groups())
+                query = query.enable_assertions(False).filter(permissions_criterion)
+
+        return query
+
+listen(orm.Query, "before_compile", lambda query: PermissionedModel.compile_handler(query), retval=True)
 
 ### The base model
 @generic_repr("id")

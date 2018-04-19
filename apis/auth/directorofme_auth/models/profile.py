@@ -9,8 +9,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import JSONType, EmailType, UUIDType, generic_repr
 
 # proprietary imports
-from directorofme.orm import Model
-from directorofme.authorization.groups import scope
+from directorofme.authorization.orm import Model
 
 from . import GroupTypes, Group, License
 from .license import profiles_to_license
@@ -18,7 +17,6 @@ from .exceptions import NoProfileError
 
 __all__ = [ "Profile" ]
 
-@scope
 @generic_repr("email")
 class Profile(Model):
     '''A profile, at the moement is what we authenticate against a third party

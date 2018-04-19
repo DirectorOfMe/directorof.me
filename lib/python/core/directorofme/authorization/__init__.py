@@ -13,3 +13,6 @@ from . import groups
 from . import session
 from . import jwt
 from . import requires
+from . import orm
+
+### TODO: wrap this up in a nice flask extension

@@ -4,9 +4,7 @@ from sqlalchemy.event import listen
 from sqlalchemy_utils import URLType, JSONType, UUIDType
 from slugify import slugify
 
-from directorofme.orm import Model, slugify_on_change
-from directorofme.authorization.groups import scope
-
+from directorofme.authorization.orm import Model, slugify_on_change
 
 __all__ = [ "EventType", "Event" ]
 
@@ -14,7 +12,6 @@ __all__ = [ "EventType", "Event" ]
 #TODO: hook up to app
 #TODO: tests
 
-@scope
 @slugify_on_change("name", "slug")
 class EventType(Model):
     '''Table defining an event type which emitted events are expected to
@@ -38,7 +35,6 @@ class EventType(Model):
     data_schema = Column(JSONType)
 
 
-@scope
 class Event(Model):
     __tablename__ = "event"
 

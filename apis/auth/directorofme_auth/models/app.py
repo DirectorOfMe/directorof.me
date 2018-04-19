@@ -3,8 +3,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import URLType, JSONType, UUIDType
 from slugify import slugify
 
-from directorofme.orm import Model, slugify_on_change
-from directorofme.authorization.groups import scope, Group as AuthGroup
+from directorofme.authorization.orm import Model, slugify_on_change
+from directorofme.authorization.groups import Group as AuthGroup
 
 from . import Group
 
@@ -22,7 +22,6 @@ granted_access_groups = Table(
     Column('installed_app_id', UUIDType, ForeignKey(Model.prefix_name('installed_app.id')), nullable=False),
     Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False))
 
-@scope
 @slugify_on_change("name", "slug")
 class App(Model):
     '''An App is an application that can be installed and run on the DOM
@@ -56,7 +55,6 @@ class App(Model):
         return Group.scopes(self.requested_access_groups)
 
 
-@scope
 class InstalledApp(Model):
     '''InstalledApp is an instance of :class:`.App` that has been installed
        and is running on the DOM platform.

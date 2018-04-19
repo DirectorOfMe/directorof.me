@@ -8,7 +8,7 @@ from directorofme_auth.models import Profile, Group, GroupTypes, License
 from directorofme_auth.models.exceptions import NoProfileError
 
 class TestProfile:
-    def test__mininum_well_formed(self, db):
+    def test__mininum_well_formed(self, db, disable_permissions):
         id_ = uuid.uuid1()
         group = Group(display_name=id_.hex, type=GroupTypes.data)
         profile = Profile(id=id_, name="test", email="test@example.com",
@@ -24,14 +24,14 @@ class TestProfile:
 
         assert existing(profile).id == id_, "profile saved to DB"
 
-    def test__init__(self, db):
+    def test__init__(self, db, disable_permissions):
         id_ = uuid.uuid1()
         assert Profile(id=id_).id == id_, "can instantiate with id"
 
         with pytest.raises(NoProfileError):
             Profile()
 
-    def test__required_fields(self, db):
+    def test__required_fields(self, db, disable_permissions):
         id_ = uuid.uuid1()
         group = Group(display_name=id_.hex, type=GroupTypes.data)
 
@@ -72,7 +72,7 @@ class TestProfile:
         assert existing(missing_group, "email").email== "test2@example.com",\
                "save works if group set"
 
-    def test__create_profile(self, db):
+    def test__create_profile(self, db, disable_permissions):
         profile = Profile.create_profile("Test", "test@example.com")
         assert isinstance(profile.id, uuid.UUID), "uuid is set"
         assert profile.group_of_one.type == GroupTypes.data, "group_of_one is data"

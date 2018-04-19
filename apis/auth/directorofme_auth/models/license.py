@@ -8,8 +8,7 @@ from sqlalchemy.sql.expression import func
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
-from directorofme.orm import Model
-from directorofme.authorization.groups import scope
+from directorofme.authorization.orm import Model
 
 from . import Group
 
@@ -28,7 +27,6 @@ profiles_to_license = Table(
     Column('profile_id', UUIDType, ForeignKey(Model.prefix_name('profile.id')), nullable=False),
     Column('created', DateTime, default=func.now(), nullable=False))
 
-@scope
 class License(Model):
     __tablename__ = "license"
 

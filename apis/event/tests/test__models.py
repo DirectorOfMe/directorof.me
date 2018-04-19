@@ -6,7 +6,7 @@ from directorofme.testing import commit_with_integrity_error, existing
 
 
 class TestEventType:
-    def test__mininum_well_formed(self, db):
+    def test__mininum_well_formed(self, db, disable_permissions):
         event_type = EventType(name="test", desc="test event_type")
         assert event_type.name == "test", "name set"
         assert event_type.slug == "test", "slug generated from name by __init__"
@@ -22,7 +22,7 @@ class TestEventType:
         assert existing(event_type, "name").id == event_type.id, "event_type in DB"
 
 
-    def test__unique_name_and_slug(self, db):
+    def test__unique_name_and_slug(self, db, disable_permissions):
         event_type = EventType(name="foo", desc="r")
         assert existing(event_type, "name") is None, "event_type not saved"
 
@@ -40,7 +40,7 @@ class TestEventType:
         assert existing(event_type_duplicate_slug, "name") is None, "name is unique"
         commit_with_integrity_error(db, event_type_duplicate_slug)
 
-    def test__required_fields(self, db):
+    def test__required_fields(self, db, disable_permissions):
         missing_name = EventType(slug="foo", desc="r")
         assert existing(missing_name, "slug") is None, "slug is unique"
         commit_with_integrity_error(db, missing_name)
@@ -58,7 +58,7 @@ class TestEventType:
 
 
 class TestEvent:
-    def test__mininum_well_formed(self, db):
+    def test__mininum_well_formed(self, db, disable_permissions):
         event_type = EventType(name="test", desc="test event_type")
         assert existing(event_type, "name") is None, "no event_type pre-save"
 
@@ -77,7 +77,7 @@ class TestEvent:
         assert existing(event).id == event.id, "event in DB"
 
 
-    def test__required_fields(self, db):
+    def test__required_fields(self, db, disable_permissions):
         missing_event_type = Event(event_time=datetime.datetime.now())
         commit_with_integrity_error(db, missing_event_type)
 
