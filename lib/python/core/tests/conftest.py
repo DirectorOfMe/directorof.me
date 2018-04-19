@@ -4,6 +4,10 @@ import flask
 
 from unittest import mock
 
+from flask.sessions import SessionInterface
+
+from directorofme.authorization.session import Session
+
 ### COPIED FROM FLASK ITSELF
 @pytest.fixture
 def app():
@@ -14,3 +18,13 @@ def app():
 def clear_env():
     with mock.patch.dict(os.environ, {}, clear=True):
         yield
+
+class TestSessionInterface(SessionInterface):
+    def open_session(self, *args):
+        return Session(save=False, app=None, profile=None, groups=[], environment={})
+
+@pytest.fixture
+def request_context_with_session(app):
+    app.session_interface = TestSessionInterface()
+    with app.test_request_context() as ctx:
+        yield ctx

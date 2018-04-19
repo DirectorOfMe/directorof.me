@@ -6,23 +6,11 @@ import flask
 
 from unittest import mock
 
-from flask.sessions import SessionInterface
-
 from directorofme.authorization.session import Session, SessionProfile, SessionApp, SessionDecorator, \
                                                do_with_groups, do_as_root
 from directorofme.authorization import groups
 from directorofme.json import JSONEncoder
 
-### Fixtures
-class TestSessionInterface(SessionInterface):
-    def open_session(self, *args):
-        return Session(save=False, app=None, profile=None, groups=[], environment={})
-
-@pytest.fixture
-def request_context_with_session(app):
-    app.session_interface = TestSessionInterface()
-    with app.test_request_context() as ctx:
-        yield ctx
 
 ### Tests
 def test__SessionApp():
