@@ -6,6 +6,7 @@ from jwt.exceptions import InvalidTokenError
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
 from directorofme.testing import token_mock
+from directorofme.authorization import groups
 from directorofme.authorization.jwt import JWTSessionInterface, JWTManager
 from directorofme.authorization.exceptions import MisconfiguredAuthError
 
@@ -35,6 +36,7 @@ class TestJWTSessionInterface:
                 session = flask.session
                 assert decode_mock.called, "mock was installed correctly"
                 assert session.profile is None, "invalid token installs empty session"
+                assert session.groups == [groups.everybody], "groups list is [everybody]"
 
         # no header = empty session
         with token_mock() as decode_mock:
@@ -43,6 +45,7 @@ class TestJWTSessionInterface:
                 session = flask.session
                 assert decode_mock.called, "mock was installed correctly"
                 assert session.profile is None, "no token installs empty session"
+                assert session.groups == [groups.everybody], "groups list is [everybody]"
 
     def test__save_session(self, app):
         app.config["IS_AUTH_SERVER"] = True

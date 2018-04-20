@@ -45,7 +45,7 @@ class JWTSessionInterface(FlaskSessionInterface):
                 app=(app if app is None else session.SessionApp(**app)),
                 environment=identity.get("environment", {}))
         except (TypeError, KeyError):
-            return session.Session(save=False, app=None, profile=None, groups=[], environment={})
+            return session.Session(save=False, app=None, profile=None, groups=[groups.everybody], environment={})
 
     def save_session(self, app, session_obj, response):
         '''Save the session at the end of a request if it's new and we are the auth server'''
