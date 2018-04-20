@@ -164,8 +164,13 @@ def test__feature(request_context_with_session):
         with requires.feature("pro") | requires.group(groups.root):
             assert False, "should not be reached"
 
-def test__admin_user_staff(request_context_with_session):
-    flask.session.groups = [groups.user, groups.admin, groups.staff]
-    assert requires.admin.test(), "admin helper succeeds"
+def test__admin_user_staff_everybody_anybody(request_context_with_session):
+    flask.session.groups = [groups.user]
     assert requires.user.test(), "user helper succeeds"
+    flask.session.groups = [groups.admin]
+    assert requires.admin.test(), "admin helper succeeds"
+    flask.session.groups = [groups.staff]
     assert requires.staff.test(), "user helper succeeds"
+    flask.session.groups = [groups.everybody]
+    assert requires.everybody.test(), "everybody helper succeeds"
+    assert requires.anybody.test(), "anybody helper succeeds"

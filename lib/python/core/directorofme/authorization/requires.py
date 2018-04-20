@@ -1,16 +1,13 @@
 import contextlib
 
 import flask
+from . import groups, exceptions
 
-from .groups import Group, GroupTypes, Scope, admin, staff, user
-from .exceptions import PermissionDeniedError
-
-
-__all__ = [ "RequiresDecorator", "group", "scope", "feature", "admin", "staff" ]
+__all__ = [ "RequiresDecorator", "group", "scope", "feature", "admin", "staff", "everybody", "anybody" ]
 
 class RequiresDecorator(contextlib.ContextDecorator):
     def __init__(self, group_or_requirement, and_=None, or_=None, session=flask.session):
-        self.group = group_or_requirement if isinstance(group_or_requirement, Group) else None
+        self.group = group_or_requirement if isinstance(group_or_requirement, groups.Group) else None
         self.requirement = group_or_requirement if isinstance(group_or_requirement, RequiresDecorator) else None
 
         if self.group is None and self.requirement is None:
@@ -26,7 +23,7 @@ class RequiresDecorator(contextlib.ContextDecorator):
     def __enter__(self):
         '''Support with scoping for permissioning, not really a context, but syntactically it works nicely'''
         if not self.test():
-            raise PermissionDeniedError(self)
+            raise exceptions.PermissionDeniedError(self)
         return self
 
     def __exit__(self, *args):
@@ -60,11 +57,12 @@ def group(group):
     return RequiresDecorator(group)
 
 def scope(name, perm_name):
-    return group(Scope(display_name=name, __perms__={perm_name}).perms[perm_name])
+    return group(groups.Scope(display_name=name, __perms__={perm_name}).perms[perm_name])
 
 def feature(name):
-    return group(Group(display_name=name, type=GroupTypes.feature))
+    return group(groups.Group(display_name=name, type=groups.GroupTypes.feature))
 
-user = group(user)
-admin = group(admin)
-staff = group(staff)
+user = group(groups.user)
+admin = group(groups.admin)
+staff = group(groups.staff)
+everybody = anybody = group(groups.everybody)
