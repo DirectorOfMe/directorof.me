@@ -5,17 +5,15 @@ from unittest import mock
 from jwt.exceptions import InvalidTokenError
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
+from directorofme.testing import token_mock
 from directorofme.authorization.jwt import JWTSessionInterface, JWTManager
 from directorofme.authorization.exceptions import MisconfiguredAuthError
 
 class TestJWTSessionInterface:
-    mock_session = {
-        "user_claims": {},
-        "identity": {
-            "profile": { "id": 1, "email": "hi@example.com" },
-            "groups": [], "environment": {},
-            "app": { "id": 1, "app_id": 2, "app_name": "main", "config": {} },
-        },
+    mock_identity = {
+        "profile": { "id": 1, "email": "hi@example.com" },
+        "groups": [], "environment": {},
+        "app": { "id": 1, "app_id": 2, "app_name": "main", "config": {} },
     }
 
     def test__open_session(self, app):
@@ -23,8 +21,7 @@ class TestJWTSessionInterface:
         JWTManager(app)
 
         # happy path
-        with mock.patch("flask_jwt_extended.view_decorators._decode_jwt_from_request") as decode_mock:
-            decode_mock.return_value = self.mock_session
+        with token_mock(self.mock_identity) as decode_mock:
             with app.test_request_context() as ctx:
                 session = flask.session
                 assert decode_mock.called, "mock was installed correctly"
@@ -32,7 +29,7 @@ class TestJWTSessionInterface:
                 assert session.app.app_name == "main", "session app installed"
 
         # invalid token errors are ignored
-        with mock.patch("flask_jwt_extended.view_decorators._decode_jwt_from_request") as decode_mock:
+        with token_mock() as decode_mock:
             decode_mock.side_effect = InvalidTokenError("Invalid Token")
             with app.test_request_context() as ctx:
                 session = flask.session
@@ -40,7 +37,7 @@ class TestJWTSessionInterface:
                 assert session.profile is None, "invalid token installs empty session"
 
         # no header = empty session
-        with mock.patch("flask_jwt_extended.view_decorators._decode_jwt_from_request") as decode_mock:
+        with token_mock() as decode_mock:
             decode_mock.side_effect = NoAuthorizationError("No Token")
             with app.test_request_context() as ctx:
                 session = flask.session

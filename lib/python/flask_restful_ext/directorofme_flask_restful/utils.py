@@ -9,7 +9,7 @@ import functools
 import flask
 import flask_restful
 
-__all__ = [ "resource_url", "versioned_api" ]
+__all__ = [ "resource_url", "versioned_api", "errors" ]
 
 def resource_url(api, *args, **kwargs):
     '''Decorator for simplifying the add_resource interface:
@@ -25,6 +25,13 @@ def resource_url(api, *args, **kwargs):
         return cls
 
     return real_decorator
+
+errors = {
+    'PermissionDeniedError': {
+        'message': "You do not have permission to perform this action",
+        'status': 401,
+    }
+}
 
 def store_version_in_a_global(api_version):
     '''Default version storage method'''
@@ -58,5 +65,4 @@ def versioned_api(api_name, version_setter=store_version_in_a_global,
         if "api_version" not in values:
             values["api_version"] = version_getter()
 
-    return flask_restful.Api(blueprint)
-
+    return flask_restful.Api(blueprint, errors=errors)

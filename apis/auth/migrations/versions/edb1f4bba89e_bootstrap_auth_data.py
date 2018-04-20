@@ -43,8 +43,7 @@ def build_main_app(groups):
 def build_profiles(groups, main_app):
     # founders
     profiles = []
-    for (name, email) in (("Matt Story", "matt@directorof.me"),
-                          ("Barb Blakley", "barb@directorof.me")):
+    for (name, email) in (("Matt Story", "matt@directorof.me"),):
         profile = Profile.create_profile(name=name, email=email)
         profile.licenses[0].groups.extend([ groups["f-user"], groups["0-admin"] ])
         InstalledApp.install_for_group(main_app, profile.group_of_one)

@@ -8,7 +8,9 @@ from werkzeug.exceptions import NotFound, BadRequest
 from oauthlib.oauth2 import OAuth2Error
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
-from directorofme.testing import dict_from_response
+from directorofme.testing import dict_from_response, token_mock
+from directorofme.authorization import groups, session
+from directorofme.authorization.exceptions import PermissionDeniedError
 
 from directorofme_auth import app
 from directorofme_auth.oauth import Client as OAuthClient, Google
@@ -22,12 +24,15 @@ def authorization_url():
         method.return_value = test_auth_url
         yield method
 
-empty_session_data = { "environment": {}, "groups": [], "app": None, "profile": None }
-test_session_data = {
+empty_session_data = json.loads(json.dumps({
+    "environment": {}, "groups": [groups.everybody], "app": None, "profile": None
+}, cls=app.json_encoder))
+
+test_session_data = json.loads(json.dumps({
     "app": None, "environment": {},
     "profile": { "id": "12345", "email": "hi@example.com" },
-    "groups": [{ "type": "data", "display_name": "test", "name": "d-test" }],
-}
+    "groups": [groups.everybody, groups.user, groups.Group(display_name="test", type=groups.GroupTypes.data)],
+}, cls=app.json_encoder))
 
 @pytest.fixture
 def refresh_token_decoder(request_context):
@@ -164,7 +169,7 @@ class TestRefreshToken:
                "session is empty before test"
 
         session = RefreshToken().get()
-        assert session == flask.session, "session is saved by the refresh method"
+        assert session is flask.session, "session is saved by the refresh method"
         assert json.loads(json.dumps(session, cls=app.json_encoder)) == test_session_data, \
                "session data returned correctly"
 
@@ -175,9 +180,17 @@ class TestRefreshToken:
 
 class TestSession:
     def test__get_method_directly(self, request_context):
-        with mock.patch("flask.session") as session:
-            assert Session().get() is session, "session returns flask.session"
+        with pytest.raises(PermissionDeniedError):
+            Session().get()
+
+        with session.do_with_groups(groups.user):
+            assert Session().get() is flask.session, "session returns flask.session"
 
     def test__session_route(self, test_client):
         response = test_client.get("/api/-/auth/session")
-        assert dict_from_response(response) == empty_session_data, "default session returned by default"
+        assert response.status_code == 401, "permission denied to non-user"
+
+        with token_mock(copy.deepcopy(test_session_data)) as mocked_token:
+            response = test_client.get("/api/-/auth/session")
+            assert mocked_token.called, "mock was used correctly"
+            assert dict_from_response(response) == test_session_data, "correct session for logged-in user"

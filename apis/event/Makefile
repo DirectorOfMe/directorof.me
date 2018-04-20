@@ -20,7 +20,7 @@ PROXY_NAME           ?= $(PKG_NAME)
 PROXY_HOST           ?= $(SERVER_ADDR)
 PROXY_PORT           ?= $(SERVER_PORT)
 
-API_NAME             ?= auth
+API_NAME             ?= event
 
 PSQL_DB              ?= $(EVENT_API_PSQL_DB)
 PSQL_USER            ?= $(EVENT_API_PSQL_USER)

@@ -1,8 +1,11 @@
 import json
+import functools
+import contextlib
 
 import pytest
 import sqlalchemy
 
+from unittest import mock
 from .authorization.orm import Model
 
 # TODO ironically, tests
@@ -69,3 +72,9 @@ def disable_permissions():
     Model.permissions_enabled = false
     yield
     Model.original_checker= original_checker
+
+@contextlib.contextmanager
+def token_mock(identity=None, user_claims=None):
+    with mock.patch("flask_jwt_extended.view_decorators._decode_jwt_from_request") as jwt_token_mock:
+        jwt_token_mock.return_value = { "user_claims": user_claims, "identity": identity }
+        yield jwt_token_mock

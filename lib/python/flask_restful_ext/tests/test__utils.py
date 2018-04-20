@@ -1,3 +1,5 @@
+import json
+
 import flask
 import pytest
 
@@ -5,6 +7,7 @@ from unittest import mock
 from flask_restful import Resource
 
 from directorofme.testing import dict_from_response
+from directorofme.authorization.exceptions import PermissionDeniedError
 from directorofme_flask_restful import resource_url, versioned_api
 
 def test__resource_url(app, api):
@@ -68,3 +71,17 @@ class TestVersionedApi:
             assert getter.called, "getter was called"
 
             assert dict_from_response(resp) == { "url": "/api/custom/test/baz" }, "url used custom getter"
+
+
+    def test__errors_handled(self, app, api):
+        v_api = versioned_api("test")
+        app.register_blueprint(v_api.blueprint)
+
+        @resource_url(v_api, "/error", endpoint="error")
+        class Error(Resource):
+            def get(self):
+                raise PermissionDeniedError()
+
+        with app.test_client() as client:
+            resp = client.get("api/2/test/error")
+            assert resp.status_code == 401, "Permission denied returns a 401"

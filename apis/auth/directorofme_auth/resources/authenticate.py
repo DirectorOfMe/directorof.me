@@ -5,7 +5,7 @@ import flask_jwt_extended as flask_jwt
 from flask_restful import Resource, abort
 from oauthlib.oauth2 import OAuth2Error
 
-from directorofme.authorization import session, groups
+from directorofme.authorization import session, groups, requires
 from directorofme_flask_restful import resource_url
 
 from . import api
@@ -30,7 +30,6 @@ def with_service_client(fn):
                                       "supported".format(service, supported_methods))
 
         callback_url = api.url_for(OAuthCallback, api_version="-", service=service, method=method, _external=True)
-        print(callback_url)
         return fn(obj, ClientForService(callback_url, offline=(method == "token")), method, *args, **kwargs)
 
     return inner
@@ -38,6 +37,7 @@ def with_service_client(fn):
 
 @resource_url(api, "/oauth/<string:service>/<string:method>", endpoint="oauth_api")
 class OAuth(Resource):
+    @requires.anybody
     @with_service_client
     def get(self, client, method):
         url = client.authorization_url()
@@ -46,6 +46,7 @@ class OAuth(Resource):
 
 @resource_url(api, "/oauth/<string:service>/<string:method>/callback", endpoint="oauth_callback_api")
 class OAuthCallback(Resource):
+    @requires.anybody
     @with_service_client
     def get(self, client, method):
         error = client.check_callback_request_for_errors(flask.request)
@@ -58,14 +59,24 @@ class OAuthCallback(Resource):
             if not verified:
                 raise EmailNotVerified(email)
 
-            profile = Profile.query.filter(Profile.email == email).first()
+            profile = None
+            with session.do_as_root:
+                profile = Profile.query.filter(Profile.email == email).first()
+
             if not profile:
                 raise NoUserForEmail(email)
 
             if method == "login":
-                primary_groups = []
-                for license in profile.licenses:
-                    primary_groups += license.groups
+                groups_list = []
+
+                with session.do_as_root:
+                    primary_groups = []
+                    for license in profile.licenses:
+                        primary_groups += license.groups
+
+                    groups_list = [
+                        groups.Group.from_conforming_type(g) for p in primary_groups for g in p.expand()
+                    ]
 
                 ### XXX: mix in app group
                 flask.session.overwrite(session.Session(
@@ -73,8 +84,7 @@ class OAuthCallback(Resource):
                     environment=profile.preferences or {},
                     app=None,
                     profile=session.SessionProfile.from_conforming_type(profile),
-                    groups=[groups.Group.from_conforming_type(g) for group in primary_groups \
-                                                                 for g in group.expand()]
+                    groups= flask.session.groups + groups_list
                 ))
                 return flask.session
 
@@ -90,6 +100,7 @@ class OAuthCallback(Resource):
 
 @resource_url(api, "/refresh", endpoint="refresh_jwt")
 class RefreshToken(Resource):
+    @requires.anybody
     @flask_jwt.jwt_refresh_token_required
     def get(self):
         session_data = flask_jwt.get_jwt_identity() or {}
@@ -102,5 +113,6 @@ class RefreshToken(Resource):
 
 @resource_url(api, "/session", endpoint="session_api")
 class Session(Resource):
+    @requires.user
     def get(self):
         return flask.session
