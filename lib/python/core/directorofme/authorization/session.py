@@ -38,8 +38,8 @@ class Session(Spec):
 
 
 class SessionDecorator(contextlib.ContextDecorator):
-    def __init__(self, extend_groups=True, real_session=flask.session, **session_modifications):
-        self.real_session = real_session
+    def __init__(self, extend_groups=True, real_session=None, **session_modifications):
+        self.real_session = real_session or flask.session
         self.original_sessions = []
         self.extend_groups = extend_groups
         self.session_modifications = session_modifications
