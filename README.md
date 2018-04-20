@@ -76,6 +76,12 @@ with `sa.dialects.postgresql.UUID` and any `sqlalchemy_utils.types.JSONType`
 with `sa.dialects.postgresql.JSON` for now. See
 [Issue 106](https://github.com/kvesteri/sqlalchemy-utils/issues/106) for more.
 
+To then run your migration you'll execute:
+
+```
+make upgrade-db
+```
+
 ##### Running your API
 
 We use `daemontools-encore` to daemonize our services. NB: finish this
