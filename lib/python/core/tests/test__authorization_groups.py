@@ -4,7 +4,7 @@ import json
 from directorofme.json import JSONEncoder
 from directorofme.authorization import standard_permissions
 from directorofme.authorization.groups import GroupTypes, Group, Scope, root, admin, nobody, \
-                                              everybody, user, staff, base_groups
+                                              everybody, anybody, user, staff, base_groups
 
 class TestGroupTypes:
     def test__GroupTypes_spec(self):
@@ -188,6 +188,9 @@ def test__base_groups():
     assert root.name == "0-root", "root name is correct"
     assert admin.name == "0-admin", "admin name is correct"
     assert nobody.name == "0-nobody", "admin name is correct"
+
     assert everybody.name == "0-everybody", "admin name is correct"
+    assert everybody is anybody, "anybody is an alias for everybody"
+
     assert user.name == "f-user", "admin name is correct"
     assert staff.name == "f-staff", "staff name is correct"

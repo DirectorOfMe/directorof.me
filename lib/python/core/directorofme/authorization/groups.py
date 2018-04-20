@@ -6,7 +6,7 @@ from ..specify import Spec, Attribute
 from ..authorization import standard_permissions
 
 __all__ = [ "GroupTypes", "Group", "Scope", "scope", "root", "admin", "nobody",\
-            "everybody", "user", "staff", "base_groups" ]
+            "everybody", "anybody", "user", "staff", "base_groups" ]
 
 class GroupTypes(enum.Enum):
     '''GroupTypes defines the three types of group that are available. Groups
@@ -129,7 +129,7 @@ class Scope(Spec):
 root = Group(display_name="root", type=GroupTypes.system)
 admin = Group(display_name="admin", type=GroupTypes.system)
 nobody = Group(display_name="nobody", type=GroupTypes.system)
-everybody = Group(display_name="everybody", type=GroupTypes.system)
+everybody = anybody = Group(display_name="everybody", type=GroupTypes.system)
 user = Group(display_name="user", type=GroupTypes.feature)
 staff = Group(display_name="staff", type=GroupTypes.feature)
 
