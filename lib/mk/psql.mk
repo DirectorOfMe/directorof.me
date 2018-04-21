@@ -41,3 +41,7 @@ clean-postgresql: clean-postgresql.$(PSQL_DB).out
 .PHONY: clean-postgresql.$(PSQL_DB).out
 clean-postgresql.$(PSQL_DB).out:
 	rm -f .setup.postgresql.$(PSQL_DB).out
+
+.PHONY: db-shell
+db-shell:
+	PGPASSWORD="$(PSQL_PASSWORD)" psql -h "$(PSQL_HOST)" "$(PSQL_DB)" "$(PSQL_USER)"

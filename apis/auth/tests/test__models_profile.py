@@ -3,16 +3,16 @@ import uuid
 import pytest
 
 from directorofme.testing import existing, commit_with_integrity_error
+from directorofme.authorization import groups
 
 from directorofme_auth.models import Profile, Group, GroupTypes, License
-from directorofme_auth.models.exceptions import NoProfileError
+from directorofme_auth.models.exceptions import NoProfileError, MissingGroupError
 
 class TestProfile:
     def test__mininum_well_formed(self, db, disable_permissions):
         id_ = uuid.uuid1()
         group = Group(display_name=id_.hex, type=GroupTypes.data)
-        profile = Profile(id=id_, name="test", email="test@example.com",
-                          group_of_one=group)
+        profile = Profile(id=id_, name="test", email="test@example.com", group_of_one=group)
         assert profile.id == id_, "id sets correctly"
         assert profile.name == "test" , "name sets correctly"
         assert profile.email == "test@example.com", "email sets correctly"
@@ -72,7 +72,7 @@ class TestProfile:
         assert existing(missing_group, "email").email== "test2@example.com",\
                "save works if group set"
 
-    def test__create_profile(self, db, disable_permissions):
+    def test__create_profile(self, db, disable_permissions, user_group):
         profile = Profile.create_profile("Test", "test@example.com")
         assert isinstance(profile.id, uuid.UUID), "uuid is set"
         assert profile.group_of_one.type == GroupTypes.data, "group_of_one is data"
@@ -82,17 +82,25 @@ class TestProfile:
         db.session.add(profile)
         db.session.commit()
 
-        license = License.query.filter(
-            License.managing_group == profile.group_of_one).first()
-        assert license.groups == [profile.group_of_one], \
-               "license has group_of_one as the member group"
+        license = License.query.filter(License.managing_group == profile.group_of_one).first()
+        assert set(license.groups) == {
+            profile.group_of_one, Group.query.filter(Group.name == groups.user.name).first()
+        }, "license has group_of_one as the member group"
         assert list(license.profiles) == [profile], "license lists"
 
         profile = Profile.create_profile("Test", "test@a.com", additional_groups=[
                         Group(display_name="foo", type=GroupTypes.data)
-                  ])
+                  ], add_user_group=False)
 
-        groups = list(profile.licenses.first().groups)
-        assert len(groups)== 2, "two groups installed when additional group passed"
-        assert groups[0].id == profile.group_of_one_id
-        assert groups[1].name == "d-foo"
+        groups_list = list(profile.licenses.first().groups)
+        assert len(groups_list)== 2, "two groups installed when additional group passed"
+        assert groups_list[0].id == profile.group_of_one_id
+        assert groups_list[1].name == "d-foo"
+
+    def test__create_profile_without_user_group(self, db, disable_permissions):
+        with pytest.raises(MissingGroupError):
+            Profile.create_profile("Test", "test@example.com")
+
+        profile = Profile.create_profile("Test", "test@example.com", add_user_group=False)
+        assert profile.email == "test@example.com", "profile is created with flag"
+

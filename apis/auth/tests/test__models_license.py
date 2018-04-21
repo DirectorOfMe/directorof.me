@@ -71,7 +71,7 @@ class TestModel:
         assert from_db[1].name == "f-core", "group 1 corect"
 
 
-    def test__profiles_and_active_profiles(self, db, disable_permissions):
+    def test__profiles_and_active_profiles(self, db, disable_permissions, user_group):
         mgmt = Group(display_name="test", type=GroupTypes.data)
         license = License(seats=2, managing_group=mgmt)
 

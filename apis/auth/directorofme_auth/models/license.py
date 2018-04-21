@@ -3,7 +3,7 @@ models/license.py -- License system
 
 @author: Matt Story <matt@directorof.me>
 '''
-from sqlalchemy import Table, Column, Integer, DateTime, Text, ForeignKey
+from sqlalchemy import Table, Column, Integer, DateTime, Text, ForeignKey, Sequence
 from sqlalchemy.sql.expression import func
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
@@ -25,14 +25,14 @@ profiles_to_license = Table(
     Model.metadata,
     Column('license_id', UUIDType, ForeignKey(Model.prefix_name('license.id')), nullable=False),
     Column('profile_id', UUIDType, ForeignKey(Model.prefix_name('profile.id')), nullable=False),
-    Column('created', DateTime, default=func.now(), nullable=False))
+    Column('created', Integer, Sequence("profiles_to_license_seq"), nullable=False))
 
 class License(Model):
     __tablename__ = "license"
 
     #: :class:`Group` objects to add to a session for an authenticated profile
     #: on this license.
-    groups = relationship("Group", secondary=groups_to_license)
+    groups = relationship("Group", secondary=groups_to_license, backref="licenses")
 
     #: id of :attr:`managing_group` for this :class:`License`
     managing_group_id = Column(UUIDType, ForeignKey(Group.id), nullable=False)

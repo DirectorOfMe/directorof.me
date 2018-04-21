@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'edb1f4bba89e'
-down_revision = '29b7f139356a'
+down_revision = '8c0968acb34f'
 branch_labels = None
 depends_on = None
 
@@ -44,8 +44,8 @@ def build_profiles(groups, main_app):
     # founders
     profiles = []
     for (name, email) in (("Matt Story", "matt@directorof.me"),):
-        profile = Profile.create_profile(name=name, email=email)
-        profile.licenses[0].groups.extend([ groups["f-user"], groups["0-admin"] ])
+        profile = Profile.create_profile(name=name, email=email, add_user_group=False,
+                                         additional_groups=[ groups["f-user"], groups["0-admin"] ])
         InstalledApp.install_for_group(main_app, profile.group_of_one)
         profiles.append(profile)
 

@@ -12,7 +12,7 @@ from directorofme.testing import dict_from_response, token_mock
 from directorofme.authorization import groups, session
 from directorofme.authorization.exceptions import PermissionDeniedError
 
-from directorofme_auth import app
+from directorofme_auth import app, models
 from directorofme_auth.oauth import Client as OAuthClient, Google
 from directorofme_auth.resources.authenticate import OAuth, OAuthCallback, RefreshToken, Session,\
                                                      with_service_client
@@ -145,6 +145,12 @@ class TestOAuthCallback:
         """TODO: when app groups are mixed in, we'll need to test this"""
         pass
 
+    def cookie_checker(self, response):
+        cookies_should_be = [ "JWT_ACCESS_COOKIE_NAME", "JWT_REFRESH_COOKIE_NAME",
+                              "JWT_ACCESS_CSRF_COOKIE_NAME", "JWT_REFRESH_CSRF_COOKIE_NAME" ]
+        set_cookies = set([h.partition("=")[0] for h in response.headers.getlist("Set-Cookie")])
+        assert set_cookies == { app.config[name] for name in cookies_should_be }, "cookies set correctly"
+
     def test__oauth_callback_route(self, fetch_token, confirm_email, test_profile, test_client):
         fetch_token.return_value = "token"
         confirm_email.return_value = ("test@example.com", True)
@@ -155,13 +161,32 @@ class TestOAuthCallback:
                "response object correct for token"
 
         response = test_client.get("/api/-/auth/oauth/google/login/callback")
-        cookies_should_be = [ "JWT_ACCESS_COOKIE_NAME", "JWT_REFRESH_COOKIE_NAME",
-                              "JWT_ACCESS_CSRF_COOKIE_NAME", "JWT_REFRESH_CSRF_COOKIE_NAME" ]
-        set_cookies = set([h.partition("=")[0] for h in response.headers.getlist("Set-Cookie")])
-        assert set_cookies == { app.config[name] for name in cookies_should_be }, "cookies set correctly"
+        self.cookie_checker(response)
         assert dict_from_response(response) == json.loads(json.dumps(flask.session, cls=app.json_encoder)), \
                "response object correct for login"
 
+
+    def test__end_to_end(self, fetch_token, confirm_email, test_client, test_profile):
+        fetch_token.return_value = "token",
+        confirm_email.return_value = (test_profile.email, True)
+
+        response = test_client.get("/api/-/auth/oauth/google/login/callback")
+        self.cookie_checker(response)
+        response_dict = dict_from_response(response)
+        response_dict['groups'].sort(key=lambda x: x['name'])
+        assert response_dict == {
+            'environment': {},
+            'profile': { 'id': str(test_profile.id), 'email': test_profile.email },
+            'groups': sorted([
+                json.loads(json.dumps(groups.everybody, cls=app.json_encoder)),
+                json.loads(json.dumps(groups.user, cls=app.json_encoder)),
+                json.loads(json.dumps(
+                    groups.Group.from_conforming_type(test_profile.group_of_one),
+                    cls=app.json_encoder
+                ))
+            ], key=lambda x: x['name']),
+            'app': None
+        }, "session is correctly formed"
 
 class TestRefreshToken:
     def test__get_method_directly(self, refresh_token_decoder):

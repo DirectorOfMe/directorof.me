@@ -48,7 +48,7 @@ class App(Model):
     config_schema = Column(JSONType)
 
     #: Groups this app would like to add into the session
-    requested_access_groups = relationship("Group", secondary=requested_access_groups)
+    requested_access_groups = relationship("Group", secondary=requested_access_groups, backref="requested_by")
 
     @property
     def requested_scopes(self):
@@ -76,7 +76,7 @@ class InstalledApp(Model):
     config = Column(JSONType)
 
     #: Groups this app will mix into session
-    access_groups = relationship("Group", secondary=granted_access_groups)
+    access_groups = relationship("Group", secondary=granted_access_groups, backref="granted_to")
 
     @property
     def scopes(self):

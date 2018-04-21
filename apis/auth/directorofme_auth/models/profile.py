@@ -9,16 +9,16 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import JSONType, EmailType, UUIDType, generic_repr
 
 # proprietary imports
-from directorofme.authorization.orm import Model
+from directorofme.authorization import orm, groups
 
 from . import GroupTypes, Group, License
 from .license import profiles_to_license
-from .exceptions import NoProfileError
+from .exceptions import NoProfileError, MissingGroupError
 
 __all__ = [ "Profile" ]
 
 @generic_repr("email")
-class Profile(Model):
+class Profile(orm.Model):
     '''A profile, at the moement is what we authenticate against a third party
        service. It associates a user to a license and set of groups, which
        determines which applications, features and data a user has access to
@@ -44,7 +44,7 @@ class Profile(Model):
     preferences = Column(JSONType)
 
     #: id of :attr:`parent` of this group
-    group_of_one_id = Column(UUIDType, ForeignKey(Model.prefix_name("group.id")), nullable=False)
+    group_of_one_id = Column(UUIDType, ForeignKey(orm.Model.prefix_name("group.id")), nullable=False)
 
     #: all members of this :class:`.Group` are also members of parent.
     group_of_one = relationship("Group")
@@ -56,8 +56,8 @@ class Profile(Model):
 
 
     @classmethod
-    def create_profile(cls, name, email, valid_through=None,
-                       preferences=None, additional_groups=tuple()):
+    def create_profile(cls, name, email, valid_through=None, preferences=None,
+                       add_user_group=True, additional_groups=tuple()):
         '''Factory for generating a profile with all of the necessary related
            objects to make it useful. This is *the way* to create a new user.
         '''
@@ -71,10 +71,17 @@ class Profile(Model):
             type=GroupTypes.data,
         )
 
+        profile_groups = [ profile.group_of_one ]
+        if add_user_group:
+            user_group = Group.query.filter(Group.name == groups.user.name).first()
+            if user_group is None:
+                raise MissingGroupError("user group is required but not found")
+            profile_groups.append(user_group)
+
         # allocate a default license for this user (required for login)
         profile.licenses.append(License(
             valid_through = valid_through,
-            groups = [ profile.group_of_one ] + list(additional_groups),
+            groups = [g for g in profile_groups + list(additional_groups) if g is not None],
             managing_group = profile.group_of_one,
             seats = 1
         ))
