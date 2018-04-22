@@ -3,7 +3,7 @@ from directorofme.authorization import orm
 
 __all__ = ["db", "Group", "GroupTypes", "License", "Profile", "App", "InstalledApp", "exceptions"]
 
-db = SQLAlchemy(model_class=orm.Model)
+db = SQLAlchemy(model_class=orm.Model, query_class=orm.PermissionedQuery)
 
 from . import exceptions
 from .group import Group, GroupTypes

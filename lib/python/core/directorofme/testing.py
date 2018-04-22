@@ -6,7 +6,7 @@ import pytest
 import sqlalchemy
 
 from unittest import mock
-from .authorization.orm import Model, disable_permissions
+from .authorization.orm import Model
 
 # TODO ironically, tests
 __all__ = [ "db", "existing", "commit_with_integrity_error", "dict_from_response" ]

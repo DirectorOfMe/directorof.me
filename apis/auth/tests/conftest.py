@@ -6,7 +6,7 @@ from directorofme_auth import db as real_db, app
 from directorofme.testing import db as db
 from directorofme_auth.models import Group, GroupTypes, Profile
 from directorofme.authorization import groups
-from directorofme.authorization.orm import Model, disable_permissions as disable_permissions_decorator
+from directorofme.authorization.orm import Model
 
 # setup the db fixture
 # TODO: autouse?
@@ -24,7 +24,7 @@ def test_client():
 
 @pytest.fixture
 def disable_permissions():
-    with disable_permissions_decorator():
+    with Model.disable_permissions():
         yield
 
 @pytest.fixture

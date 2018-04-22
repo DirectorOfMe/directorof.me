@@ -17,7 +17,7 @@ orm.Model.load_groups = orm.Model.load_groups_from_flask_session
 
 from . import models
 
-db = SQLAlchemy(model_class=orm.Model)
+db = SQLAlchemy(model_class=orm.Model, query_class=orm.PermissionedQuery)
 db.init_app(app)
 db.app = app
 

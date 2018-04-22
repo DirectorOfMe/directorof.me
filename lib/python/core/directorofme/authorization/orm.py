@@ -16,18 +16,13 @@ from sqlalchemy.event import listen
 from sqlalchemy_utils import Timestamp, UUIDType, generic_repr
 from slugify import slugify
 
-from . import standard_permissions, groups
+from . import standard_permissions, groups, exceptions
+
+###: TODO factor out non-permissions stuff
+###: TODO soft-deletes
 
 __all__ = [ "Permission", "GroupBasedPermission", "PermissionedModelMeta", "PrefixedModel",
-            "PermissionedModel", "Model", "slugify_on_change", "disable_permissions" ]
-
-@contextlib.contextmanager
-def disable_permissions():
-    '''Disable permissions as a decorator or context manager'''
-    permissions_enabled = PermissionedModel.permissions_enabled
-    PermissionedModel.permissions_enabled = lambda: False
-    yield
-    PermissionedModel.permissions_enabled = permissions_enabled
+            "PermissionedModel", "Model", "PermissionedQuery", "slugify_on_change" ]
 
 def slugify_on_change(src, target, default=True):
     '''Class decorator that slugs an attribute when it changes and stores it to another attribute.
@@ -188,15 +183,16 @@ class PrefixedModel(PermissionedBase):
         return name
 
 class PermissionedModel(PrefixedModel):
+    '''A model for handling group-based permissions transparently'''
     __abstract__ = True
     __standard_permissions__ = True
     __scope__ = None
 
-    # map of query-type to permission name
-    __select_perm__ = "read"
-    __insert_perm__ = "write"
-    __update_perm__ = "write"
-    __delete_perm__ = "delete"
+    # map of query-type to (scope permission name, obj permission name)
+    __select_perm__ = ("read", "read")
+    __insert_perm__ = ("write", None)
+    __update_perm__ = ("read", "write")
+    __delete_perm__ = ("delete", "delete")
 
     ### TODO: populate these defaults from session
     def __init__(self, *args, **kwargs):
@@ -220,7 +216,19 @@ class PermissionedModel(PrefixedModel):
         return flask.session.groups
 
     @classmethod
-    def permission_criterion(cls, permission_name, groups_list):
+    @contextlib.contextmanager
+    def disable_permissions(cls):
+        '''Disable permissions as a decorator or context manager'''
+        permissions_enabled = cls.permissions_enabled
+        cls.permissions_enabled = lambda: False
+        yield
+        cls.permissions_enabled = permissions_enabled
+
+
+    @classmethod
+    def permissions_criterion(cls, action):
+        groups_list = cls.load_groups()
+
         # if the groups list is empty, return a literal boolean FALSE criterion
         if not groups_list:
             return False
@@ -229,16 +237,24 @@ class PermissionedModel(PrefixedModel):
         if groups.root in groups_list:
             return True
 
+        try:
+            scope_perm_name, obj_perm_name = getattr(cls, "__{}_perm__".format(action))
+        except AttributeError:
+            raise ValueError("unsupported action: {}".format(action))
+
         criterion = []
 
         # if this model is scoped
-        scope_group = getattr(cls.__scope__, permission_name, None)
+        scope_group = getattr(cls.__scope__, scope_perm_name, None)
         if scope_group is not None and scope_group not in groups_list:
             # if we don't have access we return a literal boolean FALSE criterion and short-circuit anything else
             return False
 
         # if we aren't root, we have groups and scope is OK
-        perm = getattr(cls, permission_name, None)
+        perm = obj_perm_name if obj_perm_name is None else getattr(cls, obj_perm_name, None)
+
+        # if the permission isn't enforced for this object past the scope level
+        # -- or if we are doing an insert (and therefore there are no objects to check)
         if not perm:
             return True
 
@@ -249,18 +265,63 @@ class PermissionedModel(PrefixedModel):
 
         return or_(*parts)
 
+    @classmethod
+    def insert_handler(cls, mapper, connection, target):
+        if not cls.permissions_criterion("insert"):
+            raise exceptions.PermissionDeniedError("Cannot insert type: {}".format(cls))
+
+    @classmethod
+    def update_handler(cls, mapper, connection, target):
+        print("UPDATE", mapper, connection, target)
+
+    @classmethod
+    def delete_handler(cls, mapper, connection, target):
+        print("DELETE", mapper, connection, target)
+
+
+class PermissionedQuery(orm.Query):
+    __actions__ = { "select", "insert", "update", "delete" }
 
     @classmethod
     def compile_handler(cls, query):
-        for desc in query.column_descriptions:
+        if isinstance(query, cls):
+            return query.permissions_filter("select")
+        return query
+
+    def permissions_filter(self, action):
+        query = self
+
+        if action not in self.__actions__:
+            raise ValueError("Action must be one of {} (not {})".format(self.__actions__, action))
+
+        for desc in self.column_descriptions:
             type_ = desc.get("type")
-            if issubclass(type_, PermissionedModel) and type_.permissions_enabled():
-                permissions_criterion = type_.permission_criterion(type_.__select_perm__, type_.load_groups())
-                query = query.enable_assertions(False).filter(permissions_criterion)
+            if isinstance(type_, type) and  issubclass(type_, PermissionedModel) and type_.permissions_enabled():
+                query = self.enable_assertions(False).filter(type_.permissions_criterion(action))
 
         return query
 
-listen(orm.Query, "before_compile", lambda query: PermissionedModel.compile_handler(query), retval=True)
+    def _bulk_op(self, op_name, *op_args, **op_kwargs):
+        '''Perform a bulk operation with permissions clauses appended to query'''
+        return getattr(super(type(self), self.permissions_filter(op_name)), op_name)(*op_args, **op_kwargs)
+
+    def update(self, *args, **kwargs):
+        return self._bulk_op("update", *args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return self._bulk_op("delete", *args, **kwargs)
+
+def _dispatch(classmethod_):
+    @functools.wraps(classmethod_)
+    def inner(*args, **kwargs):
+        return classmethod_(*args, **kwargs)
+
+    return inner
+
+listen(PermissionedQuery, "before_compile", _dispatch(PermissionedQuery.compile_handler), retval=True)
+listen(PermissionedModel, "before_insert", _dispatch(PermissionedModel.insert_handler))
+listen(PermissionedModel, "before_update", _dispatch(PermissionedModel.update_handler))
+listen(PermissionedModel, "before_delete", _dispatch(PermissionedModel.delete_handler))
 
 ### The base model
 @generic_repr("id")

@@ -301,10 +301,10 @@ class TestPermissionedModel:
 
         # overridable attrs affecting perms
         assert concrete.__scope__ is None, "scope defaults to None"
-        assert concrete.__select_perm__ == "read", "select perm defaults to `read`"
-        assert concrete.__insert_perm__ == "write", "insert perm defaults to `write`"
-        assert concrete.__update_perm__ == "write", "insert perm defaults to `write`"
-        assert concrete.__delete_perm__ == "delete", "insert perm defaults to `delete`"
+        assert concrete.__select_perm__ == ("read", "read"), "select perm defaults"
+        assert concrete.__insert_perm__ == ("write", None), "insert perm defaults"
+        assert concrete.__update_perm__ == ("read", "write"), "insert perm defaults"
+        assert concrete.__delete_perm__ == ("delete", "delete"), "insert perm defaults"
 
     def test__Permissions__init__(self):
         instance = Permed(read=("test", "groups"), write=("test",))
@@ -326,69 +326,145 @@ class TestPermissionedModel:
         assert orm.PermissionedModel.load_groups_from_flask_session() == [groups.everybody], \
                "load_groups_from_flask_session loads the default groups from flask session by default"
 
-    def test__permission_criterion(self):
-        assert Permed.permission_criterion("read", []) is False,\
+    def test__permissions_criterion(self):
+        assert Permed.permissions_criterion("select") is False,\
                "empty groups list returns literal False criteria (e.g. with no groups permission is denied"
-        assert Permed.permission_criterion("read", [groups.everybody, groups.root]) is True,\
-               "if root is in groups_list a literal True criteria is returned (e.g. root always has permission)"
+        with mock.patch.object(Permed, "load_groups") as mock_load:
+            mock_load.return_value = [groups.everybody, groups.root]
+            assert Permed.permissions_criterion("select") is True,\
+                   "if root is in groups_list a literal True criteria is returned (root always has permission)"
+            assert mock_load.called, "mock used"
+
+        yes_scope = groups.Scope(display_name="yes")
+        with mock.patch.object(Permed, "load_groups") as mock_load:
+            mock_load.return_value = [groups.everybody, yes_scope.read, yes_scope.write]
+            with pytest.raises(ValueError):
+                assert Permed.permissions_criterion("no_action")
+            assert mock_load.called, "mock was used"
+            mock_load.reset_mock()
+
+            with mock.patch.object(Permed, "__scope__", groups.Scope(display_name="nope")):
+                assert Permed.permissions_criterion("select") is False,\
+                       "if correct scope permission is not in groups list a literal False criteria is returned"
+                assert mock_load.called, "mock was used"
+                mock_load.reset_mock()
+
+            with mock.patch.object(Permed, "__scope__", yes_scope):
+                assert Permed.permissions_criterion("insert") is True,\
+                       "if correct scope permission is in groups list and action is insert, permission is granted"
+                assert mock_load.called, "mock was used"
+                mock_load.reset_mock()
+
+                with mock.patch.object(Permed, "read", None):
+                    assert Permed.permissions_criterion("select") is True,\
+                        "if permission is not defined on object then permission is not enforced"
+                assert mock_load.called, "mock was used"
+                mock_load.reset_mock()
 
 
-        Permed.__scope__ = groups.Scope(display_name="nope")
-        assert Permed.permission_criterion("read", [groups.everybody]) is False,\
-               "if correct scope permission is not in groups list a literal False criteria is returned"
+        with mock.patch.object(Permed, "load_groups") as mock_load:
+            # this is actually how SQLAlchemy tests conditions
+            mock_load.return_value = [groups.user, groups.everybody]
+            assert str(Permed.permissions_criterion("select")) ==  \
+                   "{t}.{perm}_0 IN (:{perm}_0_1, :{perm}_0_2) OR {t}.{perm}_1 IN (:{perm}_1_1, :{perm}_1_2)"\
+                   "".format(t=Permed.__tablename__, perm="_permissions_read")
+            assert mock_load.called, "mock was used"
 
-        Permed.__scope__ = None
-        assert orm.PermissionedModel.permission_criterion("no_perm", [groups.everybody]) is True,\
-               "if the permission is not provided by Model then the permission is not enforced"
+    def test__insert_handler(self):
+        pass
 
-        # this is actually how SQLAlchemy tests conditions
-        assert str(Permed.permission_criterion("read", [groups.user, groups.everybody])) ==  \
-               "{t}.{perm}_0 IN (:{perm}_0_1, :{perm}_0_2) OR {t}.{perm}_1 IN (:{perm}_1_1, :{perm}_1_2)"\
-               "".format(t=Permed.__tablename__, perm="_permissions_read")
+    def test__update_handler(self):
+        pass
 
-    def test__compile_handler(self):
-        Session = sessionmaker()
-        session = Session()
-
-        assert str(orm.PermissionedModel.compile_handler(session.query(Permed)).whereclause).lower() == "false", \
-               "if groups list is empty, a literal false condition is added to the query"
-
-        assert orm.PermissionedModel.compile_handler(session.query(Prefixed)).whereclause is None, \
-               "no clauses added when model class doesn't inherit PermissionedModel"
-
-        class NoPerms(Permed):
-            @classmethod
-            def permissions_enabled(cls):
-                return False
-
-        assert orm.PermissionedModel.compile_handler(session.query(NoPerms)).whereclause is None, \
-               "no clauses added when permissioned_enabled returns false"
-
-        class AlwaysAsUser(Permed):
-            @classmethod
-            def load_groups(cls):
-                return [groups.everybody, groups.user]
-
-
-        assert str(
-            AlwaysAsUser.compile_handler(session.query(AlwaysAsUser).filter(AlwaysAsUser.id == 1)).whereclause
-        ) == "permisionedconcrete.id = :id_1 AND ("\
-                 "{t}.{perm}_0 IN (:{perm}_0_1, :{perm}_0_2) OR {t}.{perm}_1 IN (:{perm}_1_1, :{perm}_1_2)"\
-             ")".format(t=Permed.__tablename__, perm="_permissions_read")
-
-        assert str(session.query(AlwaysAsUser).filter(AlwaysAsUser.id == 1)).endswith(
-            "permisionedconcrete.id = :id_1 AND ("\
-                 "{t}.{perm}_0 IN (:{perm}_0_1, :{perm}_0_2) OR {t}.{perm}_1 IN (:{perm}_1_1, :{perm}_1_2)"\
-             ")".format(t=Permed.__tablename__, perm="_permissions_read")
-        ), "compile_handler called by `before_compile`"
-
+    def test__delete_handler(self):
+        pass
 
     def test__disable_permissions(self):
         assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled defaults to true"
-        with orm.disable_permissions():
+        with orm.PermissionedModel.disable_permissions():
             assert not orm.PermissionedModel.permissions_enabled(), "override of permissions_enabled works"
         assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled reset after exit"
 
+
+class NoPerms(Permed):
+    @classmethod
+    def permissions_enabled(cls):
+        return False
+
+class AlwaysAsUser(Permed):
+    select_whereclause = ""\
+        "permisionedconcrete.id = :id_1 AND ("\
+            "{t}.{perm}_0 IN (:{perm}_0_1, :{perm}_0_2) OR {t}.{perm}_1 IN (:{perm}_1_1, :{perm}_1_2)"\
+        ")".format(t=Permed.__tablename__, perm="_permissions_read")
+
+    @classmethod
+    def load_groups(cls):
+        return [groups.everybody, groups.user]
+
+class NotSubclass(Permissioned):
+    __abstract__ = False
+    __tablename__ = "not_subclass"
+
+    id = Column(UUIDType, primary_key = True)
+
+@pytest.fixture
+def session():
+    return sessionmaker(query_cls=orm.PermissionedQuery)()
+
+class TestPermissionedQuery:
+    def test__compile_handler(self, session):
+        query = session.query(NoPerms)
+        assert query.compile_handler(query).whereclause is None, \
+               "no clauses added when permissioned_enabled returns false"
+
+
+        with mock.patch("directorofme.authorization.orm.PermissionedQuery.permissions_filter") as perm_filter:
+            assert query.compile_handler(None) is None, "if instance is not a PermissionedQuery No-Op"
+            assert not perm_filter.called, "perm filter should not have been called"
+
+        query = session.query(AlwaysAsUser).filter(AlwaysAsUser.id == 1)
+        assert str(query.compile_handler(query).whereclause) == AlwaysAsUser.select_whereclause, \
+               "direct call to compile handler with permissions works as expected"
+
+        assert str(query).endswith(AlwaysAsUser.select_whereclause), "compile_handler called by `before_compile`"
+
+
+    def test__permissions_filter(self, session):
+        with pytest.raises(ValueError):
+            session.query(NoPerms).permissions_filter("nope")
+
+        assert session.query(NotSubclass).permissions_filter("select").whereclause is None, \
+               "permissions skipped if the model isn't a PermissionedModel"
+
+        assert str(
+            session.query(AlwaysAsUser).filter(AlwaysAsUser.id == 1).permissions_filter("select").whereclause
+        ) == AlwaysAsUser.select_whereclause,  "permissions_filter is correct when called"
+
+        with orm.PermissionedModel.disable_permissions():
+            assert session.query(AlwaysAsUser).permissions_filter("select").whereclause is None, \
+                   "no filtering if permissions are disabled"
+
+    @mock.patch("sqlalchemy.orm.Query.update")
+    @mock.patch("sqlalchemy.orm.Query.delete")
+    def test__bulk_operations_happypath(self, delete, update, session):
+        update.return_value = "update"
+        delete.return_value = "delete"
+        permissions_criterion_mock= mock.MagicMock()
+
+        class BulkAction(Permed):
+            @classmethod
+            def permissions_criterion(cls, *args, **kwargs):
+                permissions_criterion_mock(*args, **kwargs)
+                return True
+
+        query = session.query(BulkAction)
+        assert query.update({"foo": "bar"}) == "update", "bulk update calls underyling update"
+        permissions_criterion_mock.assert_called_with("update")
+        update.assert_called_with({"foo": "bar"})
+
+        assert query.delete() == "delete", "bulk delete calls underyling update"
+        permissions_criterion_mock.assert_called_with("delete")
+        delete.assert_called_with(), "delete called"
 
 def test__Model_contract():
     class ConcreteModel(orm.Model):
