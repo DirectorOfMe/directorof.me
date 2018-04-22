@@ -5,6 +5,7 @@ orm.py -- Auth support for a SQLAlchemy-based ORM.
 '''
 import uuid
 import functools
+import contextlib
 
 import flask
 
@@ -17,13 +18,20 @@ from slugify import slugify
 
 from . import standard_permissions, groups
 
-__all__ = [ "Permission", "GroupBasedPermission", "PermissionedModelMeta",
-            "PrefixedModel", "PermissionedModel", "Model", "slugify_on_change" ]
+__all__ = [ "Permission", "GroupBasedPermission", "PermissionedModelMeta", "PrefixedModel",
+            "PermissionedModel", "Model", "slugify_on_change", "disable_permissions" ]
+
+@contextlib.contextmanager
+def disable_permissions():
+    '''Disable permissions as a decorator or context manager'''
+    permissions_enabled = PermissionedModel.permissions_enabled
+    PermissionedModel.permissions_enabled = lambda: False
+    yield
+    PermissionedModel.permissions_enabled = permissions_enabled
 
 def slugify_on_change(src, target, default=True):
-    '''Class decorator that slugs an attribute when it changes and stores it
-       to another attribute. By default it will automatically initialize the
-       target value as well.
+    '''Class decorator that slugs an attribute when it changes and stores it to another attribute.
+       By default it will automatically initialize the target value as well.
 
        NB: this does not play well with abstract classes or inheritence, and should only be used by
        concrete models.
@@ -230,21 +238,23 @@ class PermissionedModel(PrefixedModel):
             return False
 
         # if we aren't root, we have groups and scope is OK
-        perm = getattr(cls, permission_name)
-        if perm:
-            parts = []
-            for col_number in range(perm.max_permissions):
-                parts.extend([getattr(type_, perm.column_name(col_number)) == name for name in groups_list])
+        perm = getattr(cls, permission_name, None)
+        if not perm:
+            return True
 
-            return or_(*parts)
+        parts = []
+        group_names = [g.name for g in groups_list]
+        for col_number in range(perm.max_permissions):
+            parts.append(getattr(cls, perm.column_name(col_number)).in_(group_names))
 
-        return True
+        return or_(*parts)
+
 
     @classmethod
     def compile_handler(cls, query):
         for desc in query.column_descriptions:
             type_ = desc.get("type")
-            if isinstance(type_, PermissionedModelMeta) and type_.permissions_enabled():
+            if issubclass(type_, PermissionedModel) and type_.permissions_enabled():
                 permissions_criterion = type_.permission_criterion(type_.__select_perm__, type_.load_groups())
                 query = query.enable_assertions(False).filter(permissions_criterion)
 

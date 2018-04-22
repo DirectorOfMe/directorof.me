@@ -6,7 +6,7 @@ from unittest import mock
 
 from flask.sessions import SessionInterface
 
-from directorofme.authorization.session import Session
+from directorofme.authorization import groups, session
 
 ### COPIED FROM FLASK ITSELF
 @pytest.fixture
@@ -21,7 +21,7 @@ def clear_env():
 
 class TestSessionInterface(SessionInterface):
     def open_session(self, *args):
-        return Session(save=False, app=None, profile=None, groups=[], environment={})
+        return session.Session(save=False, app=None, profile=None, groups=[groups.everybody], environment={})
 
 @pytest.fixture
 def request_context_with_session(app):

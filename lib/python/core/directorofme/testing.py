@@ -6,46 +6,22 @@ import pytest
 import sqlalchemy
 
 from unittest import mock
-from .authorization.orm import Model
+from .authorization.orm import Model, disable_permissions
 
 # TODO ironically, tests
-__all__ = [ "DBFixture", "existing", "commit_with_integrity_error", "dict_from_response" ]
+__all__ = [ "db", "existing", "commit_with_integrity_error", "dict_from_response" ]
 
-class DBFixture:
-	def __init__(self, real_db):
-		self.real_db = real_db
-		self.to_cleanup = []
+def db(real_db):
+    def inner():
+        yield real_db
 
-	def track_for_deletion(self, session):
-		self.to_cleanup += session.new
+        real_db.session.rollback()
+        for table in reversed(Model.metadata.sorted_tables):
+            real_db.engine.execute(table.delete())
+        real_db.session.commit()
 
-	def fixture(self, fixture_name="db"):
-		def inner(request):
-			sqlalchemy.event.listen(
-				self.real_db.session,
-				"before_commit",
-				self.track_for_deletion)
-
-			yield self.real_db
-
-			try:
-				self.real_db.session.rollback()
-				for obj in self.to_cleanup:
-					try:
-						self.real_db.session.delete(obj)
-					except sqlalchemy.exc.InvalidRequestError:
-						pass
-				self.real_db.session.commit()
-			finally:
-				self.to_cleanup = []
-				sqlalchemy.event.remove(
-					self.real_db.session,
-					"before_commit",
-					self.track_for_deletion)
-
-		inner.__name__ = fixture_name
-		return inner
-
+    inner.__name__ = "db"
+    return inner
 
 def commit_with_integrity_error(db, *objs):
     db.session.add_all(objs)
@@ -62,16 +38,6 @@ def existing(model, query_on="id"):
 
 def dict_from_response(response):
     return json.loads(response.get_data().decode("utf-8"))
-
-
-def disable_permissions():
-    def false():
-        return False
-
-    original_checker = Model.permissions_enabled
-    Model.permissions_enabled = false
-    yield
-    Model.original_checker= original_checker
 
 @contextlib.contextmanager
 def token_mock(identity=None, user_claims=None):

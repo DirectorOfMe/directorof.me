@@ -82,9 +82,6 @@ class TestSessionDecorator:
         assert flask.session.profile is None, "profile is unset"
 
         # groups test
-        flask.session.groups.append(groups.everybody)
-        assert flask.session.groups == [groups.everybody], "only everybody in groups list"
-
         decorator = SessionDecorator(groups=[groups.admin])
         assert flask.session.groups == [groups.everybody], "only everybody in groups list when not in context"
         with decorator:
@@ -113,7 +110,6 @@ class TestSessionDecorator:
         # not sure if there is a legit practical reason for this
         decorator = SessionDecorator(groups=[groups.root])
 
-        flask.session.groups.append(groups.everybody)
         assert flask.session.groups == [groups.everybody], "groups list correctly set"
         with decorator:
             assert set(flask.session.groups) == set([groups.everybody, groups.root]), "groups list correct"
@@ -132,27 +128,27 @@ class TestSessionDecorator:
 
         @SessionDecorator(groups=[groups.root])
         def test_decoration():
-            assert flask.session.groups == [groups.root], "session modified in function"
+            assert set(flask.session.groups) == set([groups.everybody, groups.root]), "session modified in function"
             ensure_call()
 
-        assert flask.session.groups == [], "list empty before test"
+        assert flask.session.groups == [groups.everybody], "just everybody before test"
 
         test_decoration()
         assert ensure_call.called, "function was actually called"
 
-        assert flask.session.groups == [], "list empty after test"
+        assert flask.session.groups == [groups.everybody], "just everybody after test"
 
 
 def test__do_with_groups(request_context_with_session):
-    assert flask.session.groups == [], "test set"
+    assert flask.session.groups == [groups.everybody], "test set"
     with do_with_groups(groups.root, groups.admin):
-        assert set(flask.session.groups) == set([groups.root, groups.admin]), "passed groups set by helper"
-    assert flask.session.groups == [], "test reset"
+        assert set(flask.session.groups) == set([groups.everybody, groups.root, groups.admin]), "passed groups set by helper"
+    assert flask.session.groups == [groups.everybody], "test reset"
 
 
 def test__do_as_root(request_context_with_session):
-    assert flask.session.groups == [], "test set right"
+    assert flask.session.groups == [groups.everybody], "test set right"
     with do_as_root:
-        flask.session.groups == [groups.root], "root installed"
+        flask.session.groups == [groups.everybody, groups.root], "root installed"
 
-    assert flask.session.groups == [], "test reset"
+    assert flask.session.groups == [groups.everybody], "test reset"

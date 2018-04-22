@@ -3,11 +3,12 @@ import pytest
 from unittest import mock
 
 from sqlalchemy import Column, String
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy_utils import UUIDType
 
-from directorofme.authorization import orm
+from directorofme.authorization import orm, groups
 
 ### Fixtures
 class RandomPermission(orm.Permission):
@@ -294,9 +295,16 @@ class TestPermissionedModel:
 
         concrete = Permed()
         assert isinstance(concrete, orm.PrefixedModel), "permissionedmodel inherits prefixedmodel"
-        concrete.read == tuple(), "read installed to instance"
-        concrete.write == tuple(), "read installed to instance"
-        concrete.delete == tuple(), "read installed to instance"
+        assert concrete.read == tuple(), "read installed to instance"
+        assert concrete.write == tuple(), "read installed to instance"
+        assert concrete.delete == tuple(), "read installed to instance"
+
+        # overridable attrs affecting perms
+        assert concrete.__scope__ is None, "scope defaults to None"
+        assert concrete.__select_perm__ == "read", "select perm defaults to `read`"
+        assert concrete.__insert_perm__ == "write", "insert perm defaults to `write`"
+        assert concrete.__update_perm__ == "write", "insert perm defaults to `write`"
+        assert concrete.__delete_perm__ == "delete", "insert perm defaults to `delete`"
 
     def test__Permissions__init__(self):
         instance = Permed(read=("test", "groups"), write=("test",))
@@ -311,6 +319,70 @@ class TestPermissionedModel:
         assert instance.fancy == ("foo",), "fancy perm set correctly"
         for perm in ("read", "write", "delete"):
             assert getattr(instance, perm) == tuple(), "{} not set".format(perm)
+
+    def test__overridable_method_defaults(self, request_context_with_session):
+        assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled defaults to True"
+        assert orm.PermissionedModel.load_groups() == [], "load_groups returns an empty list by default"
+        assert orm.PermissionedModel.load_groups_from_flask_session() == [groups.everybody], \
+               "load_groups_from_flask_session loads the default groups from flask session by default"
+
+    def test__permission_criterion(self):
+        assert Permed.permission_criterion("read", []) is False,\
+               "empty groups list returns literal False criteria (e.g. with no groups permission is denied"
+        assert Permed.permission_criterion("read", [groups.everybody, groups.root]) is True,\
+               "if root is in groups_list a literal True criteria is returned (e.g. root always has permission)"
+
+
+        Permed.__scope__ = groups.Scope(display_name="nope")
+        assert Permed.permission_criterion("read", [groups.everybody]) is False,\
+               "if correct scope permission is not in groups list a literal False criteria is returned"
+
+        Permed.__scope__ = None
+        assert orm.PermissionedModel.permission_criterion("no_perm", [groups.everybody]) is True,\
+               "if the permission is not provided by Model then the permission is not enforced"
+
+        # this is actually how SQLAlchemy tests conditions
+        assert str(Permed.permission_criterion("read", [groups.user, groups.everybody])) ==  \
+               "{t}.{perm}_0 IN (:{perm}_0_1, :{perm}_0_2) OR {t}.{perm}_1 IN (:{perm}_1_1, :{perm}_1_2)"\
+               "".format(t=Permed.__tablename__, perm="_permissions_read")
+
+    def test__compile_handler(self):
+        Session = sessionmaker()
+        session = Session()
+
+        assert str(orm.PermissionedModel.compile_handler(session.query(Permed)).whereclause).lower() == "false", \
+               "if groups list is empty, a literal false condition is added to the query"
+
+        assert orm.PermissionedModel.compile_handler(session.query(Prefixed)).whereclause is None, \
+               "no clauses added when model class doesn't inherit PermissionedModel"
+
+        class NoPerms(Permed):
+            @classmethod
+            def permissions_enabled(cls):
+                return False
+
+        assert orm.PermissionedModel.compile_handler(session.query(NoPerms)).whereclause is None, \
+               "no clauses added when permissioned_enabled returns false"
+
+        class AlwaysAsUser(Permed):
+            @classmethod
+            def load_groups(cls):
+                return [groups.everybody, groups.user]
+
+
+        assert str(
+            AlwaysAsUser.compile_handler(session.query(AlwaysAsUser).filter(AlwaysAsUser.id == 1)).whereclause
+        ) == "permisionedconcrete.id = :id_1 AND ("\
+                 "{t}.{perm}_0 IN (:{perm}_0_1, :{perm}_0_2) OR {t}.{perm}_1 IN (:{perm}_1_1, :{perm}_1_2)"\
+             ")".format(t=Permed.__tablename__, perm="_permissions_read")
+
+
+    def test__disable_permissions(self):
+        assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled defaults to true"
+        with orm.disable_permissions():
+            assert not orm.PermissionedModel.permissions_enabled(), "override of permissions_enabled works"
+        assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled reset after exit"
+
 
 def test__Model_contract():
     class ConcreteModel(orm.Model):
