@@ -376,6 +376,12 @@ class TestPermissionedModel:
                  "{t}.{perm}_0 IN (:{perm}_0_1, :{perm}_0_2) OR {t}.{perm}_1 IN (:{perm}_1_1, :{perm}_1_2)"\
              ")".format(t=Permed.__tablename__, perm="_permissions_read")
 
+        assert str(session.query(AlwaysAsUser).filter(AlwaysAsUser.id == 1)).endswith(
+            "permisionedconcrete.id = :id_1 AND ("\
+                 "{t}.{perm}_0 IN (:{perm}_0_1, :{perm}_0_2) OR {t}.{perm}_1 IN (:{perm}_1_1, :{perm}_1_2)"\
+             ")".format(t=Permed.__tablename__, perm="_permissions_read")
+        ), "compile_handler called by `before_compile`"
+
 
     def test__disable_permissions(self):
         assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled defaults to true"
