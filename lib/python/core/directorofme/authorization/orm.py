@@ -4,6 +4,7 @@ orm.py -- Auth support for a SQLAlchemy-based ORM.
 @author: Matt Story <matt.story@directorof.me>
 '''
 import uuid
+import enum
 import functools
 import contextlib
 
@@ -11,7 +12,7 @@ import flask
 
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy import Column, String, or_, orm
+from sqlalchemy import Column, String, or_, and_, orm
 from sqlalchemy.event import listen
 from sqlalchemy_utils import Timestamp, UUIDType, generic_repr
 from slugify import slugify
@@ -112,20 +113,21 @@ class Permission:
             yield getattr(instance, self.column_name(ii))
 
 
-
 class GroupBasedPermission(Permission):
     ### without any foreign keys, this is just idiomatic for now
     col_type = String(50)
+
 
 ### Permissions Model Classes
 class PermissionedModelMeta(DeclarativeMeta):
     def __new__(cls, object_or_name, bases, __dict__):
         perm_columns = {}
-        perms = []
+        perms = {p for b in bases for p in getattr(b, "__perms__", []) }
 
         if __dict__.get("__standard_permissions__"):
             PermType = __dict__.get("__permission_type__", GroupBasedPermission)
             __dict__.update({k: PermType() for k in standard_permissions})
+            perms |= set(standard_permissions)
 
         for kk,vv in __dict__.items():
             if isinstance(vv, Permission):
@@ -134,7 +136,7 @@ class PermissionedModelMeta(DeclarativeMeta):
                                      "attribute name ({})".format(vv.name, kk))
                 vv.name = kk
                 perm_columns.update(cls.make_permissions(vv))
-                perms.append(vv.name)
+                perms.add(vv.name)
 
         __dict__.update(perm_columns)
         __dict__["__perms__"] = tuple(perms)
@@ -182,6 +184,13 @@ class PrefixedModel(PermissionedBase):
             return "_".join([prefix, name])
         return name
 
+
+class _PermissionCheck(enum.Enum):
+    granted = 1
+    denied = 2
+    not_denied = 3
+
+
 class PermissionedModel(PrefixedModel):
     '''A model for handling group-based permissions transparently'''
     __abstract__ = True
@@ -196,12 +205,12 @@ class PermissionedModel(PrefixedModel):
 
     ### TODO: populate these defaults from session
     def __init__(self, *args, **kwargs):
-        for perm_name in self.__perms__:
-            perm = kwargs.pop(perm_name, None)
-            if perm is not None:
-                setattr(self, perm_name, perm)
-
         super().__init__(*args, **kwargs)
+        self.update_initial_perms()
+
+
+    def update_initial_perms(self):
+        self.__initial_perms__ = {p: getattr(self, p) for p in self.__perms__}
 
     @classmethod
     def permissions_enabled(cls):
@@ -221,62 +230,96 @@ class PermissionedModel(PrefixedModel):
         '''Disable permissions as a decorator or context manager'''
         permissions_enabled = cls.permissions_enabled
         cls.permissions_enabled = lambda: False
-        yield
-        cls.permissions_enabled = permissions_enabled
+        try:
+            yield
+        finally:
+            cls.permissions_enabled = permissions_enabled
+
+
+    @classmethod
+    def _scope_and_obj_perms_from_action(cls, action):
+        try:
+            return getattr(cls, "__{}_perm__".format(action))
+        except AttributeError:
+            raise ValueError("unsupported action: {}".format(action))
+
+    @classmethod
+    def _type_level_checks(cls, action):
+        groups_list = cls.load_groups()
+
+        # if there are no groups, permission is denied
+        if not groups_list:
+            return _PermissionCheck.denied
+
+        # root always has permission
+        if groups.root in groups_list:
+            return _PermissionCheck.granted
+
+        scope_perm_name, obj_perm_name = cls._scope_and_obj_perms_from_action(action)
+
+        # check scope permissions
+        scope_group = getattr(cls.__scope__, scope_perm_name, None)
+        if scope_group is not None and scope_group not in groups_list:
+            # if we don't have scope access permission is denied
+            return _PermissionCheck.denied
+
+        # if there are no object permissions for this action, permission is granted
+        if obj_perm_name is None or getattr(cls, obj_perm_name, None) is None:
+            return _PermissionCheck.granted
+
+        return _PermissionCheck.not_denied
 
 
     @classmethod
     def permissions_criterion(cls, action):
-        groups_list = cls.load_groups()
+        type_checks = cls._type_level_checks(action)
 
-        # if the groups list is empty, return a literal boolean FALSE criterion
-        if not groups_list:
-            return False
+        if type_checks == _PermissionCheck.denied:
+            return and_(False)
+        elif type_checks == _PermissionCheck.granted:
+            return and_(True)
 
-        # root group in session subverts access controls
-        if groups.root in groups_list:
-            return True
-
-        try:
-            scope_perm_name, obj_perm_name = getattr(cls, "__{}_perm__".format(action))
-        except AttributeError:
-            raise ValueError("unsupported action: {}".format(action))
-
-        criterion = []
-
-        # if this model is scoped
-        scope_group = getattr(cls.__scope__, scope_perm_name, None)
-        if scope_group is not None and scope_group not in groups_list:
-            # if we don't have access we return a literal boolean FALSE criterion and short-circuit anything else
-            return False
-
-        # if we aren't root, we have groups and scope is OK
-        perm = obj_perm_name if obj_perm_name is None else getattr(cls, obj_perm_name, None)
-
-        # if the permission isn't enforced for this object past the scope level
-        # -- or if we are doing an insert (and therefore there are no objects to check)
-        if not perm:
-            return True
-
+        # build criterion from permissions columns
         parts = []
-        group_names = [g.name for g in groups_list]
+        perm = getattr(cls, cls._scope_and_obj_perms_from_action(action)[1])
+        group_names = [g.name for g in cls.load_groups()]
         for col_number in range(perm.max_permissions):
             parts.append(getattr(cls, perm.column_name(col_number)).in_(group_names))
 
         return or_(*parts)
 
+    def permissions_check(self, action):
+        type_checks = self._type_level_checks(action)
+        if type_checks == _PermissionCheck.denied:
+            return False
+        elif type_checks == _PermissionCheck.granted:
+            return True
+
+        groups_list = self.load_groups()
+        groups_set = {g.name for g in self.load_groups()}
+        obj_perms_set = set(self.__initial_perms__.get(self._scope_and_obj_perms_from_action(action)[1]))
+
+        return bool(groups_set & obj_perms_set)
+
+
     @classmethod
     def insert_handler(cls, mapper, connection, target):
-        if not cls.permissions_criterion("insert"):
+        if type(target).permissions_enabled() and not target.permissions_check("insert"):
             raise exceptions.PermissionDeniedError("Cannot insert type: {}".format(cls))
 
     @classmethod
     def update_handler(cls, mapper, connection, target):
-        print("UPDATE", mapper, connection, target)
+        if type(target).permissions_enabled() and not target.permissions_check("update"):
+            raise exceptions.PermissionDeniedError("Cannot update {}".format(target))
 
     @classmethod
     def delete_handler(cls, mapper, connection, target):
-        print("DELETE", mapper, connection, target)
+        if type(target).permissions_enabled() and not target.permissions_check("delete"):
+            raise exceptions.PermissionDeniedError("Cannot delete {}".format(target))
+
+    @classmethod
+    def after_save_handler(cls, mapper, connection, target):
+        target.update_initial_perms()
 
 
 class PermissionedQuery(orm.Query):
@@ -311,18 +354,6 @@ class PermissionedQuery(orm.Query):
     def delete(self, *args, **kwargs):
         return self._bulk_op("delete", *args, **kwargs)
 
-def _dispatch(classmethod_):
-    @functools.wraps(classmethod_)
-    def inner(*args, **kwargs):
-        return classmethod_(*args, **kwargs)
-
-    return inner
-
-listen(PermissionedQuery, "before_compile", _dispatch(PermissionedQuery.compile_handler), retval=True)
-listen(PermissionedModel, "before_insert", _dispatch(PermissionedModel.insert_handler))
-listen(PermissionedModel, "before_update", _dispatch(PermissionedModel.update_handler))
-listen(PermissionedModel, "before_delete", _dispatch(PermissionedModel.delete_handler))
-
 ### The base model
 @generic_repr("id")
 class Model(PermissionedModel, Timestamp):
@@ -330,3 +361,20 @@ class Model(PermissionedModel, Timestamp):
 
     #: Unique identifier for this object.
     id = Column(UUIDType, primary_key=True, default=uuid.uuid1)
+
+
+### Attach Events
+def _dispatch(classmethod_):
+    @functools.wraps(classmethod_)
+    def inner(*args, **kwargs):
+        return classmethod_(*args, **kwargs)
+
+    return inner
+
+listen(PermissionedQuery, "before_compile", _dispatch(PermissionedQuery.compile_handler),
+       retval=True, propagate=True)
+listen(PermissionedModel, "before_insert", _dispatch(PermissionedModel.insert_handler), propagate=True)
+listen(PermissionedModel, "before_update", _dispatch(PermissionedModel.update_handler), propagate=True)
+listen(PermissionedModel, "before_delete", _dispatch(PermissionedModel.delete_handler), propagate=True)
+listen(PermissionedModel, "after_insert", _dispatch(PermissionedModel.after_save_handler), propagate=True)
+listen(PermissionedModel, "after_update", _dispatch(PermissionedModel.after_save_handler), propagate=True)

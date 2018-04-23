@@ -1,14 +1,15 @@
+import uuid
 import pytest
 
 from unittest import mock
 
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, and_, create_engine, Integer
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy_utils import UUIDType
 
-from directorofme.authorization import orm, groups
+from directorofme.authorization import orm, groups, exceptions
 
 ### Fixtures
 class RandomPermission(orm.Permission):
@@ -284,7 +285,8 @@ class TestPrefixedModel:
 
 class Permed(orm.PermissionedModel):
     __tablename__ = "permisionedconcrete"
-    id = Column(UUIDType, primary_key = True)
+    __table_args = {"sqlite_autoincrement": True}
+    id = Column(Integer, primary_key=True)
 
 
 class TestPermissionedModel:
@@ -306,11 +308,13 @@ class TestPermissionedModel:
         assert concrete.__update_perm__ == ("read", "write"), "insert perm defaults"
         assert concrete.__delete_perm__ == ("delete", "delete"), "insert perm defaults"
 
-    def test__Permissions__init__(self):
+    def test__PermissionedModel__init__(self):
         instance = Permed(read=("test", "groups"), write=("test",))
         assert instance.read == ("test", "groups"), "read set via __init__ kwarg"
         assert instance.write == ("test",), "write set via __init__ kwarg"
         assert instance.delete == tuple(), "delete not set when not passed"
+        assert instance.__initial_perms__ == {"read": ("test", "groups"), "write": ("test",), "delete": tuple()},\
+               "initial perms set from initializing perms"
 
         class ExtraPermed(Permed):
             fancy = orm.GroupBasedPermission()
@@ -326,58 +330,200 @@ class TestPermissionedModel:
         assert orm.PermissionedModel.load_groups_from_flask_session() == [groups.everybody], \
                "load_groups_from_flask_session loads the default groups from flask session by default"
 
-    def test__permissions_criterion(self):
-        assert Permed.permissions_criterion("select") is False,\
+    # 286-296, 301-302, 306-307, 311-312
+    def test__permissions_criterion_and_permissions_check(self):
+        assert str(Permed.permissions_criterion("select")) == "false",\
                "empty groups list returns literal False criteria (e.g. with no groups permission is denied"
+        assert Permed().permissions_check("select") is False, "empty groups list means no permissions"
+
         with mock.patch.object(Permed, "load_groups") as mock_load:
             mock_load.return_value = [groups.everybody, groups.root]
-            assert Permed.permissions_criterion("select") is True,\
+            assert Permed.load_groups() == mock_load.return_value, "mock installed"
+            assert str(Permed.permissions_criterion("select")) == "true",\
                    "if root is in groups_list a literal True criteria is returned (root always has permission)"
-            assert mock_load.called, "mock used"
+
+            assert Permed().permissions_check("select") is True, "root always has permission"
 
         yes_scope = groups.Scope(display_name="yes")
         with mock.patch.object(Permed, "load_groups") as mock_load:
             mock_load.return_value = [groups.everybody, yes_scope.read, yes_scope.write]
-            with pytest.raises(ValueError):
-                assert Permed.permissions_criterion("no_action")
-            assert mock_load.called, "mock was used"
-            mock_load.reset_mock()
+            assert Permed.load_groups() == mock_load.return_value, "mock installed"
+            for meth in (Permed.permissions_criterion, Permed().permissions_check):
+                with pytest.raises(ValueError):
+                    meth("no_action")
 
             with mock.patch.object(Permed, "__scope__", groups.Scope(display_name="nope")):
-                assert Permed.permissions_criterion("select") is False,\
+                assert str(Permed.permissions_criterion("select")) == "false",\
                        "if correct scope permission is not in groups list a literal False criteria is returned"
-                assert mock_load.called, "mock was used"
-                mock_load.reset_mock()
+
+                assert Permed().permissions_check("select") is False, \
+                       "if correct scope permission is not in groups list a permission is denied"
 
             with mock.patch.object(Permed, "__scope__", yes_scope):
-                assert Permed.permissions_criterion("insert") is True,\
+                assert str(Permed.permissions_criterion("insert")) == "true",\
                        "if correct scope permission is in groups list and action is insert, permission is granted"
-                assert mock_load.called, "mock was used"
-                mock_load.reset_mock()
+                assert Permed().permissions_check("insert") is True, \
+                       "if correct scope permission is in groups list and action is insert, permission is granted"
 
                 with mock.patch.object(Permed, "read", None):
-                    assert Permed.permissions_criterion("select") is True,\
+                    assert str(Permed.permissions_criterion("select")) == "true",\
                         "if permission is not defined on object then permission is not enforced"
-                assert mock_load.called, "mock was used"
-                mock_load.reset_mock()
-
+                    assert Permed().permissions_check("select") is True,\
+                        "if permission is not defined on object then permission is not enforced"
 
         with mock.patch.object(Permed, "load_groups") as mock_load:
             # this is actually how SQLAlchemy tests conditions
             mock_load.return_value = [groups.user, groups.everybody]
+            assert Permed.load_groups() == mock_load.return_value, "mock installed"
             assert str(Permed.permissions_criterion("select")) ==  \
                    "{t}.{perm}_0 IN (:{perm}_0_1, :{perm}_0_2) OR {t}.{perm}_1 IN (:{perm}_1_1, :{perm}_1_2)"\
                    "".format(t=Permed.__tablename__, perm="_permissions_read")
-            assert mock_load.called, "mock was used"
 
-    def test__insert_handler(self):
-        pass
+            with mock.patch.object(Permed, "read", [groups.user.name]):
+                assert Permed().permissions_check("select") is True, "permissions check works when group in list"
 
-    def test__update_handler(self):
-        pass
+            with mock.patch.object(Permed, "read", []):
+                assert Permed().permissions_check("select") is False, \
+                       "permissions check works when group not in list"
 
-    def test__delete_handler(self):
-        pass
+    @mock.patch.object(Permed, "load_groups")
+    def test__initial_perms_are_what_matters(self, mock_load):
+        mock_load.return_value = [groups.everybody]
+        assert Permed.load_groups() == mock_load.return_value, "mock installed"
+
+        no_initial_perms = Permed()
+        assert no_initial_perms.permissions_check("select") is False, "no groups means no access"
+
+        no_initial_perms.read = (groups.everybody.name,)
+        assert no_initial_perms.permissions_check("select") is False, "even after read set, no access"
+
+        Permed(read=[groups.everybody]).permissions_check("select") is True, "works when initialized with access"
+
+    def test__insert_handler(self, bound_session_with_permed):
+        # no groups fails
+        permed = Permed()
+        bound_session_with_permed.add(permed)
+        with pytest.raises(exceptions.PermissionDeniedError):
+            bound_session_with_permed.commit()
+
+        # disabled permissions succeeds
+        bound_session_with_permed.rollback()
+        bound_session_with_permed.add(permed)
+        with orm.PermissionedModel.disable_permissions():
+            bound_session_with_permed.commit()
+            assert isinstance(permed.id, int), "permed saved"
+
+        permed_scope = groups.Scope(display_name="permed")
+        with mock.patch.object(Permed, "load_groups") as mock_load, \
+                mock.patch.object(Permed, "__scope__", permed_scope):
+            mock_load.return_value = [permed_scope.write, permed_scope.read, groups.user]
+            scoped = Permed(read=(groups.user.name,))
+            bound_session_with_permed.add(scoped)
+            bound_session_with_permed.commit()
+            assert isinstance(scoped.id, int), "scoped saved"
+
+    @orm.PermissionedModel.disable_permissions()
+    def test__after_save_handler(self, bound_session_with_permed):
+        permed = Permed()
+        permed.read = (groups.everybody.name,)
+        assert permed.__initial_perms__["read"] == tuple(), "initial perms remain unchanged"
+
+        bound_session_with_permed.add(permed)
+        bound_session_with_permed.commit()
+        assert permed.__initial_perms__["read"] == (groups.everybody.name,), "initial perms set after insert"
+
+        permed.write = (groups.user.name,)
+        assert permed.__initial_perms__["write"] == tuple(), "initial perms remain unchanged"
+        bound_session_with_permed.add(permed)
+        bound_session_with_permed.commit()
+        assert permed.__initial_perms__["write"] == (groups.user.name,), "initial perms set after update"
+
+    @mock.patch.object(Permed, "load_groups")
+    def test__update_handler(self, mock_load, bound_session_with_permed):
+        # no groups fails
+        mock_load.return_value = [groups.everybody,]
+        assert Permed.load_groups() == [groups.everybody], "perms mock works"
+
+        permed = Permed(read=(groups.everybody.name,))
+        bound_session_with_permed.add(permed)
+        with orm.PermissionedModel.disable_permissions():
+            bound_session_with_permed.commit()
+
+        assert isinstance(permed.id , int), "permed saved"
+
+        # update fails if no model-level permission
+        permed.write = (groups.everybody.name,)
+        bound_session_with_permed.add(permed)
+        with pytest.raises(exceptions.PermissionDeniedError):
+            bound_session_with_permed.commit()
+
+        bound_session_with_permed.rollback()
+
+        permed.write = (groups.everybody.name,)
+        bound_session_with_permed.add(permed)
+        with orm.PermissionedModel.disable_permissions():
+            bound_session_with_permed.commit()
+
+        # update succeeds with model write permission
+        permed.read = (groups.everybody.name, groups.user.name)
+        bound_session_with_permed.add(permed)
+        bound_session_with_permed.commit()
+
+        permed_scope = groups.Scope(display_name="permed")
+        with mock.patch.object(Permed, "__scope__", permed_scope):
+            permed.delete = (groups.user.name,)
+            bound_session_with_permed.add(permed)
+
+            # fail without scope-level read
+            with orm.PermissionedModel.disable_permissions():
+                bound_session_with_permed.commit()
+
+            bound_session_with_permed.rollback()
+            bound_session_with_permed.add(permed)
+
+            mock_load.return_value += [permed_scope.read]
+            bound_session_with_permed.commit()
+            assert isinstance(permed.id, int), "update works with scope read"
+
+    @mock.patch.object(Permed, "load_groups")
+    def test__delete_handler(self, mock_load, bound_session_with_permed):
+        # no groups fails
+        mock_load.return_value = [groups.everybody,]
+        assert Permed.load_groups() == [groups.everybody], "perms mock works"
+
+        def make_permed(add_delete=True):
+            with orm.PermissionedModel.disable_permissions():
+                permed = Permed(read=(groups.everybody.name,), write=(groups.everybody.name,))
+                permed.delete = (groups.everybody.name,) if add_delete else tuple()
+                bound_session_with_permed.add(permed)
+                bound_session_with_permed.commit()
+                assert isinstance(permed.id, int), "permed created"
+                return permed
+
+        bound_session_with_permed.delete(make_permed(False))
+        with orm.PermissionedModel.disable_permissions():
+            bound_session_with_permed.commit()
+
+        bound_session_with_permed.rollback()
+
+        # modify the delete group -- works without scope
+        permed = make_permed()
+        bound_session_with_permed.delete(permed)
+        bound_session_with_permed.commit()
+        assert bound_session_with_permed.query(Permed).filter(Permed.id == permed.id).first() is None, \
+               "actually deleted"
+
+        permed_scope = groups.Scope(display_name="permed")
+        with mock.patch.object(Permed, "__scope__", permed_scope):
+            bound_session_with_permed.delete(make_permed())
+            with pytest.raises(exceptions.PermissionDeniedError):
+                bound_session_with_permed.commit()
+            bound_session_with_permed.rollback()
+
+            mock_load.return_value += [permed_scope.delete]
+            bound_session_with_permed.delete(make_permed())
+            bound_session_with_permed.commit()
+
 
     def test__disable_permissions(self):
         assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled defaults to true"
@@ -408,8 +554,28 @@ class NotSubclass(Permissioned):
     id = Column(UUIDType, primary_key = True)
 
 @pytest.fixture
-def session():
-    return sessionmaker(query_cls=orm.PermissionedQuery)()
+def Session():
+    return sessionmaker(query_cls=orm.PermissionedQuery)
+
+@pytest.fixture
+def session(Session):
+    return Session()
+
+@pytest.fixture
+def engine():
+    return create_engine('sqlite://')
+
+@pytest.fixture
+def bound_session(Session, engine):
+    return Session(bind=engine)
+
+@pytest.fixture
+def bound_session_with_permed(engine, bound_session):
+    Permed.__table__.create(engine)
+    try:
+        yield bound_session
+    finally:
+        Permed.__table__.drop(engine)
 
 class TestPermissionedQuery:
     def test__compile_handler(self, session):
@@ -449,13 +615,13 @@ class TestPermissionedQuery:
     def test__bulk_operations_happypath(self, delete, update, session):
         update.return_value = "update"
         delete.return_value = "delete"
-        permissions_criterion_mock= mock.MagicMock()
+        permissions_criterion_mock = mock.MagicMock()
 
         class BulkAction(Permed):
             @classmethod
             def permissions_criterion(cls, *args, **kwargs):
                 permissions_criterion_mock(*args, **kwargs)
-                return True
+                return and_(True)
 
         query = session.query(BulkAction)
         assert query.update({"foo": "bar"}) == "update", "bulk update calls underyling update"
