@@ -4,7 +4,8 @@ from sqlalchemy.event import listen
 from sqlalchemy_utils import URLType, JSONType, UUIDType
 from slugify import slugify
 
-from directorofme.authorization.orm import Model, slugify_on_change
+from directorofme.authorization.orm import slugify_on_change
+from directorofme.authorization.flask import Model
 
 __all__ = [ "EventType", "Event" ]
 

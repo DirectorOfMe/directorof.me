@@ -31,6 +31,7 @@ class Session(Spec):
     #TODO: factor this to set
     groups = Attribute(typing.List[groups_module.Group])
     environment = Attribute(typing.Dict[str, typing.Any])
+    default_object_perms = Attribute(typing.Dict[str, typing.Tuple[groups_module.Group]])
 
     def overwrite(self, new_session):
         for attr in self.attributes:

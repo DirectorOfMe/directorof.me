@@ -3,7 +3,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import URLType, JSONType, UUIDType
 from slugify import slugify
 
-from directorofme.authorization.orm import Model, slugify_on_change
+from directorofme.authorization.orm import slugify_on_change
+from directorofme.authorization.flask import Model
 from directorofme.authorization.groups import Group as AuthGroup
 
 from . import Group
@@ -83,11 +84,12 @@ class InstalledApp(Model):
         return Group.scopes(self.access_groups)
 
     @classmethod
-    def install_for_group(cls, app, group, config=None, access_groups=None):
+    def install_for_group(cls, app, group, config=None, access_groups=None, **perms):
         if access_groups is None:
             access_groups = app.requested_access_groups
 
         if isinstance(group, Group) or isinstance(group, AuthGroup):
             group = group.name
 
-        return cls(app=app, read=[group], config=config, access_groups=access_groups)
+        reads = perms.get("read", tuple()) + (group,)
+        return cls(app=app, read=reads, config=config, access_groups=access_groups, **perms)

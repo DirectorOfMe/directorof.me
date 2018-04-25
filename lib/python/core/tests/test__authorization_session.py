@@ -39,22 +39,25 @@ def test__SessionProfile():
 
 class TestSession:
     def test__init__(self):
-        assert Session.attributes == {"save", "app", "profile", "groups", "environment"}, "attributes correct"
+        assert Session.attributes == {"save", "app", "profile", "groups", "environment", "default_object_perms"},\
+               "attributes correct"
 
         session = Session()
         assert isinstance(session, Session), "init works with no args"
 
-        session = Session(save=True, app=SessionApp(), profile=SessionProfile(), groups=[], environment={})
+        session = Session(save=True, app=SessionApp(), profile=SessionProfile(), groups=[],
+                          environment={}, default_object_perms={})
         assert session.save == True, "save is set by __init__"
         assert isinstance(session.app, SessionApp), "app is set by __init__"
         assert isinstance(session.profile, SessionProfile), "profile is set by __init__"
         assert session.groups == [], "groups is set by __init__"
         assert session.environment == {}, "environment is set by __init__"
+        assert session.default_object_perms == {}, "default_object_perms is set by __init__"
 
     def test__json_encode(self):
         app = SessionApp(id=uuid.uuid1(), app_id=uuid.uuid1(), app_name="test", config={})
         profile = SessionProfile(id=uuid.uuid1(), email="hi@example.com")
-        session = Session(save=True, app=app, profile=profile, groups=[], environment={})
+        session = Session(save=True, app=app, profile=profile, groups=[], environment={}, default_object_perms={})
         assert "save" not in json.loads(json.dumps(session, cls=JSONEncoder)), "save not exported"
 
     def test__overwrite(self):
@@ -63,13 +66,15 @@ class TestSession:
             session.save
 
         session.overwrite(
-            Session(save=True, app=SessionApp(), profile=SessionProfile(), groups=[], environment={})
+            Session(save=True, app=SessionApp(), profile=SessionProfile(), groups=[], environment={},
+                    default_object_perms={})
         )
         assert session.save == True, "save is set by overwrite"
         assert isinstance(session.app, SessionApp), "app is set by overwrite"
         assert isinstance(session.profile, SessionProfile), "profile is set by overwrite"
         assert session.groups == [], "groups is set by overwrite"
         assert session.environment == {}, "environment is set by overwrite"
+        assert session.default_object_perms == {}, "default_object_perms is set by overwrite"
 
 class TestSessionDecorator:
     def test__basic(self, request_context_with_session):
@@ -95,7 +100,8 @@ class TestSessionDecorator:
             assert flask.session.groups == [groups.admin], "groups list replaced in context if asked to"
 
         # different session
-        real_session = Session(groups=[], profile=None, environment={}, app=None, save=False)
+        real_session = Session(groups=[], profile=None, environment={}, app=None,
+                               save=False, default_object_perms={})
         assert flask.session.groups == [groups.everybody], "groups list correctly reset on exit"
 
         decorator = SessionDecorator(extend_groups=True, groups=[groups.root], real_session=real_session)

@@ -7,14 +7,21 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 
 from directorofme.testing import token_mock
 from directorofme.authorization import groups
-from directorofme.authorization.jwt import JWTSessionInterface, JWTManager
+from directorofme.authorization.flask import JWTSessionInterface, JWTManager, Model
 from directorofme.authorization.exceptions import MisconfiguredAuthError
+
+def test__Model(request_context_with_session):
+    assert Model.load_groups() == [groups.everybody], "load_groups loads gruops from the flask session"
+    with mock.patch.object(flask.session, "default_object_perms", { "read": (groups.everybody,) }):
+        assert Model.default_perms("read") == (groups.everybody,), \
+               "default_perms loads groups from the flask session"
 
 class TestJWTSessionInterface:
     mock_identity = {
         "profile": { "id": 1, "email": "hi@example.com" },
         "groups": [], "environment": {},
         "app": { "id": 1, "app_id": 2, "app_name": "main", "config": {} },
+        "default_object_perms": { "read": (groups.user.name,) },
     }
 
     def test__open_session(self, app):
@@ -28,6 +35,8 @@ class TestJWTSessionInterface:
                 assert decode_mock.called, "mock was installed correctly"
                 assert session.profile.email == "hi@example.com", "session profile installed"
                 assert session.app.app_name == "main", "session app installed"
+                assert session.default_object_perms == self.mock_identity["default_object_perms"], \
+                       "default object perms installed"
 
         # invalid token errors are ignored
         with token_mock() as decode_mock:
@@ -37,6 +46,8 @@ class TestJWTSessionInterface:
                 assert decode_mock.called, "mock was installed correctly"
                 assert session.profile is None, "invalid token installs empty session"
                 assert session.groups == [groups.everybody], "groups list is [everybody]"
+                assert session.default_object_perms == { "read": (groups.everybody.name,) }, \
+                       "default object perms default correctly"
 
         # no header = empty session
         with token_mock() as decode_mock:
@@ -46,6 +57,8 @@ class TestJWTSessionInterface:
                 assert decode_mock.called, "mock was installed correctly"
                 assert session.profile is None, "no token installs empty session"
                 assert session.groups == [groups.everybody], "groups list is [everybody]"
+                assert session.default_object_perms == { "read": (groups.everybody.name,) }, \
+                       "default object perms default correctly"
 
     def test__save_session(self, app):
         app.config["IS_AUTH_SERVER"] = True
@@ -101,14 +114,14 @@ class TestJWTSessionInterface:
 
 class TestJWTManager:
     def test__init_app_calls_configure_app(self, app):
-        with mock.patch('directorofme.authorization.jwt.JWTManager.configure_app') as ConfigureAppMock:
+        with mock.patch('directorofme.authorization.flask.JWTManager.configure_app') as ConfigureAppMock:
             jwt = JWTManager()
             ConfigureAppMock.assert_not_called()
 
             jwt.init_app(app)
             ConfigureAppMock.assert_called_with(app)
 
-        with mock.patch('directorofme.authorization.jwt.JWTManager.configure_app') as ConfigureAppMock:
+        with mock.patch('directorofme.authorization.flask.JWTManager.configure_app') as ConfigureAppMock:
             jwt = JWTManager(app)
             ConfigureAppMock.assert_called_with(app)
 

@@ -3,7 +3,7 @@ directorofme.authorization -- shared libraries for authorizing access to
                               functionality and data.
 '''
 
-__all__ = [ "groups", "session", "jwt", "exceptions", "standard_permissions", "requires" ]
+__all__ = [ "groups", "session", "exceptions", "standard_permissions", "requires" ]
 
 standard_permissions = ( "read", "write", "delete" )
 
@@ -11,7 +11,7 @@ standard_permissions = ( "read", "write", "delete" )
 from . import exceptions
 from . import groups
 from . import session
-from . import jwt
+from . import flask
 from . import requires
 from . import orm
 

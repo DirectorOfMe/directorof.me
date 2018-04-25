@@ -8,7 +8,7 @@ from sqlalchemy.sql.expression import func
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
-from directorofme.authorization.orm import Model
+from directorofme.authorization.flask import Model
 
 from . import Group
 

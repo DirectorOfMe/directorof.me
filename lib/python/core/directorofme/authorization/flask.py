@@ -1,13 +1,27 @@
 import functools
+
+import flask
 import jwt.exceptions
 import flask_jwt_extended as flask_jwt
 
-from flask import Flask
 from flask.sessions import SessionInterface as FlaskSessionInterface
 
 from . import session, groups, exceptions
+from . import orm
 
-__all__ = [ "JWTSessionInterface", "JWTManager" ]
+
+__all__ = [ "JWTSessionInterface", "JWTManager", "Model" ]
+
+class Model(orm.Model):
+    __abstract__ = True
+
+    @classmethod
+    def default_perms(cls, perm_name):
+        return flask.session.default_object_perms.get(perm_name, tuple())
+
+    @classmethod
+    def load_groups(cls):
+        return flask.session.groups
 
 ### Utility
 def empty_if_expired(fn):
@@ -34,6 +48,8 @@ class JWTSessionInterface(FlaskSessionInterface):
     def open_session(self, app, request):
         '''Populate the session from the JWT cookies at the start of a request'''
         ### TODO: MAYBE RAISE IF KEY IS EXPIRED
+        ### TODO: default_objectt_perms
+        ### TODO: default_object_perms are strings, but groups are objects ...
         identity = flask_jwt.get_jwt_identity() or {}
         try:
             ###: TODO: app is required, but not yet implemented, re-factor
@@ -43,9 +59,11 @@ class JWTSessionInterface(FlaskSessionInterface):
                 profile=session.SessionProfile(**identity["profile"]),
                 groups=[groups.Group(**g) for g in (identity["groups"] or [])],
                 app=(app if app is None else session.SessionApp(**app)),
+                default_object_perms=identity.get("default_object_perms", {}),
                 environment=identity.get("environment", {}))
         except (TypeError, KeyError):
-            return session.Session(save=False, app=None, profile=None, groups=[groups.everybody], environment={})
+            return session.Session(save=False, app=None, profile=None,groups=[groups.everybody],
+                                   environment={}, default_object_perms={ "read": (groups.everybody.name,) })
 
     def save_session(self, app, session_obj, response):
         '''Save the session at the end of a request if it's new and we are the auth server'''
@@ -56,13 +74,13 @@ class JWTSessionInterface(FlaskSessionInterface):
 
 class JWTManager(flask_jwt.JWTManager):
     '''Our implementation of JWT overrides some things'''
-    def init_app(self, app: Flask):
+    def init_app(self, app: flask.Flask):
         '''Extension of the JWTManager to configure all servers correctly to
            work together'''
         self.configure_app(app)
         super().init_app(app)
 
-    def configure_app(self, app: Flask):
+    def configure_app(self, app: flask.Flask):
         app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
         app.config["JWT_COOKIE_CSRF_PROTECT"] = True
 

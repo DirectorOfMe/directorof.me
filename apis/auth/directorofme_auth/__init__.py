@@ -9,6 +9,7 @@ import flask
 from flask_migrate import Migrate
 from directorofme import flask_app
 from directorofme.authorization import groups, orm
+from directorofme.authorization.flask import Model
 
 __all__ = [ "app", "api", "config", "db", "exceptions", "jwt", "migrate", "resources", "models" ]
 
@@ -17,9 +18,8 @@ from .config import config
 config = config()
 
 ###: TODO: this should be factored to a flask app ext or base model factory
-orm.Model.__tablename_prefix__ = config["name"]
-orm.Model.__scope__ = groups.Scope(display_name=config["name"])
-orm.Model.load_groups = orm.Model.load_groups_from_flask_session
+Model.__tablename_prefix__ = config["name"]
+Model.__scope__ = groups.Scope(display_name=config["name"])
 
 from . import exceptions
 from .models import db
@@ -38,4 +38,4 @@ db.app = app
 jwt.init_app(app)
 jwt.app = app
 
-migrate = Migrate(app, db, version_table=orm.Model.version_table(), include_symbol=orm.Model.include_symbol)
+migrate = Migrate(app, db, version_table=Model.version_table(), include_symbol=Model.include_symbol)

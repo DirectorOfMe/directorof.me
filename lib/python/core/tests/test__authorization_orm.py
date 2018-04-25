@@ -9,7 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy_utils import UUIDType
 
-from directorofme.authorization import orm, groups, exceptions
+from directorofme.authorization import orm, groups, exceptions, standard_permissions
 
 ### Fixtures
 class RandomPermission(orm.Permission):
@@ -324,11 +324,21 @@ class TestPermissionedModel:
         for perm in ("read", "write", "delete"):
             assert getattr(instance, perm) == tuple(), "{} not set".format(perm)
 
+    @mock.patch.object(orm.PermissionedModel, "default_perms")
+    def test__default_perms(self, default_perms_mock):
+        default_perms_mock.return_value = ("default-group-name",)
+
+        for perm in standard_permissions:
+            assert getattr(Permed(), perm) == ("default-group-name",), "defaults correctly"
+
+        instance = Permed(read=("foo",), delete=("bar",))
+        assert instance.read == ("foo",), "when passed, default is not set"
+        assert instance.delete == ("bar",), "when passed, default is not set"
+        assert instance.write == ("default-group-name",), "when not passed default is set"
+
     def test__overridable_method_defaults(self, request_context_with_session):
         assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled defaults to True"
         assert orm.PermissionedModel.load_groups() == [], "load_groups returns an empty list by default"
-        assert orm.PermissionedModel.load_groups_from_flask_session() == [groups.everybody], \
-               "load_groups_from_flask_session loads the default groups from flask session by default"
 
     # 286-296, 301-302, 306-307, 311-312
     def test__permissions_criterion_and_permissions_check(self):

@@ -21,7 +21,8 @@ def clear_env():
 
 class TestSessionInterface(SessionInterface):
     def open_session(self, *args):
-        return session.Session(save=False, app=None, profile=None, groups=[groups.everybody], environment={})
+        return session.Session(save=False, app=None, profile=None, groups=[groups.everybody],
+                               environment={}, default_object_perms={})
 
 @pytest.fixture
 def request_context_with_session(app):

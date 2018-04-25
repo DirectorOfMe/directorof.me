@@ -17,15 +17,19 @@ depends_on = None
 
 from slugify import slugify
 
-from directorofme.authorization import orm
-from directorofme.authorization.groups import base_groups, admin, staff
+from directorofme.authorization.groups import base_groups, admin, staff, everybody
+from directorofme.authorization.flask import Model
+from unittest import mock
 from directorofme_auth.models import Group, GroupTypes, License, Profile, App, InstalledApp
 
 ### GROUPS
 # TODO: DEFAULT OWNERSHIP
 def build_groups():
-    groups = {g.name: Group(display_name=g.display_name, type=g.type) for g in base_groups}
-    for g in Group.create_scope_groups(orm.Model.__scope__):
+    groups_groups = { "read": (everybody.name,), "write": (admin.name,) }
+    groups = {g.name: Group(display_name=g.display_name, type=g.type, **groups_groups) for g in base_groups}
+    for g in Group.create_scope_groups(Model.__scope__):
+        g.read = groups_groups["read"]
+        g.write = groups_groups["write"]
         groups[g.name] = g
 
     return groups
@@ -36,7 +40,9 @@ def build_main_app(groups):
         name="Main",
         desc="DirectorOf.Me's main app. Everyone should have this installed.",
         url="/",
-        requested_access_groups = [groups["s-{}-read".format(slugify(orm.Model.__scope__.display_name))]]
+        requested_access_groups = [groups["s-{}-read".format(slugify(Model.__scope__.display_name))]],
+        read=(everybody.name,),
+        write=(admin.name,),
     )
 
 
@@ -67,6 +73,10 @@ def build_dom_license(groups, profiles):
 def get_session():
     return sa.orm.session.Session(bind=op.get_bind())
 
+def default_perms(*args):
+    return tuple()
+
+@mock.patch.object(Model, "default_perms", default_perms)
 def upgrade():
     session = get_session()
     groups = build_groups()

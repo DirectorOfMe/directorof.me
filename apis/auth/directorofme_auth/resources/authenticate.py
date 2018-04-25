@@ -5,7 +5,7 @@ import flask_jwt_extended as flask_jwt
 from flask_restful import Resource, abort
 from oauthlib.oauth2 import OAuth2Error
 
-from directorofme.authorization import session, groups, requires
+from directorofme.authorization import session, groups, requires, standard_permissions
 from directorofme_flask_restful import resource_url
 
 from . import api
@@ -69,13 +69,13 @@ class OAuthCallback(Resource):
             if method == "login":
                 groups_list = []
 
+                #: NOTE: DO NOT ADD profile.group_of_one here, as profile can be edited by user
+                #: profile.group_of_one is mixed into session by the license, which is not editable by the user
                 with session.do_as_root:
-                    primary_groups = []
-                    for license in profile.licenses:
-                        primary_groups += license.groups
-
                     groups_list = [
-                        groups.Group.from_conforming_type(g) for p in primary_groups for g in p.expand()
+                        groups.Group.from_conforming_type(group) for license in profile.licenses \
+                                                                 for license_group in license.groups \
+                                                                 for group in license_group.expand()
                     ]
 
                 ### XXX: mix in app group
@@ -84,7 +84,9 @@ class OAuthCallback(Resource):
                     environment=profile.preferences or {},
                     app=None,
                     profile=session.SessionProfile.from_conforming_type(profile),
-                    groups= flask.session.groups + groups_list
+                    groups= flask.session.groups + groups_list,
+                    #TODO: think on this
+                    default_object_perms={name: [profile.group_of_one.name] for name in standard_permissions}
                 ))
                 return flask.session
 

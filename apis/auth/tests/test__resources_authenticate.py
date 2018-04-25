@@ -25,13 +25,15 @@ def authorization_url():
         yield method
 
 empty_session_data = json.loads(json.dumps({
-    "environment": {}, "groups": [groups.everybody], "app": None, "profile": None
+    "environment": {}, "groups": [groups.everybody], "app": None, "profile": None,
+    "default_object_perms": { "read": [groups.everybody.name] },
 }, cls=app.json_encoder))
 
 test_session_data = json.loads(json.dumps({
     "app": None, "environment": {},
     "profile": { "id": "12345", "email": "hi@example.com" },
     "groups": [groups.everybody, groups.user, groups.Group(display_name="test", type=groups.GroupTypes.data)],
+    "default_object_perms": { "read": [groups.everybody.name] }
 }, cls=app.json_encoder))
 
 @pytest.fixture
@@ -173,19 +175,24 @@ class TestOAuthCallback:
         response = test_client.get("/api/-/auth/oauth/google/login/callback")
         self.cookie_checker(response)
         response_dict = dict_from_response(response)
-        response_dict['groups'].sort(key=lambda x: x['name'])
+        response_dict["groups"].sort(key=lambda x: x["name"])
         assert response_dict == {
-            'environment': {},
-            'profile': { 'id': str(test_profile.id), 'email': test_profile.email },
-            'groups': sorted([
+            "environment": {},
+            "profile": { "id": str(test_profile.id), "email": test_profile.email },
+            "groups": sorted([
                 json.loads(json.dumps(groups.everybody, cls=app.json_encoder)),
                 json.loads(json.dumps(groups.user, cls=app.json_encoder)),
                 json.loads(json.dumps(
                     groups.Group.from_conforming_type(test_profile.group_of_one),
                     cls=app.json_encoder
                 ))
-            ], key=lambda x: x['name']),
-            'app': None
+            ], key=lambda x: x["name"]),
+            "app": None,
+            "default_object_perms": {
+                "read": [test_profile.group_of_one.name],
+                "write": [test_profile.group_of_one.name],
+                "delete": [test_profile.group_of_one.name]
+            }
         }, "session is correctly formed"
 
 class TestRefreshToken:

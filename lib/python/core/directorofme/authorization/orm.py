@@ -8,8 +8,6 @@ import enum
 import functools
 import contextlib
 
-import flask
-
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy import Column, String, or_, and_, orm
@@ -206,11 +204,20 @@ class PermissionedModel(PrefixedModel):
     ### TODO: populate these defaults from session
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.id is None:
+            for perm_name in self.__perms__:
+                current_perms = getattr(self, perm_name)
+                setattr(self, perm_name, current_perms if current_perms else self.default_perms(perm_name))
+
         self.update_initial_perms()
 
 
     def update_initial_perms(self):
         self.__initial_perms__ = {p: getattr(self, p) for p in self.__perms__}
+
+    @classmethod
+    def default_perms(cls, perm_name):
+        return tuple()
 
     @classmethod
     def permissions_enabled(cls):
@@ -219,10 +226,6 @@ class PermissionedModel(PrefixedModel):
     @classmethod
     def load_groups(cls):
         return []
-
-    @classmethod
-    def load_groups_from_flask_session(cls):
-        return flask.session.groups
 
     @classmethod
     @contextlib.contextmanager

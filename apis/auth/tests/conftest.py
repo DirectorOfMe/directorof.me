@@ -23,7 +23,7 @@ def test_client():
         yield client
 
 @pytest.fixture
-def disable_permissions():
+def disable_permissions(request_context):
     with Model.disable_permissions():
         yield
 
