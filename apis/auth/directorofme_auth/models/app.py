@@ -80,6 +80,10 @@ class InstalledApp(Model):
     access_groups = relationship("Group", secondary=granted_access_groups, backref="granted_to")
 
     @property
+    def app_name(self):
+        return self.app.name
+
+    @property
     def scopes(self):
         return Group.scopes(self.access_groups)
 

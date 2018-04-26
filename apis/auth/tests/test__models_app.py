@@ -119,6 +119,7 @@ class TestInstalledApp:
         installed_app = InstalledApp(app=app)
         assert installed_app.app == app, "app setup correctly"
         assert installed_app.app_id is None, "app_id None until saved"
+        assert installed_app.app_name == app.name, "app_name is correct"
         assert installed_app.id is None, "id None until saved"
 
         db.session.add(installed_app)

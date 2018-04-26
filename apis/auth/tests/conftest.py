@@ -1,10 +1,9 @@
 import pytest
-import uuid
 import requests
 
 from directorofme_auth import db as real_db, app
 from directorofme.testing import db as db
-from directorofme_auth.models import Group, GroupTypes, Profile
+from directorofme_auth.models import Group, GroupTypes, Profile, App, InstalledApp
 from directorofme.authorization import groups
 from directorofme.authorization.orm import Model
 
@@ -37,11 +36,15 @@ def user_group(disable_permissions, db):
 
 @pytest.fixture
 def test_profile(db, user_group):
-    id_ = uuid.uuid1()
-    group = Group(display_name=id_.hex, type=GroupTypes.data)
+    scope_groups = Group.create_scope_groups(groups.Scope(display_name="main"))
+    app = App(name="main", requested_access_groups=scope_groups, desc="main app", url="https://example.com/")
     profile = Profile.create_profile("test", "test@example.com")
+    installed_app = InstalledApp.install_for_group(app, profile.group_of_one)
 
+    db.session.add_all(scope_groups)
+    db.session.add(app)
     db.session.add(profile)
+    db.session.add(installed_app)
     db.session.commit()
 
     yield profile
