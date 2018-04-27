@@ -37,6 +37,10 @@ class Session(Spec):
         for attr in self.attributes:
             setattr(self, attr, getattr(new_session, attr))
 
+    @classmethod
+    def empty(cls):
+        return cls(save=False, app=None, profile=None, groups=[groups_module.everybody], environment={},
+                   default_object_perms={ "read": (groups_module.everybody.name,) })
 
 class SessionDecorator(contextlib.ContextDecorator):
     def __init__(self, extend_groups=True, real_session=None, **session_modifications):

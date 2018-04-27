@@ -76,6 +76,16 @@ class TestSession:
         assert session.environment == {}, "environment is set by overwrite"
         assert session.default_object_perms == {}, "default_object_perms is set by overwrite"
 
+    def test__empty(self):
+        session = Session.empty()
+
+        assert session.save is False, "save is False"
+        assert session.app is None, "app is None"
+        assert session.profile is None, "profile is None"
+        assert session.groups == [groups.everybody], "groups defaults to [everybody]"
+        assert session.environment == {}, "environment is {}"
+        assert session.default_object_perms == { "read": (groups.everybody.name,) }, "default perms correct"
+
 class TestSessionDecorator:
     def test__basic(self, request_context_with_session):
         # basic
