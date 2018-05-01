@@ -3,77 +3,17 @@ import functools
 import flask
 from flask_restful import Resource, abort
 
+from directorofme.flask.api import dump_with_schema, with_pagination_params
+
 from . import models, marshmallow, spec, api
 
-
-def dump_with(Schema, **dump_kwargs):
-    @functools.wraps(dump_with)
-    def inner(fn):
-        @functools.wraps(fn)
-        def inner_inner(*args, **kwargs):
-            # TODO: collection
-            obj = fn(*args, **kwargs)
-            if obj is None:
-                abort(404, message="No object found")
-
-            return Schema().dump(obj, **dump_kwargs)
-
-        return inner_inner
-
-    return inner
-
-class PaginationParams(marshmallow.Schema):
-    page = marshmallow.Integer()
-    results_per_page = marshmallow.Integer()
-
-def pagination_params(fn):
-    @functools.wraps(fn)
-    def inner(*args, **kwargs):
-        kwargs.update(PaginationParams().dump(flask.request.values).data)
-        kwargs["page"] = max(kwargs.get("page", 1), 1)
-        kwargs["results_per_page"] = min(max(kwargs.get("results_per_page", 50), 1), 50)
-
-        return fn(*args, **kwargs)
-
-
-    return inner
-
-def register_schema_with_spec(spec, name):
-    @functools.wraps(register_schema_with_spec)
-    def inner(cls):
-        spec.definition(name, schema=cls)
-        return cls
-
-    return inner
-
-def register_resource_with_spec(spec):
-    @functools.wraps(register_resource_with_spec)
-    def inner(cls):
-        # TODO: this needs to happen within the app context
-        from . import app
-        with app.test_request_context():
-            for view_func in app.view_functions.values():
-                if hasattr(view_func, "view_class") and view_func.view_class is cls:
-                    view_func.__doc__ = cls.__doc__
-                    spec.add_path(view=view_func)
-                    break
-
-        return cls
-
-    return inner
-
-class ErrorSchema(marshmallow.Schema):
-    message = marshmallow.String(required=True)
-
-
-### FACTOR EVERYTHING ABOVE THIS LINE
-@register_resource_with_spec(spec)
+@spec.register_resource
 @api.resource("/event_types/<string:slug>", endpoint="event_types_api")
 class EventType(Resource):
     """
     An endpoint for retrieving and manipulating event type definitions.
     """
-    @register_schema_with_spec(spec, "EventType")
+    @spec.register_schema("EventType")
     class EventTypeSchema(marshmallow.Schema):
         slug = marshmallow.String(required=True)
         name = marshmallow.String(required=True)
@@ -85,7 +25,7 @@ class EventType(Resource):
             "collection": marshmallow.URLFor("event.event_types_collection_api"),
         })
 
-    @dump_with(EventTypeSchema)
+    @dump_with_schema(EventTypeSchema)
     def get(self, slug):
         """
         ---
@@ -107,13 +47,13 @@ class EventType(Resource):
         return models.EventType.query.filter(models.EventType.slug == slug).first()
 
 
-@register_resource_with_spec(spec)
+@spec.register_resource
 @api.resource("/event_types/", endpoint="event_types_collection_api")
 class EventTypes(Resource):
     """
     An endpoint for retrieving and manipulating collections of event types.
     """
-    @register_schema_with_spec(spec, "EventTypeCollection")
+    @spec.register_schema("EventTypeCollection")
     class EventTypeCollectionSchema(marshmallow.Schema):
         page = marshmallow.Integer()
         results_per_page = marshmallow.Integer()
@@ -128,8 +68,8 @@ class EventTypes(Resource):
                                        page="<prev_page>", results_per_page="<results_per_page"),
         })
 
-    @dump_with(EventTypeCollectionSchema)
-    @pagination_params
+    @dump_with_schema(EventTypeCollectionSchema)
+    @with_pagination_params(marshmallow)
     def get(self, page=1, results_per_page=50):
         """
         ---

@@ -4,9 +4,10 @@ authentication and authorization functionality for directorofme.
 
 @author: Matthew Story <matt@directorof.me>
 '''
+from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from directorofme.flask import app_for_api
-from directorofme.authorization import groups
+from directorofme.flask import versioned_api, app_for_api, JWTManager
+from directorofme.authorization import groups, orm
 from directorofme.flask import Model
 
 __all__ = [ "app", "api", "config", "db", "exceptions", "jwt", "migrate", "resources", "models" ]
@@ -20,10 +21,14 @@ Model.__tablename_prefix__ = config["name"]
 Model.__scope__ = groups.Scope(display_name=config["name"])
 
 from . import exceptions
-from .models import db
+
+db = SQLAlchemy(model_class=Model, query_class=orm.PermissionedQuery)
+
 from . import models
 
-from .resources import api, jwt
+api = versioned_api(config.get("api_name"))
+jwt = JWTManager()
+
 from . import resources
 
 app = app_for_api(config["name"], config)

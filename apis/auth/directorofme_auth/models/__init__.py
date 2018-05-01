@@ -1,12 +1,6 @@
-from flask_sqlalchemy import SQLAlchemy
-from directorofme.authorization import orm
-from directorofme.flask import Model
+__all__ = ["Group", "GroupTypes", "License", "Profile", "App", "InstalledApp", "exceptions"]
 
-__all__ = ["db", "Group", "GroupTypes", "License", "Profile", "App", "InstalledApp", "exceptions"]
-
-db = SQLAlchemy(model_class=Model, query_class=orm.PermissionedQuery)
-
-from . import exceptions
+from .. import exceptions, db
 from .group import Group, GroupTypes
 from .app import App, InstalledApp
 from .license import License
