@@ -24,7 +24,7 @@ class TestJWTSessionInterface:
 
         # happy path
         with token_mock(self.mock_identity) as decode_mock:
-            with app.test_request_context() as ctx:
+            with app.test_request_context():
                 session = flask.session
                 assert decode_mock.called, "mock was installed correctly"
                 assert session.profile.email == "hi@example.com", "session profile installed"
@@ -35,7 +35,7 @@ class TestJWTSessionInterface:
         # invalid token errors are ignored
         with token_mock() as decode_mock:
             decode_mock.side_effect = InvalidTokenError("Invalid Token")
-            with app.test_request_context() as ctx:
+            with app.test_request_context():
                 session = flask.session
                 assert decode_mock.called, "mock was installed correctly"
                 assert session.profile is None, "invalid token installs empty session"
@@ -68,7 +68,7 @@ class TestJWTSessionInterface:
             refresh_mock.return_value = "refresh"
             csrf_mock.return_value = "csrf"
 
-            with app.test_request_context() as ctx:
+            with app.test_request_context():
                 #session.save is false, no save happens
                 response = flask.Response()
                 app.session_interface.save_session(app, flask.session, response)

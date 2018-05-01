@@ -1,8 +1,20 @@
 import functools
 import flask
+import marshmallow
+
+from flask_restful import abort
 
 from collections import namedtuple
 from apispec import APISpec
+
+__all__ = [ "dump_with_schema", "with_pagination_params", "Spec" ]
+
+def _abort_if_errors(result):
+    if result.errors:
+        messages = ["{}: {}".format(k,v) for k,v in result.errors.items()]
+        abort(400, message="Validation failed: {}".format(", ".join(messages)))
+    return result
+
 
 def dump_with_schema(Schema, **dump_kwargs):
     """
@@ -16,30 +28,33 @@ def dump_with_schema(Schema, **dump_kwargs):
             if obj is None:
                 abort(404, message="No object found")
 
-            return Schema().dump(obj, **dump_kwargs)
+            return _abort_if_errors(Schema().dump(obj, **dump_kwargs)).data
 
         return inner_inner
 
     return inner
 
 
-def with_pagination_params(marshmallow):
+def with_pagination_params(default_results_per_page=50):
     """
     Validate and pass the standard pagination parameters for collections endpoints into a decorated
     MethodView method.
     """
     class PaginationParams(marshmallow.Schema):
-        page = marshmallow.Integer()
-        results_per_page = marshmallow.Integer()
+        page = marshmallow.fields.Integer()
+        results_per_page = marshmallow.fields.Integer()
 
     @functools.wraps(with_pagination_params)
     def inner(fn):
         # TODO: woulc be nice to manipulate the docs here as well
         @functools.wraps(fn)
         def inner_inner(*args, **kwargs):
-            kwargs.update(PaginationParams().dump(flask.request.values).data)
+            kwargs.update(_abort_if_errors(PaginationParams().dump(flask.request.values)).data)
             kwargs["page"] = max(kwargs.get("page", 1), 1)
-            kwargs["results_per_page"] = min(max(kwargs.get("results_per_page", 50), 1), 50)
+            kwargs["results_per_page"] = min(
+                max(kwargs.get("results_per_page", default_results_per_page), 1),
+                default_results_per_page
+            )
 
             return fn(*args, **kwargs)
 
@@ -52,11 +67,17 @@ Path = namedtuple("Path", ("args", "kwargs"))
 class Spec:
     name = "dom-apispec"
     def __init__(self, app=None, **spec_kwargs):
-        self.spec = APISpec(**spec_kwargs)
-        self.app = app
+        spec_kwargs.setdefault("plugins", [
+            'apispec.ext.flask',
+            'apispec.ext.marshmallow',
+        ])
+
+        self.spec = APISpec(**spec_kwargs, )
+        self.app = None
         self.paths = []
 
         if app is not None:
+            self.app = app
             self.init_app(app)
 
     ### pass through to spec
