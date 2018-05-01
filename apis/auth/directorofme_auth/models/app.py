@@ -1,11 +1,10 @@
 from sqlalchemy import Table, Column, String, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import URLType, JSONType, UUIDType
-from slugify import slugify
 
-from directorofme.authorization.orm import slugify_on_change
-from directorofme.authorization.flask import Model
+from directorofme.orm import slugify_on_change
 from directorofme.authorization.groups import Group as AuthGroup
+from directorofme.flask import Model
 
 from . import Group
 

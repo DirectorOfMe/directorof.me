@@ -7,7 +7,6 @@ from flask_restful import Resource, abort, reqparse
 from oauthlib.oauth2 import OAuth2Error
 
 from directorofme.authorization import session, groups, requires, standard_permissions
-from directorofme_flask_restful import resource_url
 
 from . import api
 from ..oauth import Client
@@ -73,7 +72,7 @@ def with_service_client(fn):
     return inner
 
 
-@resource_url(api, "/oauth/<string:service>/<string:method>", endpoint="oauth_api")
+@api.resource("/oauth/<string:service>/<string:method>", endpoint="oauth_api")
 class OAuth(Resource):
     @requires.anybody
     @with_service_client
@@ -82,7 +81,7 @@ class OAuth(Resource):
         return { "auth_url": url }, 302, { "Location": url }
 
 
-@resource_url(api, "/oauth/<string:service>/<string:method>/callback", endpoint="oauth_callback_api")
+@api.resource("/oauth/<string:service>/<string:method>/callback", endpoint="oauth_callback_api")
 class OAuthCallback(Resource):
     @requires.anybody
     @with_service_client
@@ -122,7 +121,7 @@ class OAuthCallback(Resource):
             return abort(404, message="No user associated with email ({})".format(email))
 
 
-@resource_url(api, "/refresh", endpoint="refresh_jwt")
+@api.resource("/refresh", endpoint="refresh_jwt")
 class RefreshToken(Resource):
     @requires.anybody
     @flask_jwt.jwt_refresh_token_required
@@ -138,13 +137,13 @@ class RefreshToken(Resource):
         return flask.session
 
 
-@resource_url(api, "/session", endpoint="session_api")
+@api.resource("/session", endpoint="session_api")
 class Session(Resource):
     @requires.user
     def get(self):
         return flask.session
 
-@resource_url(api, "/session/<installed_app_id>", endpoint="session_for_app_api")
+@api.resource("/session/<installed_app_id>", endpoint="session_for_app_api")
 class SessionForApp(Resource):
     @requires.user
     def get(self, installed_app_id):

@@ -1,5 +1,4 @@
-from directorofme.authorization.flask import JWTManager
-from directorofme_flask_restful import versioned_api
+from directorofme.flask import versioned_api, JWTManager
 
 from .. import config
 api = versioned_api(config.get("api_name"))

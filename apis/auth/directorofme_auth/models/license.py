@@ -4,11 +4,10 @@ models/license.py -- License system
 @author: Matt Story <matt@directorof.me>
 '''
 from sqlalchemy import Table, Column, Integer, DateTime, Text, ForeignKey, Sequence
-from sqlalchemy.sql.expression import func
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
-from directorofme.authorization.flask import Model
+from directorofme.flask import Model
 
 from . import Group
 

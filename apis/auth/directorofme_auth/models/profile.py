@@ -9,8 +9,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import JSONType, EmailType, UUIDType, generic_repr
 
 # proprietary imports
-from directorofme.authorization import orm, groups
-from directorofme.authorization.flask import Model
+from directorofme.authorization import groups
+from directorofme.flask import Model
 
 from . import GroupTypes, Group, License
 from .license import profiles_to_license

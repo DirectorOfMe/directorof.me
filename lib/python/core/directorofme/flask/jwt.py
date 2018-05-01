@@ -6,22 +6,10 @@ import flask_jwt_extended as flask_jwt
 
 from flask.sessions import SessionInterface as FlaskSessionInterface
 
-from . import session, groups, exceptions
-from . import orm
+from ..authorization import session, groups, exceptions
 
 
-__all__ = [ "JWTSessionInterface", "JWTManager", "Model" ]
-
-class Model(orm.Model):
-    __abstract__ = True
-
-    @classmethod
-    def default_perms(cls, perm_name):
-        return flask.session.default_object_perms.get(perm_name, tuple())
-
-    @classmethod
-    def load_groups(cls):
-        return flask.session.groups
+__all__ = [ "JWTSessionInterface", "JWTManager" ]
 
 ### Utility
 def empty_if_expired(fn):

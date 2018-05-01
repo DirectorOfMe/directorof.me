@@ -5,7 +5,7 @@ directorofme.conf
 *.tmp
 
 # Editors
-.*.sw[jklmnop]
+.*.sw[ijklmnop]
 .DS_Store
 *.un~
 

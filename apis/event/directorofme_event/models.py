@@ -1,11 +1,9 @@
-from sqlalchemy import Table, Column, String, ForeignKey, DateTime
+from sqlalchemy import Column, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from sqlalchemy.event import listen
-from sqlalchemy_utils import URLType, JSONType, UUIDType
-from slugify import slugify
+from sqlalchemy_utils import JSONType, UUIDType
 
-from directorofme.authorization.orm import slugify_on_change
-from directorofme.authorization.flask import Model
+from directorofme.orm import slugify_on_change
+from directorofme.flask import Model
 
 __all__ = [ "EventType", "Event" ]
 

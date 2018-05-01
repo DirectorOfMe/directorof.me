@@ -82,4 +82,4 @@ class TestEvent:
         commit_with_integrity_error(db, missing_event_type)
 
         missing_event_time = Event(event_type=EventType(name="test", desc="test event_type"))
-        commit_with_integrity_error(db, missing_event_type)
+        commit_with_integrity_error(db, missing_event_time)

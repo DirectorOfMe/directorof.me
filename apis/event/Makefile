@@ -27,7 +27,7 @@ PSQL_USER            ?= $(EVENT_API_PSQL_USER)
 PSQL_PASSWORD        ?= $(EVENT_API_PSQL_PASSWORD)
 PSQL_HOST            ?= $(EVENT_API_PSQL_HOST)
 
-EXTRA_PYTHONPATH     ?= $(LIB_DIR)/python/core:$(LIB_DIR)/python/flask_restful_ext
+EXTRA_PYTHONPATH     ?= $(LIB_DIR)/python/core
 
 .PHONY: default
 default: build-setup-py gunicorn-service proxy.conf

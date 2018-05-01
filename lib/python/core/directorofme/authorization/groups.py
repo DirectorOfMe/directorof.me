@@ -5,8 +5,8 @@ import slugify
 from ..specify import Spec, Attribute
 from ..authorization import standard_permissions
 
-__all__ = [ "GroupTypes", "Group", "Scope", "scope", "root", "admin", "nobody",\
-            "everybody", "anybody", "user", "staff", "base_groups" ]
+__all__ = [ "GroupTypes", "Group", "Scope", "root", "admin", "nobody", "everybody", "anybody",
+            "user", "staff", "base_groups" ]
 
 class GroupTypes(enum.Enum):
     '''GroupTypes defines the three types of group that are available. Groups

@@ -4,6 +4,7 @@ import operator
 
 __all__ = [ "Attribute", "AttributeMeta", "Spec", "undefaulted" ]
 
+### TODO: replace with marshmallow
 # sentinel
 undefaulted = object()
 

@@ -9,11 +9,9 @@ import functools
 import contextlib
 
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
-from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy import Column, String, or_, and_, orm
 from sqlalchemy.event import listen
 from sqlalchemy_utils import Timestamp, UUIDType, generic_repr
-from slugify import slugify
 
 from . import standard_permissions, groups, exceptions
 
@@ -21,34 +19,7 @@ from . import standard_permissions, groups, exceptions
 ###: TODO soft-deletes
 
 __all__ = [ "Permission", "GroupBasedPermission", "PermissionedModelMeta", "PrefixedModel",
-            "PermissionedModel", "Model", "PermissionedQuery", "slugify_on_change" ]
-
-def slugify_on_change(src, target, default=True):
-    '''Class decorator that slugs an attribute when it changes and stores it to another attribute.
-       By default it will automatically initialize the target value as well.
-
-       NB: this does not play well with abstract classes or inheritence, and should only be used by
-       concrete models.
-    '''
-    @functools.wraps(slugify_on_change)
-    def inner(cls):
-        if not hasattr(cls, "__table__") and not hasattr(cls, "__tablename__"):
-            raise ValueError("May not be used with non-concrete models")
-
-        old_init = cls.__init__
-        def __init__(self, *args, **kwargs):
-            old_init(self, *args, **kwargs)
-            src_value = getattr(self, src, None)
-
-            if src_value is not None:
-                setattr(self, target, slugify(src_value))
-
-        cls.__init__ = __init__
-
-        listen(getattr(cls, src), "set", lambda obj, v, x, y: setattr(obj, target, slugify(v)))
-        return cls
-
-    return inner
+            "PermissionedModel", "Model", "PermissionedQuery" ]
 
 class Permission:
     col_type = UUIDType
@@ -298,7 +269,6 @@ class PermissionedModel(PrefixedModel):
         elif type_checks == _PermissionCheck.granted:
             return True
 
-        groups_list = self.load_groups()
         groups_set = {g.name for g in self.load_groups()}
         obj_perms_set = set(self.__initial_perms__.get(self._scope_and_obj_perms_from_action(action)[1]))
 

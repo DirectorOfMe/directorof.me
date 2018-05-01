@@ -7,14 +7,8 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 
 from directorofme.testing import token_mock
 from directorofme.authorization import groups
-from directorofme.authorization.flask import JWTSessionInterface, JWTManager, Model
 from directorofme.authorization.exceptions import MisconfiguredAuthError
-
-def test__Model(request_context_with_session):
-    assert Model.load_groups() == [groups.everybody], "load_groups loads gruops from the flask session"
-    with mock.patch.object(flask.session, "default_object_perms", { "read": (groups.everybody,) }):
-        assert Model.default_perms("read") == (groups.everybody,), \
-               "default_perms loads groups from the flask session"
+from directorofme.flask import JWTSessionInterface, JWTManager
 
 class TestJWTSessionInterface:
     mock_identity = {
@@ -52,7 +46,7 @@ class TestJWTSessionInterface:
         # no header = empty session
         with token_mock() as decode_mock:
             decode_mock.side_effect = NoAuthorizationError("No Token")
-            with app.test_request_context() as ctx:
+            with app.test_request_context():
                 session = flask.session
                 assert decode_mock.called, "mock was installed correctly"
                 assert session.profile is None, "no token installs empty session"
@@ -114,14 +108,14 @@ class TestJWTSessionInterface:
 
 class TestJWTManager:
     def test__init_app_calls_configure_app(self, app):
-        with mock.patch('directorofme.authorization.flask.JWTManager.configure_app') as ConfigureAppMock:
+        with mock.patch('directorofme.flask.jwt.JWTManager.configure_app') as ConfigureAppMock:
             jwt = JWTManager()
             ConfigureAppMock.assert_not_called()
 
             jwt.init_app(app)
             ConfigureAppMock.assert_called_with(app)
 
-        with mock.patch('directorofme.authorization.flask.JWTManager.configure_app') as ConfigureAppMock:
+        with mock.patch('directorofme.flask.jwt.JWTManager.configure_app') as ConfigureAppMock:
             jwt = JWTManager(app)
             ConfigureAppMock.assert_called_with(app)
 

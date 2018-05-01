@@ -65,12 +65,13 @@ RUN_FILE_EXPORTS ?= FLASK_APP="$(FLASK_APP)" \
 ### Python pkg bits
 FLASK_PKG_DEPS  ?= $(SQLALCHEMY_DEPS),\
                    directorofme,\
-                   directorofme_flask_restful,\
                    flask==0.12.2,\
                    flask-restful==0.3.5,\
                    flask-jwt-extended[asymmetric_crypto]>=3.8.1,\
                    flask-sqlalchemy>=2.3.2,\
                    flask-migrate>=2.1.1,\
+				   flask-marshmallow==0.8.0,\
+				   apispec==0.35.0,\
 				   gunicorn==19.7,\
 
 

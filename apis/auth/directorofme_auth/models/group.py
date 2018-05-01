@@ -5,8 +5,8 @@ from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.event import listen
 from sqlalchemy_utils import UUIDType, generic_repr
 
-from directorofme.authorization.flask import Model
 from directorofme.authorization.groups import GroupTypes, Group as AuthGroup, Scope
+from directorofme.flask import Model
 
 from . import db
 

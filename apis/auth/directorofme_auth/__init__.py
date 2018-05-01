@@ -4,12 +4,10 @@ authentication and authorization functionality for directorofme.
 
 @author: Matthew Story <matt@directorof.me>
 '''
-import flask
-
 from flask_migrate import Migrate
-from directorofme import flask_app
-from directorofme.authorization import groups, orm
-from directorofme.authorization.flask import Model
+from directorofme.flask import app_for_api
+from directorofme.authorization import groups
+from directorofme.flask import Model
 
 __all__ = [ "app", "api", "config", "db", "exceptions", "jwt", "migrate", "resources", "models" ]
 
@@ -28,7 +26,7 @@ from . import models
 from .resources import api, jwt
 from . import resources
 
-app = flask_app.api(config["name"], config)
+app = app_for_api(config["name"], config)
 
 app.register_blueprint(api.blueprint)
 

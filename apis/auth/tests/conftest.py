@@ -1,9 +1,8 @@
 import pytest
-import requests
 
 from directorofme_auth import db as real_db, app
 from directorofme.testing import db as db
-from directorofme_auth.models import Group, GroupTypes, Profile, App, InstalledApp
+from directorofme_auth.models import Group, Profile, App, InstalledApp
 from directorofme.authorization import groups
 from directorofme.authorization.orm import Model
 

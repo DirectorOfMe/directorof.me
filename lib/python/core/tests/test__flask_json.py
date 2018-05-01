@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from directorofme.json import JSONEncoder
+from directorofme.flask import JSONEncoder
 
 class Implements:
     def __json_encode__(self):

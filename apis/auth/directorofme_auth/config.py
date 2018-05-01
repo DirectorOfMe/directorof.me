@@ -1,5 +1,5 @@
 import os
-from directorofme.flask_app import default_config
+from directorofme.flask import default_config
 
 def config():
     dflt = default_config(name=os.path.basename(os.path.dirname(__file__)))

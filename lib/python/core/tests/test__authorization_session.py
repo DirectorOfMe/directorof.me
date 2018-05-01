@@ -9,7 +9,7 @@ from unittest import mock
 from directorofme.authorization.session import Session, SessionProfile, SessionApp, SessionDecorator, \
                                                do_with_groups, do_as_root
 from directorofme.authorization import groups
-from directorofme.json import JSONEncoder
+from directorofme.flask import JSONEncoder
 
 
 ### Tests

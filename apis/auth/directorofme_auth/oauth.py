@@ -1,4 +1,3 @@
-from flask_restful import reqparse
 from requests_oauthlib import OAuth2Session
 
 from . import config
