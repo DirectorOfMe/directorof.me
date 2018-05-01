@@ -32,10 +32,6 @@ spec = Spec(
     app,
     title='DirectorOf.Me Event API',
     version='0.0.1',
-    plugins=[
-        'apispec.ext.flask',
-        'apispec.ext.marshmallow',
-    ],
 )
 
 spec.add_parameter("api_version", "path",  description="api version for this request",

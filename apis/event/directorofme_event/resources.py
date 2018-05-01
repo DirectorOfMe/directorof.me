@@ -69,7 +69,7 @@ class EventTypes(Resource):
         })
 
     @dump_with_schema(EventTypeCollectionSchema)
-    @with_pagination_params(marshmallow)
+    @with_pagination_params()
     def get(self, page=1, results_per_page=50):
         """
         ---
