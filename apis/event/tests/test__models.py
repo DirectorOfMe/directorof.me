@@ -62,10 +62,12 @@ class TestEvent:
         event_type = EventType(name="test", desc="test event_type")
         assert existing(event_type, "name") is None, "no event_type pre-save"
 
-        event = Event(event_type=event_type, event_time=datetime.datetime.now())
+        event = Event(event_type=event_type)
         assert event.event_type == event_type, "event_type setup correctly"
         assert event.event_type_id is None, "event_type_id is None until saved"
         assert event.id is None, "id None until saved"
+        assert event.cursor is None, "cursor is None until saved"
+        assert event.event_type_slug == event_type.slug, "event_type_slug property works"
 
         db.session.add(event)
         db.session.commit()
@@ -75,11 +77,29 @@ class TestEvent:
 
         assert existing(event_type).id == event_type.id, "event_type in DB"
         assert existing(event).id == event.id, "event in DB"
+        assert isinstance(existing(event).cursor, int), "cursor is an integer after save"
+        assert isinstance(existing(event).event_time, datetime.datetime), "event_time is a date at save"
 
 
     def test__required_fields(self, db, disable_permissions):
         missing_event_type = Event(event_time=datetime.datetime.now())
         commit_with_integrity_error(db, missing_event_type)
 
-        missing_event_time = Event(event_type=EventType(name="test", desc="test event_type"))
-        commit_with_integrity_error(db, missing_event_time)
+        event = Event(event_type=EventType(name="test", desc="test event_type"))
+        db.session.add(event)
+        db.session.commit()
+
+        event.event_time = None
+        commit_with_integrity_error(db, event)
+
+        event.event_time = datetime.datetime.now()
+        db.session.add(event)
+        db.session.commit()
+
+        cursor = event.cursor
+        event.cursor = None
+        commit_with_integrity_error(db, event)
+
+        event.cursor = cursor
+        db.session.add(event)
+        db.session.commit()

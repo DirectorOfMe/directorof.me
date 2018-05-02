@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String, ForeignKey, DateTime
+from sqlalchemy import Column, String, ForeignKey, DateTime, Integer, Sequence
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import JSONType, UUIDType
 
@@ -7,10 +8,7 @@ from directorofme.flask import Model
 
 __all__ = [ "EventType", "Event" ]
 
-#TODO: hook up to perms
 #TODO: hook up to app
-#TODO: tests
-
 @slugify_on_change("name", "slug")
 class EventType(Model):
     '''Table defining an event type which emitted events are expected to
@@ -37,6 +35,9 @@ class EventType(Model):
 class Event(Model):
     __tablename__ = "event"
 
+    #: for polling
+    cursor = Column(Integer, Sequence("event_cursor_seq"), nullable=False)
+
     #: id of the :class:`.EventType` this :class:`Event` is.
     event_type_id = Column(UUIDType, ForeignKey(EventType.id), nullable=False)
 
@@ -44,7 +45,11 @@ class Event(Model):
     event_type = relationship(EventType)
 
     #: time the :class:`.Event` occured
-    event_time = Column(DateTime, nullable=False)
+    event_time = Column(DateTime, nullable=False, default=func.now())
 
     #: config for this event (conforms to :attr:`.Event.data_schema`)
     data = Column(JSONType)
+
+    @property
+    def event_type_slug(self):
+        return self.event_type.slug

@@ -3,6 +3,7 @@ import os
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_marshmallow import Marshmallow
+from flask_restful import Resource
 
 from directorofme.flask import app_for_api
 from directorofme.flask.api import Spec
@@ -18,7 +19,7 @@ app = app_for_api(os.path.basename(os.path.dirname(__file__)), { "api_name": "ev
 app.register_blueprint(api.blueprint)
 
 Model.__tablename_prefix__ = app.name
-#Model.__scope__ = Scope(display_name=app.name)
+Model.__scope__ = Scope(display_name=app.name)
 
 from . import models
 
@@ -27,24 +28,15 @@ db.init_app(app)
 db.app = app
 marshmallow = Marshmallow(app)
 
-### TODO: Factor / Hook Up To Endpoint
-spec = Spec(
-    app,
-    title='DirectorOf.Me Event API',
-    version='0.0.1',
-)
-
-spec.add_parameter("api_version", "path",  description="api version for this request",
-                   required=True, type="string")
-spec.add_parameter("page", "query", description="which page to return for a paginated api", type="int", minimum=1)
-spec.add_parameter("results_per_page", "query", description="how many results to return per page", type="int",
-                   minimum=1, maximum=50)
-
-@spec.register_schema("Error")
-class ErrorSchema(marshmallow.Schema):
-    message = marshmallow.String(required=True)
+### TODO: Factor
+spec = Spec(app, title='DirectorOf.Me Event API', version='0.0.1',)
 
 from . import resources
+
+@api.resource("/swagger.json", endpoint="spec_api")
+class Spec(Resource):
+    def get(self):
+        return spec.to_dict()
 
 jwt = JWTManager()
 jwt.init_app(app)
