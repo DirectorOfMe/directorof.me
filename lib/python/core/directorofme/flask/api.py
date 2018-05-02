@@ -1,3 +1,4 @@
+import uuid
 import functools
 import flask
 import marshmallow
@@ -7,14 +8,41 @@ from flask_restful import abort
 from collections import namedtuple
 from apispec import APISpec
 
-__all__ = [ "dump_with_schema", "with_pagination_params", "Spec" ]
+__all__ = [ "first_or_abort", "uuid_or_abort", "load_with_schema", "dump_with_schema",
+            "with_pagination_params", "with_cursor_params", "Spec" ]
 
 def _abort_if_errors(result):
     if result.errors:
         messages = ["{}: {}".format(k,v) for k,v in result.errors.items()]
         abort(400, message="Validation failed: {}".format(", ".join(messages)))
-    return result
+    return result.data
 
+def first_or_abort(query):
+    obj = query.first()
+    if obj is None:
+        abort(404, message="Could not find object")
+    return obj
+
+def uuid_or_abort(uuid_):
+    try:
+        return uuid.UUID(uuid_)
+    except ValueError:
+        abort(400, message="Cannot convert to UUID: {}".format(uuid_))
+
+def load_with_schema(Schema, **load_kwargs):
+    """
+    Validate request body (JSON) and load it into a dictionary
+    """
+    @functools.wraps(load_with_schema)
+    def inner(fn):
+        @functools.wraps(fn)
+        def inner_inner(*args, **kwargs):
+            data = _abort_if_errors(Schema().load(flask.request.get_json() or {}, **load_kwargs))
+            return fn(*args, data, **kwargs)
+
+        return inner_inner
+
+    return inner
 
 def dump_with_schema(Schema, **dump_kwargs):
     """
@@ -25,10 +53,35 @@ def dump_with_schema(Schema, **dump_kwargs):
         @functools.wraps(fn)
         def inner_inner(*args, **kwargs):
             obj = fn(*args, **kwargs)
+            response_tuple = None
+
+            if isinstance(obj, tuple):
+                response_tuple = obj[1:]
+                obj = obj[0]
+
             if obj is None:
                 abort(404, message="No object found")
 
-            return _abort_if_errors(Schema().dump(obj, **dump_kwargs)).data
+            obj = _abort_if_errors(Schema().dump(obj, **dump_kwargs))
+            if response_tuple is None:
+                return obj
+            return (obj,) + response_tuple
+
+        return inner_inner
+
+    return inner
+
+
+def load_query_params(Schema):
+    """
+    Load query params from a defined query string.
+    """
+    @functools.wraps(load_query_params)
+    def inner(fn):
+        @functools.wraps(fn)
+        def inner_inner(*args, **kwargs):
+            kwargs.update(_abort_if_errors(Schema().load(flask.request.values)))
+            return fn(*args, **kwargs)
 
         return inner_inner
 
@@ -46,16 +99,43 @@ def with_pagination_params(default_results_per_page=50):
 
     @functools.wraps(with_pagination_params)
     def inner(fn):
-        # TODO: woulc be nice to manipulate the docs here as well
+        # TODO: would be nice to manipulate the docs here as well
         @functools.wraps(fn)
+        @load_query_params(PaginationParams)
         def inner_inner(*args, **kwargs):
-            kwargs.update(_abort_if_errors(PaginationParams().dump(flask.request.values)).data)
             kwargs["page"] = max(kwargs.get("page", 1), 1)
             kwargs["results_per_page"] = min(
                 max(kwargs.get("results_per_page", default_results_per_page), 1),
                 default_results_per_page
             )
 
+            return fn(*args, **kwargs)
+
+        return inner_inner
+
+    return inner
+
+def with_cursor_params(default_results_per_page=50):
+    """
+    Validate and pass the standard parameters for cursor-paginated collections endpoints into a decorated
+    MethodView method.
+    """
+    class CursorParams(marshmallow.Schema):
+        max_id = marshmallow.fields.UUID()
+        since_id = marshmallow.fields.UUID()
+        results_per_page = marshmallow.fields.Integer()
+
+    @functools.wraps(with_cursor_params)
+    def inner(fn):
+        @functools.wraps(fn)
+        @load_query_params(CursorParams)
+        def inner_inner(*args, **kwargs):
+            kwargs["results_per_page"] = min(
+                max(kwargs.get("results_per_page", default_results_per_page), 1),
+                default_results_per_page
+            )
+            if kwargs.get("max_id") and kwargs.get("since_id"):
+                abort(400, message="either of max_id and since_id may be passed, but not both")
             return fn(*args, **kwargs)
 
         return inner_inner
@@ -75,6 +155,7 @@ class Spec:
         self.spec = APISpec(**spec_kwargs, )
         self.app = None
         self.paths = []
+        self._setup_shared()
 
         if app is not None:
             self.app = app
@@ -131,3 +212,29 @@ class Spec:
             return schema_class
 
         return inner
+
+    def _setup_shared(self):
+        self.add_parameter("api_version", "path",
+                           description="api version for this request",
+                           required=True,
+                           type="string",
+                           example="-")
+        self.add_parameter("slug", "path",
+                           description="unique name for this endpoint",
+                           type="string",
+                           example="slug")
+        self.add_parameter("uuid", "path",
+                           description="unique id for this endpoint",
+                           type="string", format="uuid",
+                           example="e50253ac-4dc2-11e8-aba3-0e1402415a00")
+        self.add_parameter("page", "query",
+                           description="which page to return for a paginated api",
+                           type="int",
+                           minimum=1,
+                           example="1")
+        self.add_parameter("results_per_page", "query", description="how many results to return per page",
+                           type="int", example="25", minimum=1, maximum=50)
+
+        @self.register_schema("Error")
+        class ErrorSchema(marshmallow.Schema):
+            message = marshmallow.fields.String(required=True)

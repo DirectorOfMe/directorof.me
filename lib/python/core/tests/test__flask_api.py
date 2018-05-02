@@ -1,3 +1,4 @@
+import uuid
 import flask
 import flask_restful
 import pytest
@@ -11,11 +12,51 @@ from werkzeug.exceptions import NotFound, BadRequest
 from directorofme.flask import api
 
 class FixtureSchema(marshmallow.Schema):
-    foo = marshmallow.fields.Integer()
+    foo = marshmallow.fields.Integer(required=True)
+    bar = marshmallow.fields.Integer()
 
 @pytest.fixture
 def flask_api(app):
     return flask_restful.Api(app)
+
+def test__first_or_abort():
+    query = mock.Mock()
+    query.first.return_value = "TEST"
+
+    assert api.first_or_abort(query) == "TEST", "non-None returns"
+
+    query.first.return_value = None
+
+    with pytest.raises(NotFound):
+        api.first_or_abort(query)
+
+def test__uuid_or_abort():
+    uuid_ = uuid.uuid1()
+    assert api.uuid_or_abort(str(uuid_)) == uuid_, "uuid-able string returns a UUID object"
+
+    with pytest.raises(BadRequest):
+        api.uuid_or_abort("abdddd")
+
+def test__load_with_schema(request_context_with_session):
+    loaded = mock.Mock()
+    decorated = api.load_with_schema(FixtureSchema)(loaded)
+    with mock.patch.object(flask.request, "get_json") as get_json_mock:
+        get_json_mock.return_value = { "foo": 1, "bar": 2 }
+        decorated()
+        assert get_json_mock.called, "json_ mock called"
+        loaded.assert_called_with({ "foo": 1, "bar": 2 })
+
+    with pytest.raises(BadRequest), \
+            mock.patch.object(flask.request, "get_json") as get_json_mock:
+        get_json_mock.return_value = { "bar": 1 }
+        decorated()
+
+    decorated = api.load_with_schema(FixtureSchema, partial=True)(loaded)
+    with mock.patch.object(flask.request, "get_json") as get_json_mock:
+        get_json_mock.return_value = { "bar": 1 }
+        decorated()
+        assert get_json_mock.called, "json_ mock called"
+        loaded.assert_called_with({ "bar": 1 })
 
 def test__dump_with_schema():
     @api.dump_with_schema(FixtureSchema)
@@ -45,8 +86,25 @@ def test__dump_with_schema():
     with pytest.raises(BadRequest):
         non_conforming()
 
+    @api.dump_with_schema(FixtureSchema)
+    def return_tuple():
+        return { "foo": 2 }, 404
 
-def test__pagination_params(request_context_with_session):
+    assert return_tuple() == ({ "foo": 2 }, 404), "tuple works"
+
+def test__load_query_params(request_context_with_session):
+    loaded_mock = mock.MagicMock()
+    decorated = api.load_query_params(FixtureSchema)(loaded_mock)
+
+    with pytest.raises(BadRequest):
+        decorated()
+
+    assert not loaded_mock.called, "inner function not called"
+    with mock.patch.object(flask.request, "values", {"foo": 1}):
+        decorated()
+        loaded_mock.assert_called_with(foo=1)
+
+def test__with_pagination_params(request_context_with_session):
     paginated_mock = mock.MagicMock()
     decorated = api.with_pagination_params()(paginated_mock)
 
@@ -73,8 +131,31 @@ def test__pagination_params(request_context_with_session):
         paginated_mock.assert_called_with(page=1, results_per_page=1)
 
     with pytest.raises(BadRequest), \
-             mock.patch.object(flask.request, "values", {"results_per_page": "abc", "page": 0}):
+            mock.patch.object(flask.request, "values", {"results_per_page": "abc", "page": 0}):
         decorated()
+
+def test__with_cursor_params(request_context_with_session):
+    cursor_mock = mock.MagicMock()
+    decorated = api.with_cursor_params()(cursor_mock)
+
+    decorated()
+    cursor_mock.assert_called_with(results_per_page=50)
+
+    uuid_ = uuid.uuid1()
+    with mock.patch.object(flask.request, "values", { "max_id": str(uuid_) }):
+        decorated()
+        cursor_mock.assert_called_with(max_id=uuid_, results_per_page=50)
+
+    with mock.patch.object(flask.request, "values", { "since_id": str(uuid_) }):
+        decorated()
+        cursor_mock.assert_called_with(since_id=uuid_, results_per_page=50)
+
+    cursor_mock.reset_mock()
+    with pytest.raises(BadRequest), \
+            mock.patch.object(flask.request, "values", { "max_id": uuid_, "since_id": uuid_ }):
+        decorated()
+    assert not cursor_mock.called, "cursor mock not called"
+
 
 class TestSpec:
     def test__name(self):
@@ -89,7 +170,9 @@ class TestSpec:
         assert spec.app is app, "app saved as property"
 
         spec = api.Spec(title="Test Spec", version="0.0.1")
-        assert spec.app is None, "app set to None"
+        assert "Error" in spec.to_dict()["definitions"], "added to spec"
+        assert set(spec.to_dict()["parameters"].keys()) == \
+               {"api_version", "slug", "uuid", "page", "results_per_page"}, "parameters set by __init__"
 
     def test__getattr__(self):
         spec = api.Spec(title="Test Spec", version="0.0.1")
@@ -192,4 +275,4 @@ class TestSpec:
         class Schema(marshmallow.Schema):
             pass
 
-        assert list(spec.to_dict()["definitions"].keys()) == ["Schema"], "added to spec"
+        assert "Schema" in spec.to_dict()["definitions"], "added to spec"

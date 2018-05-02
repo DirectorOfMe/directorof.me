@@ -172,7 +172,6 @@ class PermissionedModel(PrefixedModel):
     __update_perm__ = ("read", "write")
     __delete_perm__ = ("delete", "delete")
 
-    ### TODO: populate these defaults from session
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.id is None:
@@ -183,6 +182,7 @@ class PermissionedModel(PrefixedModel):
         self.update_initial_perms()
 
 
+    @orm.reconstructor
     def update_initial_perms(self):
         self.__initial_perms__ = {p: getattr(self, p) for p in self.__perms__}
 

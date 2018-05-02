@@ -75,7 +75,7 @@ rest_errors_map = {
     'PermissionDeniedError': {
         'message': "You do not have permission to perform this action",
         'status': 401,
-    }
+    },
 }
 
 def store_version_in_a_global(api_version):
