@@ -43,3 +43,7 @@ def token_mock(identity=None, user_claims=None):
     with mock.patch("flask_jwt_extended.view_decorators._decode_jwt_from_request") as jwt_token_mock:
         jwt_token_mock.return_value = { "user_claims": user_claims, "identity": identity }
         yield jwt_token_mock
+
+def dump_and_load(obj, app=None):
+    kwargs = { "cls": app.json_encoder } if app is not None else {}
+    return json.loads(json.dumps(obj, **kwargs))
