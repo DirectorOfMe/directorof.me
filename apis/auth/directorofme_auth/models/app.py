@@ -4,26 +4,25 @@ from sqlalchemy_utils import URLType, JSONType, UUIDType
 
 from directorofme.orm import slugify_on_change
 from directorofme.authorization.groups import Group as AuthGroup
-from directorofme.flask import Model
 
-from . import Group
+from . import Group, db
 
 __all__ = [ "App", "InstalledApp" ]
 
 requested_access_groups = Table(
-    Model.prefix_name('requested_scopes'),
-    Model.metadata,
-    Column('app_id', UUIDType, ForeignKey(Model.prefix_name('app.id')), nullable=False),
-    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False))
+    db.Model.prefix_name('requested_scopes'),
+    db.Model.metadata,
+    Column('app_id', UUIDType, ForeignKey(db.Model.prefix_name('app.id')), nullable=False),
+    Column('group_id', UUIDType, ForeignKey(db.Model.prefix_name('group.id')), nullable=False))
 
 granted_access_groups = Table(
-    Model.prefix_name('granted_scopes'),
-    Model.metadata,
-    Column('installed_app_id', UUIDType, ForeignKey(Model.prefix_name('installed_app.id')), nullable=False),
-    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False))
+    db.Model.prefix_name('granted_scopes'),
+    db.Model.metadata,
+    Column('installed_app_id', UUIDType, ForeignKey(db.Model.prefix_name('installed_app.id')), nullable=False),
+    Column('group_id', UUIDType, ForeignKey(db.Model.prefix_name('group.id')), nullable=False))
 
 @slugify_on_change("name", "slug")
-class App(Model):
+class App(db.Model):
     '''An App is an application that can be installed and run on the DOM
        platform as an :class:`.InstalledApp`.
     '''
@@ -55,7 +54,7 @@ class App(Model):
         return Group.scopes(self.requested_access_groups)
 
 
-class InstalledApp(Model):
+class InstalledApp(db.Model):
     '''InstalledApp is an instance of :class:`.App` that has been installed
        and is running on the DOM platform.
 

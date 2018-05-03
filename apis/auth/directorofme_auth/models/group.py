@@ -6,7 +6,6 @@ from sqlalchemy.event import listen
 from sqlalchemy_utils import UUIDType, generic_repr
 
 from directorofme.authorization.groups import GroupTypes, Group as AuthGroup, Scope
-from directorofme.flask import Model
 
 from . import db
 
@@ -14,13 +13,13 @@ __all__ = [ "Group", "GroupTypes" ]
 
 # through table for group -< groups
 group_to_group = Table(
-    Model.prefix_name('group_to_group'),
-    Model.metadata,
-    Column('parent_group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False),
-    Column('member_group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False))
+    db.Model.prefix_name('group_to_group'),
+    db.Model.metadata,
+    Column('parent_group_id', UUIDType, ForeignKey(db.Model.prefix_name('group.id')), nullable=False),
+    Column('member_group_id', UUIDType, ForeignKey(db.Model.prefix_name('group.id')), nullable=False))
 
 @generic_repr("name")
-class Group(Model):
+class Group(db.Model):
     '''The basic building block of access control.'''
     __tablename__ = "group"
     __table_args__ = (
@@ -42,8 +41,8 @@ class Group(Model):
     members = relationship(
         "Group",
         secondary=group_to_group,
-        primaryjoin="Group.id == {}.c.parent_group_id".format(Model.prefix_name("group_to_group")),
-        secondaryjoin="Group.id == {}.c.member_group_id".format(Model.prefix_name("group_to_group")),
+        primaryjoin="Group.id == {}.c.parent_group_id".format(db.Model.prefix_name("group_to_group")),
+        secondaryjoin="Group.id == {}.c.member_group_id".format(db.Model.prefix_name("group_to_group")),
         backref="member_of"
     )
 

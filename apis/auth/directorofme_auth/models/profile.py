@@ -10,16 +10,15 @@ from sqlalchemy_utils import JSONType, EmailType, UUIDType, generic_repr
 
 # proprietary imports
 from directorofme.authorization import groups
-from directorofme.flask import Model
 
-from . import GroupTypes, Group, License
+from . import GroupTypes, Group, License, db
 from .license import profiles_to_license
 from .exceptions import NoProfileError, MissingGroupError
 
 __all__ = [ "Profile" ]
 
 @generic_repr("email")
-class Profile(Model):
+class Profile(db.Model):
     '''A profile, at the moement is what we authenticate against a third party
        service. It associates a user to a license and set of groups, which
        determines which applications, features and data a user has access to
@@ -45,7 +44,7 @@ class Profile(Model):
     preferences = Column(JSONType)
 
     #: id of :attr:`parent` of this group
-    group_of_one_id = Column(UUIDType, ForeignKey(Model.prefix_name("group.id")), nullable=False)
+    group_of_one_id = Column(UUIDType, ForeignKey(db.Model.prefix_name("group.id")), nullable=False)
 
     #: all members of this :class:`.Group` are also members of parent.
     group_of_one = relationship("Group")

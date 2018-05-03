@@ -9,7 +9,7 @@ from oauthlib.oauth2 import OAuth2Error
 from directorofme.authorization import session, groups, requires, standard_permissions
 
 from . import api
-from .. import Model
+from .. import db
 from ..oauth import Client
 from ..models import Profile, InstalledApp
 from ..exceptions import EmailNotVerified, NoUserForEmail
@@ -26,7 +26,7 @@ def _parse_session_args():
 
 def _session_from_profile(profile, installed_app_id):
     # we must always grant read access to auth data strucuture scope or the user can't do anything
-    groups_list = [Model.__scope__.read] if Model.__scope__ else []
+    groups_list = [db.Model.__scope__.read] if db.Model.__scope__ else []
     with session.do_as_root:
         groups_list += [ groups.Group.from_conforming_type(group) for license in profile.licenses \
                                                                   for license_group in license.groups \

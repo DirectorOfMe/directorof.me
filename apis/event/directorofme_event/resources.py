@@ -1,6 +1,3 @@
-import functools
-
-import flask
 from flask_restful import Resource, abort
 
 from directorofme.flask.api import dump_with_schema, load_with_schema, with_pagination_params, \

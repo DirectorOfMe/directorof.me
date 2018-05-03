@@ -4,13 +4,13 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import JSONType, UUIDType
 
 from directorofme.orm import slugify_on_change
-from directorofme.flask import Model
+from . import db
 
 __all__ = [ "EventType", "Event" ]
 
 #TODO: hook up to app
 @slugify_on_change("name", "slug")
-class EventType(Model):
+class EventType(db.Model):
     '''Table defining an event type which emitted events are expected to
        conform to. Right now this is convention, but eventually the schema
        will be enforced.
@@ -32,7 +32,7 @@ class EventType(Model):
     data_schema = Column(JSONType)
 
 
-class Event(Model):
+class Event(db.Model):
     __tablename__ = "event"
 
     #: for polling

@@ -7,26 +7,24 @@ from sqlalchemy import Table, Column, Integer, DateTime, Text, ForeignKey, Seque
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
-from directorofme.flask import Model
-
-from . import Group
+from . import Group, db
 
 __all__ = [ "License" ]
 
 groups_to_license = Table(
-    Model.prefix_name('group_to_license'),
-    Model.metadata,
-    Column('license_id', UUIDType, ForeignKey(Model.prefix_name('license.id')), nullable=False),
-    Column('group_id', UUIDType, ForeignKey(Model.prefix_name('group.id')), nullable=False))
+    db.Model.prefix_name('group_to_license'),
+    db.Model.metadata,
+    Column('license_id', UUIDType, ForeignKey(db.Model.prefix_name('license.id')), nullable=False),
+    Column('group_id', UUIDType, ForeignKey(db.Model.prefix_name('group.id')), nullable=False))
 
 profiles_to_license = Table(
-    Model.prefix_name('profile_to_license'),
-    Model.metadata,
-    Column('license_id', UUIDType, ForeignKey(Model.prefix_name('license.id')), nullable=False),
-    Column('profile_id', UUIDType, ForeignKey(Model.prefix_name('profile.id')), nullable=False),
+    db.Model.prefix_name('profile_to_license'),
+    db.Model.metadata,
+    Column('license_id', UUIDType, ForeignKey(db.Model.prefix_name('license.id')), nullable=False),
+    Column('profile_id', UUIDType, ForeignKey(db.Model.prefix_name('profile.id')), nullable=False),
     Column('created', Integer, Sequence("profiles_to_license_seq"), nullable=False))
 
-class License(Model):
+class License(db.Model):
     __tablename__ = "license"
 
     #: :class:`Group` objects to add to a session for an authenticated profile

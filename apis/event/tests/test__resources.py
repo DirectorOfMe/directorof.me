@@ -10,7 +10,7 @@ import pytest
 from unittest import mock
 
 from directorofme.authorization import groups, session
-from directorofme_event import Model, app, spec
+from directorofme_event import app, spec, db as real_db
 from directorofme_event.models import Event, EventType
 from directorofme.testing import dict_from_response, token_mock, existing, dump_and_load
 
@@ -32,12 +32,12 @@ unscoped_identity = {
 }
 
 authorized_for_read_identity = copy.deepcopy(unscoped_identity)
-authorized_for_read_identity["groups"].append(dump_and_load(Model.__scope__.read, app))
+authorized_for_read_identity["groups"].append(dump_and_load(real_db.Model.__scope__.read, app))
 authorized_for_all_identity = copy.deepcopy(authorized_for_read_identity)
 authorized_for_all_identity["groups"] += [
     dump_and_load(groups.admin, app),
-    dump_and_load(Model.__scope__.write, app),
-    dump_and_load(Model.__scope__.delete, app),
+    dump_and_load(real_db.Model.__scope__.write, app),
+    dump_and_load(real_db.Model.__scope__.delete, app),
 ]
 
 
@@ -66,7 +66,7 @@ def event_type(db):
 
         db.session.add(event_type)
         db.session.add(potential_conflict)
-        with Model.disable_permissions():
+        with real_db.Model.disable_permissions():
             db.session.commit()
             obj = existing(event_type)
 
@@ -90,7 +90,7 @@ def event(db):
 
         db.session.add(event_type)
         db.session.add(event)
-        with Model.disable_permissions():
+        with real_db.Model.disable_permissions():
             db.session.commit()
             obj = existing(event)
 
@@ -241,7 +241,7 @@ def event_type_collection(db):
                                         write=(groups.admin.name,),
                                         delete=(group_of_one.name,)))
         db.session.add_all(collection)
-        with Model.disable_permissions():
+        with real_db.Model.disable_permissions():
             db.session.commit()
             objs = EventType.query.all()
 
@@ -419,7 +419,7 @@ def event_collection(db):
         db.session.add(event_type)
         db.session.add(event_type_1)
         db.session.add_all(collection)
-        with Model.disable_permissions():
+        with real_db.Model.disable_permissions():
             db.session.commit()
             objs = Event.query.all()
 

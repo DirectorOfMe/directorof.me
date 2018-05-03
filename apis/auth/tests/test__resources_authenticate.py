@@ -14,7 +14,7 @@ from directorofme.testing import dict_from_response, token_mock, dump_and_load
 from directorofme.authorization import groups, session
 from directorofme.authorization.exceptions import PermissionDeniedError
 
-from directorofme_auth import app, api, models, Model
+from directorofme_auth import app, api, models, db as real_db
 from directorofme_auth.oauth import Client as OAuthClient, Google
 from directorofme_auth.resources.authenticate import OAuth, OAuthCallback, RefreshToken, Session, SessionForApp, \
                                                      with_service_client
@@ -187,14 +187,14 @@ class TestOAuthCallback:
         confirm_email.return_value = ("test@example.com", True)
 
         db.session.expire_all()
-        with Model.enable_permissions():
+        with real_db.Model.enable_permissions():
             response = test_client.get("/api/-/auth/oauth/google/token/callback")
         assert len(response.headers.getlist("Set-Cookie")) == 0, "no cookies set"
         assert dict_from_response(response) == { "service": "google", "token": "token" }, \
                "response object correct for token"
 
         db.session.expire_all()
-        with Model.enable_permissions():
+        with real_db.Model.enable_permissions():
             response = test_client.get("/api/-/auth/oauth/google/login/callback")
 
         self.cookie_checker(response)
@@ -206,7 +206,7 @@ class TestOAuthCallback:
         confirm_email.return_value = (test_profile.email, True)
 
         db.session.expire_all()
-        with Model.enable_permissions():
+        with real_db.Model.enable_permissions():
             response = test_client.get("/api/-/auth/oauth/google/login/callback")
 
         self.cookie_checker(response)
@@ -219,7 +219,7 @@ class TestOAuthCallback:
                 dump_and_load(groups.everybody, app),
                 dump_and_load(groups.user, app),
                 dump_and_load(groups.Group.from_conforming_type(test_profile.group_of_one), app),
-                dump_and_load(Model.__scope__.read, app)
+                dump_and_load(real_db.Model.__scope__.read, app)
             ], key=lambda x: x["name"]),
             "app": None,
             "default_object_perms": {
