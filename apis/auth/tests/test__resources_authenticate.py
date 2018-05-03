@@ -14,7 +14,7 @@ from directorofme.testing import dict_from_response, token_mock
 from directorofme.authorization import groups, session
 from directorofme.authorization.exceptions import PermissionDeniedError
 
-from directorofme_auth import app, api, models
+from directorofme_auth import app, api, models, Model
 from directorofme_auth.oauth import Client as OAuthClient, Google
 from directorofme_auth.resources.authenticate import OAuth, OAuthCallback, RefreshToken, Session, SessionForApp, \
                                                      with_service_client
@@ -182,25 +182,33 @@ class TestOAuthCallback:
         set_cookies = set([h.partition("=")[0] for h in response.headers.getlist("Set-Cookie")])
         assert set_cookies == { app.config[name] for name in cookies_should_be }, "cookies set correctly"
 
-    def test__oauth_callback_route(self, fetch_token, confirm_email, test_profile, test_client):
+    def test__oauth_callback_route(self, fetch_token, confirm_email, test_profile, test_client, db):
         fetch_token.return_value = "token"
         confirm_email.return_value = ("test@example.com", True)
 
-        response = test_client.get("/api/-/auth/oauth/google/token/callback")
+        db.session.expire_all()
+        with Model.enable_permissions():
+            response = test_client.get("/api/-/auth/oauth/google/token/callback")
         assert len(response.headers.getlist("Set-Cookie")) == 0, "no cookies set"
         assert dict_from_response(response) == { "service": "google", "token": "token" }, \
                "response object correct for token"
 
-        response = test_client.get("/api/-/auth/oauth/google/login/callback")
+        db.session.expire_all()
+        with Model.enable_permissions():
+            response = test_client.get("/api/-/auth/oauth/google/login/callback")
+
         self.cookie_checker(response)
         assert dict_from_response(response) == json.loads(json.dumps(flask.session, cls=app.json_encoder)), \
                "response object correct for login"
 
-    def test__end_to_end(self, fetch_token, confirm_email, test_client, test_profile):
+    def test__end_to_end(self, fetch_token, confirm_email, test_client, test_profile, db):
         fetch_token.return_value = "token",
         confirm_email.return_value = (test_profile.email, True)
 
-        response = test_client.get("/api/-/auth/oauth/google/login/callback")
+        db.session.expire_all()
+        with Model.enable_permissions():
+            response = test_client.get("/api/-/auth/oauth/google/login/callback")
+
         self.cookie_checker(response)
         response_dict = dict_from_response(response)
         response_dict["groups"].sort(key=lambda x: x["name"])

@@ -78,6 +78,8 @@ class TestProfile:
         assert profile.group_of_one.type == GroupTypes.data, "group_of_one is data"
         assert profile.group_of_one.display_name == profile.id.hex, \
                "group_of_one is id"
+        assert profile.group_of_one.name in profile.group_of_one.read, \
+               "group_of_one has read permission to itself"
 
         db.session.add(profile)
         db.session.commit()

@@ -75,13 +75,11 @@ class TestModel:
         mgmt = Group(display_name="test", type=GroupTypes.data)
         license = License(seats=2, managing_group=mgmt)
 
-        profiles = [
-            Profile.create_profile("Tester 1", "test1@example.com"),
-            Profile.create_profile("Tester 2", "test2@example.com"),
-        ]
+        license.profiles = [ Profile.create_profile("Tester 1", "test1@example.com") ]
+        db.session.add(license)
+        db.session.commit()
 
-        license.profiles = profiles
-
+        license.profiles.append(Profile.create_profile("Tester 2", "test2@example.com"))
         db.session.add(license)
         db.session.commit()
 

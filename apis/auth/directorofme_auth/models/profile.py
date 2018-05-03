@@ -73,6 +73,7 @@ class Profile(Model):
             **perms
         )
 
+        profile.group_of_one.read += (profile.group_of_one.name,)
         profile.read += (profile.group_of_one.name,)
         perms["read"] = (profile.read,)
         profile.write += (profile.group_of_one.name,)

@@ -9,6 +9,7 @@ from oauthlib.oauth2 import OAuth2Error
 from directorofme.authorization import session, groups, requires, standard_permissions
 
 from . import api
+from .. import Model
 from ..oauth import Client
 from ..models import Profile, InstalledApp
 from ..exceptions import EmailNotVerified, NoUserForEmail
@@ -27,28 +28,29 @@ def _session_from_profile(profile, installed_app_id):
     groups_list = []
     with session.do_as_root:
         groups_list = [ groups.Group.from_conforming_type(group) for license in profile.licenses \
-                                                                  for license_group in license.groups \
-                                                                  for group in license_group.expand() ]
+                                                                 for license_group in license.groups \
+                                                                 for group in license_group.expand() ]
 
-    new_session = session.Session.empty()
-    new_session.environment = profile.preferences or {}
-    new_session.profile = session.SessionProfile.from_conforming_type(profile)
-    new_session.groups += groups_list
-    new_session.default_object_perms = {
-        name: [profile.group_of_one.name] for name in standard_permissions
-    }
+    with session.do_with_groups(*(groups_list + [Model.__scope__.read] if Model.__scope__ else [])):
+        new_session = session.Session.empty()
+        new_session.environment = profile.preferences or {}
+        new_session.profile = session.SessionProfile.from_conforming_type(profile)
+        new_session.groups += groups_list
+        new_session.default_object_perms = {
+            name: [profile.group_of_one.name] for name in standard_permissions
+        }
 
-    if installed_app_id is not None:
-        installed_app = InstalledApp.query.filter(InstalledApp.id == installed_app_id).first()
-        if installed_app is None:
-            abort(404, message="No app found for {}".format(installed_app_id))
+        if installed_app_id is not None:
+            installed_app = InstalledApp.query.filter(InstalledApp.id == installed_app_id).first()
+            if installed_app is None:
+                abort(404, message="No app found for {}".format(installed_app_id))
 
-        new_session.app = session.SessionApp.from_conforming_type(installed_app)
-        with session.do_as_root:
-            new_session.groups += [
-                groups.Group.from_conforming_type(group) for access_group in installed_app.access_groups \
-                                                         for group in access_group.expand()
-            ]
+            new_session.app = session.SessionApp.from_conforming_type(installed_app)
+            with session.do_as_root:
+                new_session.groups += [
+                    groups.Group.from_conforming_type(group) for access_group in installed_app.access_groups \
+                                                             for group in access_group.expand()
+                ]
 
     return new_session
 
