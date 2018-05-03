@@ -10,7 +10,7 @@ from werkzeug.exceptions import NotFound, BadRequest
 from oauthlib.oauth2 import OAuth2Error
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
-from directorofme.testing import dict_from_response, token_mock
+from directorofme.testing import dict_from_response, token_mock, dump_and_load
 from directorofme.authorization import groups, session
 from directorofme.authorization.exceptions import PermissionDeniedError
 
@@ -26,17 +26,17 @@ def authorization_url():
         method.return_value = test_auth_url
         yield method
 
-empty_session_data = json.loads(json.dumps({
+empty_session_data = dump_and_load({
     "environment": {}, "groups": [groups.everybody], "app": None, "profile": None,
     "default_object_perms": { "read": [groups.everybody.name] },
-}, cls=app.json_encoder))
+}, app)
 
-test_session_data = json.loads(json.dumps({
+test_session_data = dump_and_load({
     "app": None, "environment": {},
     "profile": { "id": "12345", "email": "hi@example.com" },
     "groups": [groups.everybody, groups.user, groups.Group(display_name="test", type=groups.GroupTypes.data)],
     "default_object_perms": { "read": [groups.everybody.name] }
-}, cls=app.json_encoder))
+}, app)
 
 @pytest.fixture
 def refresh_token_decoder(request_context):
@@ -198,7 +198,7 @@ class TestOAuthCallback:
             response = test_client.get("/api/-/auth/oauth/google/login/callback")
 
         self.cookie_checker(response)
-        assert dict_from_response(response) == json.loads(json.dumps(flask.session, cls=app.json_encoder)), \
+        assert dict_from_response(response) == dump_and_load(flask.session, app), \
                "response object correct for login"
 
     def test__end_to_end(self, fetch_token, confirm_email, test_client, test_profile, db):
@@ -216,12 +216,10 @@ class TestOAuthCallback:
             "environment": {},
             "profile": { "id": str(test_profile.id), "email": test_profile.email },
             "groups": sorted([
-                json.loads(json.dumps(groups.everybody, cls=app.json_encoder)),
-                json.loads(json.dumps(groups.user, cls=app.json_encoder)),
-                json.loads(json.dumps(
-                    groups.Group.from_conforming_type(test_profile.group_of_one),
-                    cls=app.json_encoder
-                ))
+                dump_and_load(groups.everybody, app),
+                dump_and_load(groups.user, app),
+                dump_and_load(groups.Group.from_conforming_type(test_profile.group_of_one), app),
+                dump_and_load(Model.__scope__.read, app)
             ], key=lambda x: x["name"]),
             "app": None,
             "default_object_perms": {
@@ -234,13 +232,11 @@ class TestOAuthCallback:
 
 class TestRefreshToken:
     def test__get_method_directly(self, refresh_token_decoder):
-        assert json.loads(json.dumps(flask.session, cls=app.json_encoder)) == empty_session_data, \
-               "session is empty before test"
+        assert dump_and_load(flask.session, app) == empty_session_data, "session is empty"
 
         session_obj = RefreshToken().get()
         assert session_obj is flask.session, "session is saved by the refresh method"
-        assert json.loads(json.dumps(session_obj, cls=app.json_encoder)) == test_session_data, \
-               "session data returned correctly"
+        assert dump_and_load(session_obj, app) == test_session_data, "session data correct"
 
         test_app =  { "id": "abc", "app_id": "def", "app_name": "foo", "config": {} }
         with mock.patch.dict(test_session_data, {"app": test_app}):
@@ -292,8 +288,7 @@ class TestSessionForApp:
         session_profile = session.SessionProfile.from_conforming_type(test_profile)
         with session.do_with_groups(groups.user):
             with mock.patch.object(flask.session, "profile", session_profile):
-                session_no_app = json.loads(json.dumps(flask.session, cls=app.json_encoder))
-
+                session_no_app = dump_and_load(flask.session, app)
                 installed_app = models.InstalledApp.query.first()
                 assert installed_app.app_name == "main", "app is correct"
 

@@ -25,13 +25,14 @@ def _parse_session_args():
 
 
 def _session_from_profile(profile, installed_app_id):
-    groups_list = []
+    # we must always grant read access to auth data strucuture scope or the user can't do anything
+    groups_list = [Model.__scope__.read] if Model.__scope__ else []
     with session.do_as_root:
-        groups_list = [ groups.Group.from_conforming_type(group) for license in profile.licenses \
-                                                                 for license_group in license.groups \
-                                                                 for group in license_group.expand() ]
+        groups_list += [ groups.Group.from_conforming_type(group) for license in profile.licenses \
+                                                                  for license_group in license.groups \
+                                                                  for group in license_group.expand() ]
 
-    with session.do_with_groups(*(groups_list + [Model.__scope__.read] if Model.__scope__ else [])):
+    with session.do_with_groups(*groups_list):
         new_session = session.Session.empty()
         new_session.environment = profile.preferences or {}
         new_session.profile = session.SessionProfile.from_conforming_type(profile)
