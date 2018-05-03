@@ -209,6 +209,17 @@ class PermissionedModel(PrefixedModel):
         finally:
             cls.permissions_enabled = permissions_enabled
 
+    @classmethod
+    @contextlib.contextmanager
+    def enable_permissions(cls):
+        '''Disable permissions as a decorator or context manager'''
+        permissions_enabled = cls.permissions_enabled
+        cls.permissions_enabled = lambda: True
+        try:
+            yield
+        finally:
+            cls.permissions_enabled = permissions_enabled
+
 
     @classmethod
     def _scope_and_obj_perms_from_action(cls, action):

@@ -483,9 +483,12 @@ class TestPermissionedModel:
             bound_session_with_permed.commit()
 
 
-    def test__disable_permissions(self):
+    def test__disable_permissions_and_enable_permissions(self):
         assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled defaults to true"
         with orm.PermissionedModel.disable_permissions():
+            assert not orm.PermissionedModel.permissions_enabled(), "override of permissions_enabled works"
+            with orm.PermissionedModel.enable_permissions():
+                assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled overridden to true"
             assert not orm.PermissionedModel.permissions_enabled(), "override of permissions_enabled works"
         assert orm.PermissionedModel.permissions_enabled(), "permissions_enabled reset after exit"
 
@@ -494,6 +497,7 @@ class NoPerms(Permed):
     @classmethod
     def permissions_enabled(cls):
         return False
+
 
 class AlwaysAsUser(Permed):
     select_whereclause = ""\
