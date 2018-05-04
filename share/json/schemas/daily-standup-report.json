@@ -1,0 +1,288 @@
+{
+    "definitions": {
+        "source": {
+            "type": "object",
+            "required": [ "url" ],
+            "properties": {
+                "url": { "type": "string", "format": "url" },
+                "path": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                }
+            }
+        },
+        "topic": {
+            "type": "object",
+            "required": [ "main" ],
+            "properties": {
+                "main": { "type": "string", "format": "template" },
+                "sub-topics": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "template" }
+                },
+                "source": { "$ref": "#/definitions/source" }
+            }
+        },
+        "status": {
+            "type": "object",
+            "required": [ "title" ],
+            "properties": {
+                "title": { "type": "string" },
+                "since": { "type": "string", "format": "date-time" }
+            }
+        },
+        "variable": {
+            "type": "string",
+            "enum": [ "IN_PROGRESS_ISSUES", "IN_PROGRESS_DAYS", "COMPLETION_TIME", "TEAM_SIZE" ]
+        },
+        "unit_of_time": {
+            "type": "string",
+            "enum": [ "days", "hours", "minutes" ]
+        },
+        "schedule_block_type": {
+            "type": "string",
+            "enum": [ "flow", "meeting", "small-tasks", "meeting-prep", "meeting-recovery" ]
+        },
+        "nullable_time": {
+            "anyOf": [
+                { "type": "null" },
+                { "type": "string", "pattern": "[0-2]?[0-9]:[0-9][0-9]" }
+            ]
+        },
+        "insight": {
+            "patternParams": {
+                "^[0-9]*$": { "not": { "type": [ "object", "array" ] } }
+            },
+            "variable": { "$ref": "#/definitions/variable" },
+            "unit": { "$ref": "#/definitions/unit_of_time" }
+        },
+        "forecast": {
+            "type": "object",
+            "required": [ "generated", "distribution", "source" ],
+            "properties": {
+                "generated": { "type": "string", "format": "date-time" },
+                "distribution": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^[0-9]*$": { "type": "string", "format": "date-time" }
+                    },
+                    "additionalProperties": false
+                },
+                "previous": {
+                    "anyOf": [
+                        { "type": "null" },
+                        { "$ref": "#/definitions/forecast" }
+                    ]
+                },
+                "changes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "variable": { "$ref": "#/definitions/variable" },
+                            "significant": { "type": "boolean" },
+                            "previous": { "not": { "type": [ "object", "array" ] } },
+                            "new":  { "not": { "type": [ "object", "array" ] } },
+                            "insights": {
+                                "type": "object",
+                                "required": [ "new", "old" ],
+                                "properties": {
+                                    "old": { "$ref": "#/definitions/insight" },
+                                    "new": { "$ref": "#/definitions/insight" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "source": { "$ref": "#/definitions/source" }
+            }
+        },
+        "team": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [ "name", "username" ],
+                "properties": {
+                    "role": { "type": "string" },
+                    "name": { "type": "string" },
+                    "username": { "type": "string" },
+                    "thumbnail": { "type": "string", "format": "url" }
+                }
+            }
+        },
+        "issues_data": {
+            "type": "object",
+            "required": [ "title", "id", "url", "forecast", "team", "status" ],
+            "properties": {
+                "title": { "type": "string" },
+                "priority": { "type": "string" },
+                "id": { "type": "string" },
+                "estimate": { "type": [ "null", "string" ] },
+                "url": { "type": "string", "format": "url" },
+                "started": {
+                    "anyOf": [
+                        { "type": "null" },
+                        { "type": "string", "format": "date-time" }
+                    ]
+                },
+                "status": { "$ref": "#/definitions/status" },
+                "team": { "$ref": "#/definitions/team" },
+                "project": {
+                    "type": "object",
+                    "required": [ "title", "url" ],
+                    "properties": {
+                        "title": { "type": "string" },
+                        "url": { "type": "string", "format": "url" }
+                    }
+                },
+                "forecast": { "$ref": "#/definitions/forecast" }
+            }
+        },
+        "schedule_data": {
+            "type": "object",
+            "required": [ "type", "summary", "blocks", "source" ],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [ "flow", "meeting", "interrupt" ]
+                },
+                "summary": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type": { "$ref": "#/definitions/schedule_block_type" },
+                            "number": { "not": { "type": [ "object", "array" ] } },
+                            "time": { "type": "integer" },
+                            "units": { "$ref": "#/definitions/unit_of_time" }
+                        }
+                    }
+                },
+                "blocks": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type": { "$ref": "#/definitions/schedule_block_type" },
+                            "start": { "$ref": "#/definitions/nullable_time" },
+                            "stop": { "$ref": "#/definitions/nullable_time" }
+                        }
+                    }
+                },
+                "source": { "$ref": "#/definitions/source" }
+            }
+        },
+        "projects_data": {
+            "allOf": [
+                { "$ref": "#/definitions/issues_data" },
+                {
+                    "type": "object",
+                    "required": [ "issues_summary" ],
+                    "properties": {
+                        "additional_fields": { "type": "object" },
+                        "issues_summary": {
+                            "type": "object",
+                            "required": [ "total", "completed", "by_status" ],
+                            "properties": {
+                                "total": { "type": "integer" },
+                                "completed": { "type": "integer" },
+                                "by_status": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "required": [ "title", "total" ],
+                                        "properties": {
+                                            "title": { "type": "string" },
+                                            "total": { "type": "number" },
+                                            "by_estimate": { "type": "object" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "component": {
+            "type": "object",
+            "properties": {
+                "issues": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/issues_data"
+                    }
+                },
+                "schedule": {
+                    "$ref": "#/definitions/schedule_data"
+                },
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/projects_data"
+                    }
+                },
+                "topics": {
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/topic" }
+                }
+            }
+        },
+        "widget": {
+            "type": "object",
+            "required": [ "name", "header", "source" ],
+            "patternProperties": {
+                "max_number_*$": { "type": "integer" }
+            },
+            "properties": {
+                "name": { "type": "string" },
+                "header": { "type": "string" },
+                "source": { "$ref": "#/definitions/source" },
+                "confidences": {
+                    "type": "array",
+                    "items": { "type": "number" },
+                    "maxItems": 3
+                },
+                "forecast_changes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "op": {
+                                "type": "string",
+                                "enum": [ ">", ">=", "==", "<=", "<" ]
+                            },
+                            "unit": { "$ref": "#/definitions/unit_of_time" },
+                            "value": { "type": "number" },
+                            "tag": {
+                                "type": "string",
+                                "enum": [ "GOOD", "CONCERN", "ALARM" ]
+                            }
+                        }
+                    }
+                }
+            },
+            "additionalProperties": true
+        }
+    },
+
+    "id": "https://matt.directorof.me/api/-/event/event_types/stand-up-report",
+    "$schema": "http://json-schema.org/draft-06/schema#",
+
+    "description": "Schema for Stand-Up Report events.",
+    "type": "object",
+
+    "patternProperties": {
+        "^.*_component": { "$ref": "#/definitions/component" }
+    },
+
+    "required": [ "display" ],
+    "additionalProperties": false,
+
+    "properties": {
+        "display": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/widget" }
+        }
+    }
+}
