@@ -17,7 +17,7 @@ depends_on = None
 
 from slugify import slugify
 
-from directorofme.authorization.groups import base_groups, admin, staff, everybody, Scope
+from directorofme.authorization.groups import base_groups, admin, staff, everybody, Scope, user
 from unittest import mock
 from directorofme_auth.models import Group, GroupTypes, License, Profile, App, InstalledApp
 from directorofme_auth import db
@@ -28,7 +28,11 @@ def build_groups():
     groups_groups = { "read": (everybody.name,), "write": (admin.name,) }
     groups = {g.name: Group(display_name=g.display_name, type=g.type, **groups_groups) for g in base_groups}
 
-    for scope in [db.Model.__scope__, Scope(display_name="directorofme_event")]:
+    for scope in [
+        db.Model.__scope__,
+        Scope(display_name="directorofme_event")
+    ]:
+        print(scope)
         for g in Group.create_scope_groups(scope):
             g.read = groups_groups["read"]
             g.write = groups_groups["write"]
@@ -36,25 +40,37 @@ def build_groups():
 
     return groups
 
-def build_main_app(groups):
+def build_apps(groups):
     # TODO: requested access groups
-    return App(
-        name="Main",
-        desc="DirectorOf.Me's main app. Everyone should have this installed.",
-        url="/",
-        requested_access_groups = [groups["s-{}-read".format(slugify(db.Model.__scope__.display_name))]],
-        read=(everybody.name,),
-        write=(admin.name,),
-    )
+    slugged_event = slugify("directorofme_event")
+    return [
+        App(
+            name="Main",
+            desc="DirectorOf.Me's main app. Everyone should have this installed.",
+            url="/",
+            requested_access_groups = [groups["s-{}-read".format(slugify(db.Model.__scope__.display_name))]],
+            read=(everybody.name,),
+            write=(admin.name,),
+        ),
+        App(
+            name="Daily Stand-Up Report",
+            desc="Daily report delivered via E-Mail, Slack, Hipchat or Teams.",
+            url="/daily-stand-up",
+            requested_access_groups = [ groups["s-{}-read".format(slugged_event)], groups["s-{}-write".format(slugged_event)] ],
+            read=(user.name,),
+            write=(admin.name,),
+        )
+    ]
 
 
-def build_profiles(groups, main_app):
+def build_profiles(groups, apps):
     # founders
     profiles = []
     for (name, email) in (("Matt Story", "matt@directorof.me"),):
         profile = Profile.create_profile(name=name, email=email, add_user_group=False,
                                          additional_groups=[ groups["f-user"], groups["0-admin"] ])
-        InstalledApp.install_for_group(main_app, profile.group_of_one)
+        for app in apps:
+            InstalledApp.install_for_group(app, profile.group_of_one)
         profiles.append(profile)
 
     return profiles
@@ -84,10 +100,10 @@ def upgrade():
     groups = build_groups()
     session.add_all(groups.values())
 
-    main_app = build_main_app(groups)
-    session.add(main_app)
+    apps = build_apps(groups)
+    session.add_all(apps)
 
-    profiles = build_profiles(groups, main_app)
+    profiles = build_profiles(groups, apps)
     session.add_all(profiles)
 
     session.add(build_dom_license(groups, profiles))
