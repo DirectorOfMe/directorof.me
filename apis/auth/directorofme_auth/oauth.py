@@ -3,7 +3,7 @@ from requests_oauthlib import OAuth2Session
 from . import config
 from directorofme.authorization.exceptions import MisconfiguredAuthError
 
-__all__ = [ "Client", "Google" ]
+__all__ = [ "Client", "Google", "Slack" ]
 
 
 ### TODO: Factor into shared library for use by many backend apps
@@ -91,3 +91,27 @@ class Google(Client):
 
     def check_callback_request_for_errors(self, request):
         return request.args.get("error")
+
+
+class Slack(Client):
+    name = "slack"
+
+    def __init__(self, callback_url):
+        super().__init__(
+            callback_url,
+            config.get("SLACK_CLIENT_ID"),
+            config.get("SLACK_CLIENT_SECRET"),
+            config.get("SLACK_AUTH_URL"),
+            config.get("SLACK_TOKEN_URL"),
+            {},
+            { "scope": "identity.basic,identity.email" }
+        )
+
+    def confirm_email(self, token=None):
+        response = self.get("https://slack.com/api/users.identity").json()
+        if response["ok"]:
+            email = response["user"].get("email")
+            return email, bool(email)
+
+    def check_callback_request_for_errors(self, request):
+        pass
