@@ -31,4 +31,3 @@ def slugify_on_change(src, target, default=True):
         return cls
 
     return inner
-

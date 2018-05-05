@@ -1,0 +1,106 @@
+{
+    "definitions": {
+        "unit_of_time": {
+            "type": "string",
+            "enum": [ "days", "hours", "minutes" ]
+        },
+        "widget": {
+            "type": "object",
+            "required": [ "name", "header" ],
+            "patternProperties": {
+                "max_number_*$": { "type": "integer" }
+            },
+            "properties": {
+                "name": { "type": "string" },
+                "header": { "type": "string" },
+                "confidences": {
+                    "type": "array",
+                    "items": { "type": "number" },
+                    "maxItems": 3
+                },
+                "forecast_changes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "op": {
+                                "type": "string",
+                                "enum": [ ">", ">=", "==", "<=", "<" ]
+                            },
+                            "unit": { "$ref": "#/definitions/unit_of_time" },
+                            "value": { "type": "number" },
+                            "tag": {
+                                "type": "string",
+                                "enum": [ "GOOD", "CONCERN", "ALARM" ]
+                            }
+                        }
+                    }
+                }
+            },
+            "additionalProperties": true
+        },
+        "channel": {
+            "type": "object",
+            "required": [ "type", "deliver_to" ],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [ "email", "slack" ]
+                },
+                "deliver_to": { "type": "string" },
+                "template": { "type": "string", "format": "url" }
+            }
+        },
+        "tokens": {
+            "type": "object",
+            "patternProperties": {
+                "^.*_token$": {
+                    "value": { "type": "string" },
+                    "encryption": {
+                        "anyOf": [
+                            { "type": "null" },
+                            {
+                                "type": "string",
+                                "enum": [ "AES" ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "id": "https://matt.directorof.me/api/-/auth/app/stand-up-report",
+    "$schema": "http://json-schema.org/draft-06/schema#",
+
+    "description": "Schema for Stand-Up Report application Configurations.",
+    "type": "object",
+
+    "required": [ "components", "title", "at", "channels", "integrations" ],
+    "additionalProperties": false,
+
+    "properties": {
+        "components": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/widget" }
+        },
+        "title": {
+            "type": "string",
+            "format": "template"
+        },
+        "at": {
+            "type": "string",
+            "pattern": "[0-2]?[0-9]:[0-9][0-9]"
+        },
+        "channels": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/channel" }
+        },
+        "integrations": {
+            "type": "object",
+            "patternProperties": {
+                "^.*$": { "$ref": "#/definitions/tokens" }
+            }
+        }
+    }
+}

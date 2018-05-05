@@ -1,0 +1,81 @@
+{
+    "components": [
+        {
+            "name": "script_component",
+            "header": "My Daily Script",
+            "max_number_of_items": 4
+        }, {
+            "name": "schedule_component",
+            "header": "Today's Forecast",
+            "max_summary_items": 4,
+            "start_of_day": "09:00",
+            "end_of_day": "18:00",
+            "min_time_for_flow": { "value": "3", "unit": "hours" },
+            "meeting_prep_time": { "value": "15", "unit": "minutes" },
+            "meeting_recovery_time": {
+                "value": "15",
+                "unit": "minutes",
+                "note": "would be nice for this to change with meeting length" },
+            "icons": {
+                "flow": "/static/img/icons/flow.svg",
+                "meeting": "/static/img/icons/flow.svg",
+                "interrupt": "/static/img/icons/flow.svg"
+            },
+            "max_number_of_topics": 4
+        }, {
+            "name": "projects_component",
+            "header": "My Projects",
+            "max_number_of_projects": 2,
+            "confidences": [ 50, 95 ],
+            "forecast_changes": [
+                { "op": "<", "unit": "days", "value": 0, "tag": "GOOD" },
+                { "op": ">", "unit": "days", "value": 0, "tag": "CONCERN" },
+                { "op": ">", "unit": "days", "value": 0, "tag": "ALARM" }
+            ],
+            "additional_fields": [
+                { "heading": "Goal", "fields": [ "goal" ], "template": "{{goal}}" }
+            ]
+        }, {
+            "name": "issues_component",
+            "header": "My Issues",
+            "max_number_of_issues": 3,
+            "max_number_of_topics": 4,
+            "confidences": [ 50, 95 ],
+            "forecast_changes": [
+                { "op": "<", "unit": "days", "value": 0, "tag": "GOOD" },
+                { "op": ">", "unit": "days", "value": 0, "tag": "CONCERN" },
+                { "op": ">", "unit": "days", "value": 0, "tag": "ALARM" }
+            ]
+        }, {
+            "name": "pull_requests_component",
+            "header": "My Pull Requests",
+            "max_number_of_pulls": 5
+        }
+    ],
+    "title": "Stand-Up Report -- {{formatDate generated \"short\"}}",
+    "at": "08:00",
+    "channels": [
+        {
+            "type": "email",
+            "deliver_to": "matt@directorof.me",
+            "template": "email/responsive-two-column.tpl"
+        }, {
+            "type": "slack",
+            "deliver_to": "@matt"
+        }
+    ],
+    "integrations": {
+        "slack": {
+            "access_token": {
+                "encryption": "AES",
+                "value": "gAAAAABa7OrkklHuYlYlJp5CkciGBjJBtNgy1mT09DT5abqHgTV1ukQz4W4__nLmOga4erm4oCudqoDSeGu9QYrGMrqIbwkitpWEP12GLHKRyaojdQnhjB_xMZmWMrSgWT_-R0lMuMoh"
+            }
+        },
+        "directorofme": {
+            "refresh_token": {
+                "encryption": "AES",
+                "value": "gAAAAABa7Oum2YQrKuBFwcxO0j5miQlol3f5kdIVQimM8eDj74mXw--TutDmdvcdni7hop8Xtd4T1qLrDBNiyJLYXJ4pOwzI5Po8UM54Y14XM2q33gA3EvVGVWBQtH8YbBoTDgcqO-atMU5BNCRjADqMvT8o6rAUiP42S_MsXlXBNfKe8WsPi1-vpSWC4ZN1xh9p5bZ11Tf9ijJ-75xCHxRILYfnzaxsIKPS1Na-kzcEvDzFAUGwo0h-aozljaggku5qldglIvrWGGWMWOpYYKwSrQC_XPkTOty6JBbythugFHebJHMEvadJM02uqtlVR-s5FnbS4E07t_EygbvPr98AaHPWB0h6kM4hgyp62s8z-cQFGxSXt3j_O2JKQqEZvXqokAD6FyWJUCYxHwHqPM73MZc3LZkBefzcAzZdklxktSIpk5iVpXbVnAL32Qo-O9MkkAskPTufACB6zhGfuwr4PU0-zeVa78n2ja1MGGn_PZldovk7WuF2BnJbLklTHeIE2nZjszs8YQE3sfkhc3kmCA5pSpUtd7W9ETeFm-CA413UsjXmaZIdsDwyIWpmSsOI79AEIgULP9cLm0pZDdYi_im4iIe7vq5CfXJEx9dVnF2Wz12uGvpV6WnyDABQBMfbI8wWBTWqavznPOmF759HJGMq94u5Mjrbf0n_jJF3ljB49tMEnkbf8fM8rbOqKlH_siyZr6HrNJLw-bSaWNSwsNDYe1j583WQRxV2vEEF5gcJlWTVDm6x9njy4i7TunEDwFXQaC4coD8jwHQMoCtVlIJsFuviQldqdlNVOl3CBrK2Xufla0aJzmtBWW4dhCfvBah2gFZrDzmvVNtshlZCbINszuURgt1h6msxoxQOB-kM0nocQRJTYrEUKU5dA4MLvDY1dnWgVmt8rOmeNWAMpDZwQo5-MVoo-KmaVb9xnkeuZpCS7NfsKuHGp2IzsMVQ716FyD-cQNHDMRn9ReYFiVQryTg_ABRwa6WrJexJ9TOytuXZfKU8AOB0YhydpBXAGBT09YbVou2BVNS9ipPTd-iKvmJUIYeYzsHah_ow-88ulKSuBAdv-c3-HQisX_TDLbMY_UW4D_54S60CRLXMkc7nIRFtSgorLEHReNif3HRjgQnAjBRPYtwUdgukeCJ7e2dYcejft1_VLjUvggNjAiQWWBb4p74N8B3kP71uoinxSi_vHcHROzvgoSN7DplXenofeYRIT6XBeZs33kgy5RPi7ecLbmquyllSwJW6COPkcVjKAzRrYyQIezr-suyzLKUXGDDaREDaA5L8r0MmaDlH9XNwuLma8dME_LdLJFUd4OmlP617xL3FBshXSbt2YvCrqEL03wYXMC1lmo92udJnppFD84YvKm8SSdWi1JROiL0zTJl267Euv5DIkxZgNbH_4T279ETNpdpBo1W4fxh9pM2G54kZ_0_h3jzukefV9_w1_5w7lqaUmVypQEMSwABC7n3fhmxQ93vEHHD8jFlDbHfYIp_BwxeqUuNCi6qpilhsHtMxAwis0mkyZOrLEZrDbedo8OS16uOTyRu0dMm6zRuP7UjBfuZCdW7lC-RI-eIYhp6r6qGF0iAZER0YRJO06oEzsTPYZwHdt0CegVl67E2ZnX5mK5BnVx5I5QoqZ0VeZng-XKZ5OvtRd9H-4RNDXBZiuH1gzUOnGuQPfnM5C-HRLGA1aIhGjxYP0YlJKUCyOP2rXAfqVHA4qc0tyINEkiygJmlo__9iDuxlHs2HtX6qva87ZEV9al_S3XRbBiiWlHKMC9-jpj0zPrWkfZR2TQsUy0-AJSHrZ4JriYyJf_qsSkQUuVRl_ftmjz8t-xAqB4uG1VtP_e5ECTQdgl4UCQiog69lGkIrqgOdBn0ahcNd0wLposCqwZOYv8h5dvDfs5zYI9OtAeA9eaF1YXGMssaIPn8U6dKjnEVUP2nRJl0X1wW60EYY8MkO7VuXesNd3Y8="
+            }
+        }
+    }
+}

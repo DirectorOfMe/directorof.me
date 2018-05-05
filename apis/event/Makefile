@@ -5,6 +5,7 @@ BIN_DIR              ?= ../../bin
 PKG_NAME             ?= directorofme_event
 PKG_VERSION          ?= 0.1
 PKG_DEPS             ?= $(FLASK_PKG_DEPS),\
+						jsonschema==2.6.0,\
 					    python-slugify>=1.2.4
 
 FLASK_APP            ?= $(PKG_NAME):app

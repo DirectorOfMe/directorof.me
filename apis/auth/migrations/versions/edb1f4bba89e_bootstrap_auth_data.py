@@ -8,6 +8,9 @@ Create Date: 2018-01-30 21:57:11.153630
 from alembic import op
 import sqlalchemy as sa
 
+import os
+import json
+import jsonschema
 
 # revision identifiers, used by Alembic.
 revision = 'edb1f4bba89e'
@@ -32,7 +35,6 @@ def build_groups():
         db.Model.__scope__,
         Scope(display_name="directorofme_event")
     ]:
-        print(scope)
         for g in Group.create_scope_groups(scope):
             g.read = groups_groups["read"]
             g.write = groups_groups["write"]
@@ -41,9 +43,7 @@ def build_groups():
     return groups
 
 def build_apps(groups):
-    # TODO: requested access groups
-    slugged_event = slugify("directorofme_event")
-    return [
+    apps = [
         App(
             name="Main",
             desc="DirectorOf.Me's main app. Everyone should have this installed.",
@@ -51,12 +51,26 @@ def build_apps(groups):
             requested_access_groups = [groups["s-{}-read".format(slugify(db.Model.__scope__.display_name))]],
             read=(everybody.name,),
             write=(admin.name,),
-        ),
-        App(
+        )
+    ]
+
+    schema = None
+    with open(os.path.join(os.path.dirname(__file__), "../../json/schemas/daily-standup-app-config.json")) as f:
+        schema = json.load(f)
+    jsonschema.Draft4Validator.check_schema(schema)
+
+    slugged_event = slugify("directorofme_event")
+    return  apps + [
+        App(url="/daily-stand-up",
             name="Daily Stand-Up Report",
-            desc="Daily report delivered via E-Mail, Slack, Hipchat or Teams.",
-            url="/daily-stand-up",
-            requested_access_groups = [ groups["s-{}-read".format(slugged_event)], groups["s-{}-write".format(slugged_event)] ],
+            config_schema = schema,
+            desc="""Start your day off with all the information you need. The Daily Stand-Up report is
+                    delivered to you each morning via E-Mail or Chat and has all the information you
+                     need to have your best day every day.""",
+            requested_access_groups = [
+                groups["s-{}-read".format(slugged_event)],
+                groups["s-{}-write".format(slugged_event)]
+            ],
             read=(user.name,),
             write=(admin.name,),
         )
@@ -65,12 +79,22 @@ def build_apps(groups):
 
 def build_profiles(groups, apps):
     # founders
+    config = None
+    with open(os.path.join(os.path.dirname(__file__), "../../json/examples/daily-standup-app-config.json")) as f:
+        config = json.load(f)
+
     profiles = []
     for (name, email) in (("Matt Story", "matt@directorof.me"),):
         profile = Profile.create_profile(name=name, email=email, add_user_group=False,
                                          additional_groups=[ groups["f-user"], groups["0-admin"] ])
         for app in apps:
-            InstalledApp.install_for_group(app, profile.group_of_one)
+            kwargs = {}
+            if app.slug == "daily-stand-up-reort":
+                jsonschema.validate(config, app.config_schema)
+                kwargs = { "config": config }
+
+            InstalledApp.install_for_group(app, profile.group_of_one, **kwargs)
+
         profiles.append(profile)
 
     return profiles
