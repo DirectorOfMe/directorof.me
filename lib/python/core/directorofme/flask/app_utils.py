@@ -74,7 +74,7 @@ def default_config(name=None):
 rest_errors_map = {
     'PermissionDeniedError': {
         'message': "You do not have permission to perform this action",
-        'status': 401,
+        'status': 403,
     },
 }
 

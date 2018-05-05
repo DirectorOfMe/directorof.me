@@ -150,7 +150,7 @@ class TestEventType:
         with token_mock(authorized_for_read_identity) as mock_token:
             response = json_request(test_client, "put", url, data=event_type_client_obj)
             assert mock_token.called, "mock used"
-            assert response.status_code == 401, "no update access returns a 401"
+            assert response.status_code == 403, "no update access returns a 403"
 
         with token_mock(authorized_for_all_identity) as mock_token:
             response = json_request(test_client, "put", url, data=event_type_client_obj)
@@ -185,7 +185,7 @@ class TestEventType:
         with token_mock(authorized_for_read_identity) as mock_token:
             response = json_request(test_client, "patch", url, data={"desc": "Updated"})
             assert mock_token.called, "mock used"
-            assert response.status_code == 401, \
+            assert response.status_code == 403, \
                 "no read access returns a 404 (missing fields aren't a validation error"
 
         with token_mock(authorized_for_all_identity) as mock_token:
@@ -220,7 +220,7 @@ class TestEventType:
         with token_mock(authorized_for_read_identity) as mock_token:
             response = test_client.delete(url)
             assert mock_token.called, "mock used"
-            assert response.status_code == 401, "no permission returns a 401"
+            assert response.status_code == 403, "no permission returns a 403"
 
         with token_mock(authorized_for_all_identity) as mock_token:
             response = test_client.delete(url)
@@ -321,7 +321,7 @@ class TestEventTypes:
         with token_mock(unscoped_identity) as mock_token:
             response = json_request(test_client, "post", url, data={"name": "A", "desc": "B", "data_schema": {}})
             assert mock_token.called, "mock used"
-            assert response.status_code == 401, "valid post without permission returns 401"
+            assert response.status_code == 403, "valid post without permission returns 403"
 
         with token_mock(authorized_for_all_identity) as mock_token:
             response = json_request(test_client, "post", url, data={"name": "A", "desc": "B", "data_schema": {}})
@@ -379,7 +379,7 @@ class TestEvent:
         with token_mock(authorized_for_read_identity) as mock_token:
             response = test_client.delete(url)
             assert mock_token.called, "mock used"
-            assert response.status_code == 401, "no permission returns a 401"
+            assert response.status_code == 403, "no permission returns a 403"
 
         with token_mock(authorized_for_all_identity) as mock_token:
             response = test_client.delete(url)
@@ -521,7 +521,7 @@ class TestEvents:
             response = json_request(test_client, "post", url,
                                     data={"event_type_slug": event_type.slug, "data": { "test": "data" }})
             assert mock_token.called, "mock used"
-            assert response.status_code == 401, "valid post without permission returns 401"
+            assert response.status_code == 403, "valid post without permission returns 403"
 
         with token_mock(authorized_for_all_identity) as mock_token:
             response = json_request(test_client, "post", url,

@@ -16,7 +16,6 @@ from ..exceptions import EmailNotVerified, NoUserForEmail
 
 __all__ = [ "OAuth", "OAuthCallback", "RefreshToken", "Session", "with_service_client" ]
 
-supported_methods = ("login", "token")
 
 def _parse_session_args():
     parser = reqparse.RequestParser()
@@ -56,39 +55,34 @@ def _session_from_profile(profile, installed_app_id):
     return new_session
 
 
-### TODO: offline for integrations, but not for auth
 def with_service_client(fn):
     @functools.wraps(fn)
-    def inner(obj, service, method, *args, **kwargs):
+    def inner(obj, service, *args, **kwargs):
         ClientForService = Client.client_by_name(service)
         if ClientForService is None:
             return abort(404, message="no oauth service named {}".format(service))
 
-        if method not in supported_methods:
-            return abort(404, message="{} is not a supported method. Only {} are "\
-                                      "supported".format(service, supported_methods))
         extra_args = {k: v for k, v in _parse_session_args().items() if k == "installed_app_id"}
-        callback_url = api.url_for(OAuthCallback, api_version="-", service=service, method=method,
-                                   _external=True, **extra_args)
-        return fn(obj, ClientForService(callback_url, offline=(method == "token")), method, *args, **kwargs)
+        callback_url = api.url_for(OAuthCallback, api_version="-", service=service, _external=True, **extra_args)
+        return fn(obj, ClientForService(callback_url, *args, **kwargs))
 
     return inner
 
 
-@api.resource("/oauth/<string:service>/<string:method>", endpoint="oauth_api")
+@api.resource("/oauth/<string:service>", endpoint="oauth_api")
 class OAuth(Resource):
     @requires.anybody
     @with_service_client
-    def get(self, client, method):
+    def get(self, client):
         url = client.authorization_url()
         return { "auth_url": url }, 302, { "Location": url }
 
-
-@api.resource("/oauth/<string:service>/<string:method>/callback", endpoint="oauth_callback_api")
+###: TODO: re-implement to Oauth2 token / refresh endpoint specs
+@api.resource("/oauth/<string:service>/callback", endpoint="oauth_callback_api")
 class OAuthCallback(Resource):
     @requires.anybody
     @with_service_client
-    def get(self, client, method):
+    def get(self, client):
         error = client.check_callback_request_for_errors(flask.request)
         if error:
             return abort(400, message=error)
@@ -106,15 +100,11 @@ class OAuthCallback(Resource):
             if not profile:
                 raise NoUserForEmail(email)
 
-            if method == "login":
-                # Now that we have our groups installed, we can query for the requested app
-                new_session = _session_from_profile(profile, _parse_session_args().get("installed_app_id"))
-                print(new_session)
-                flask.session.overwrite(new_session)
-                flask.session.save = True
-                return flask.session
-
-            return { "service": client.name, "token": token }
+            # Now that we have our groups installed, we can query for the requested app
+            new_session = _session_from_profile(profile, _parse_session_args().get("installed_app_id"))
+            flask.session.overwrite(new_session)
+            flask.session.save = True
+            return flask.session
 
         except OAuth2Error as e:
             return abort(400, message=str(e))
@@ -138,7 +128,6 @@ class RefreshToken(Resource):
         session_data["groups"] = [groups.Group(**g) for g in session_data.get("groups", [])]
         flask.session.overwrite(session.Session(**session_data))
         return flask.session
-
 
 @api.resource("/session", endpoint="session_api")
 class Session(Resource):

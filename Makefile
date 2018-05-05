@@ -87,11 +87,11 @@ test-libs:
 	$(SUBMAKE) test $(PY_LIBS)
 
 .PHONY: test-apps
-test-libs:
+test-apps:
 	$(SUBMAKE) test $(APPS)
 
 .PHONY: test-apis
-test-libs:
+test-apis:
 	$(SUBMAKE) test $(APIS)
 
 .PHONY: upgrade-app-dbs

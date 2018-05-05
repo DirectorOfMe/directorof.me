@@ -204,4 +204,4 @@ class TestVersionedApi:
 
         with app.test_client() as client:
             resp = client.get("api/2/test/error")
-            assert resp.status_code == 401, "Permission denied returns a 401"
+            assert resp.status_code == 403, "Permission denied returns a 401"

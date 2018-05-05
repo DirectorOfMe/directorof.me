@@ -71,24 +71,17 @@ def test__with_service_client(request_context):
     def pass_through(*args):
         return args
 
-    _, client, method = pass_through(None, "google", "login")
+    _, client = pass_through(None, "google")
     assert isinstance(client, OAuthClient), "client is an oauth client"
     assert isinstance(client, Google), "client is a google oauth client"
-    assert method == "login", "method is login"
-
-    _, client, method = pass_through(None, "google", "token")
-    assert method == "token", "method is token"
 
     with pytest.raises(NotFound):
-        pass_through(None, "not_a_service", "login")
-
-    with pytest.raises(NotFound):
-        pass_through(None, "google", "not_a_method")
+        pass_through(None, "not_a_service")
 
 
 class TestOAuth:
     def test__get_method_directly(self, request_context, authorization_url):
-        response, response_code, headers = OAuth().get("google", "login")
+        response, response_code, headers = OAuth().get("google")
         assert response == { "auth_url": test_auth_url }, "url is correct"
         assert response_code == 302, "temporary redirect"
         assert headers == { "Location": test_auth_url }, "Location header is correctly set"
@@ -96,13 +89,13 @@ class TestOAuth:
         installed_app_id = uuid.uuid1()
         flask.request.values.dicts.append(werkzeug.MultiDict([("installed_app_id", str(installed_app_id))]))
         with mock.patch.object(api, "url_for") as url_for_mock:
-            response, response_code, headers = OAuth().get("google", "login")
-            url_for_mock.assert_called_with(OAuthCallback, api_version="-", service="google", method="login",
-                                            _external=True, installed_app_id=installed_app_id)
+            response, response_code, headers = OAuth().get("google")
+            url_for_mock.assert_called_with(OAuthCallback, api_version="-", service="google", _external=True,
+                                            installed_app_id=installed_app_id)
             assert headers == { "Location": test_auth_url }, "Location header is correctly set"
 
     def test__oauth_route(self, test_client, authorization_url):
-        response = test_client.get("/api/-/auth/oauth/google/login")
+        response = test_client.get("/api/-/auth/oauth/google")
         assert response.status_code == 302, "temporary redirect"
         assert response.headers["Location"] == test_auth_url
         assert dict_from_response(response) == { "auth_url": test_auth_url }, "response object correct"
@@ -114,7 +107,7 @@ class TestOAuthCallback:
         with mock.patch("directorofme_auth.oauth.Google.check_callback_request_for_errors") as checker:
             checker.return_value = "Error"
             with pytest.raises(BadRequest):
-                OAuthCallback().get("google", "token")
+                OAuthCallback().get("google")
 
             assert checker.called, "checker was used"
 
@@ -123,7 +116,7 @@ class TestOAuthCallback:
         confirm_email.return_value = ("test@example.com", False)
 
         with pytest.raises(BadRequest):
-            OAuthCallback().get("google", "token")
+            OAuthCallback().get("google")
 
         assert all([m.called for m in (fetch_token, confirm_email)]), "mocks were called"
 
@@ -131,36 +124,31 @@ class TestOAuthCallback:
         fetch_token.side_effect = OAuth2Error()
 
         with pytest.raises(BadRequest):
-            OAuthCallback().get("google", "token")
+            OAuthCallback().get("google")
 
     def test__get_directly_no_user(self, fetch_token, confirm_email):
         fetch_token.return_value = "token"
         confirm_email.return_value = ("test@example.com", True)
 
         with pytest.raises(NotFound):
-            OAuthCallback().get("google", "token")
+            OAuthCallback().get("google")
 
 
     def test__get_directly_no_app(self, fetch_token, confirm_email, test_profile, request_context):
         fetch_token.return_value = "token"
         confirm_email.return_value = ("test@example.com", True)
 
-        assert OAuthCallback().get("google", "login") is not None, "profile exists"
+        assert OAuthCallback().get("google") is not None, "profile exists"
 
         flask.request.values.dicts.append(werkzeug.MultiDict([("installed_app_id", str(uuid.uuid1()))]))
         with pytest.raises(NotFound):
-            OAuthCallback().get("google", "login")
+            OAuthCallback().get("google")
 
     def test__get_directly_happypaths(self, fetch_token, confirm_email, test_profile):
         fetch_token.return_value = "token"
         confirm_email.return_value = ("test@example.com", True)
 
-        assert OAuthCallback().get("google", "token") == { "service": "google", "token": "token" }, \
-               "token returned successfully when user exists"
-
-        assert not flask.session.save, "session not updated by token request"
-
-        OAuthCallback().get("google", "login") is flask.session, "session set and returned by login"
+        OAuthCallback().get("google") is flask.session, "session set and returned by login"
         assert flask.session.profile.email == test_profile.email, "profile set"
         assert flask.session.save, "session is updated by login"
 
@@ -169,7 +157,7 @@ class TestOAuthCallback:
             installed_app = models.InstalledApp.query.first()
             flask.request.values.dicts.append(werkzeug.MultiDict([("installed_app_id", str(installed_app.id))]))
 
-        OAuthCallback().get("google", "login") is flask.session, "session set and returned by login"
+        OAuthCallback().get("google") is flask.session, "session set and returned by login"
         assert flask.session.app.id == installed_app.id, "correct test app installed"
         assert set(
             groups.Group.from_conforming_type(g) for g in installed_app.access_groups
@@ -188,14 +176,7 @@ class TestOAuthCallback:
 
         db.session.expire_all()
         with real_db.Model.enable_permissions():
-            response = test_client.get("/api/-/auth/oauth/google/token/callback")
-        assert len(response.headers.getlist("Set-Cookie")) == 0, "no cookies set"
-        assert dict_from_response(response) == { "service": "google", "token": "token" }, \
-               "response object correct for token"
-
-        db.session.expire_all()
-        with real_db.Model.enable_permissions():
-            response = test_client.get("/api/-/auth/oauth/google/login/callback")
+            response = test_client.get("/api/-/auth/oauth/google/callback")
 
         self.cookie_checker(response)
         assert dict_from_response(response) == dump_and_load(flask.session, app), \
@@ -207,7 +188,7 @@ class TestOAuthCallback:
 
         db.session.expire_all()
         with real_db.Model.enable_permissions():
-            response = test_client.get("/api/-/auth/oauth/google/login/callback")
+            response = test_client.get("/api/-/auth/oauth/google/callback")
 
         self.cookie_checker(response)
         response_dict = dict_from_response(response)
@@ -259,7 +240,7 @@ class TestSession:
 
     def test__session_route(self, test_client):
         response = test_client.get("/api/-/auth/session")
-        assert response.status_code == 401, "permission denied to non-user"
+        assert response.status_code == 403, "permission denied to non-user"
 
         with token_mock(copy.deepcopy(test_session_data)) as mocked_token:
             response = test_client.get("/api/-/auth/session")
@@ -277,7 +258,6 @@ class TestSessionForApp:
                 assert installed_app.app_name == "main", "app is correct"
 
                 session_obj = SessionForApp().get(installed_app.id)
-                print(installed_app, session_obj.app)
                 assert session_obj is flask.session, "session is overwritten"
                 assert session_obj.save, "session is marked for save"
                 assert session_obj.app.id is installed_app.id, "app is correctly set"

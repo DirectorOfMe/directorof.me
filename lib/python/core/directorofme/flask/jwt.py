@@ -21,6 +21,7 @@ def empty_if_expired(fn):
         try:
             dummy()
         except jwt.exceptions.InvalidTokenError:
+            ###: TODO: Unset headers using fancy abort, 401 here for sure
             pass
 
         return fn(*args, **kwargs)
@@ -35,7 +36,6 @@ class JWTSessionInterface(FlaskSessionInterface):
     @empty_if_expired
     def open_session(self, app, request):
         '''Populate the session from the JWT cookies at the start of a request'''
-        ### TODO: MAYBE RAISE IF KEY IS EXPIRED
         ### TODO: default_objectt_perms
         ### TODO: default_object_perms are strings, but groups are objects ...
         identity = flask_jwt.get_jwt_identity() or {}

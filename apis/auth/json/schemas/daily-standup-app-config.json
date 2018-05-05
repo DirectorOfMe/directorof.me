@@ -61,14 +61,22 @@
                             { "type": "null" },
                             {
                                 "type": "string",
-                                "enum": [ "AES" ]
+                                "enum": [ "RSA" ]
                             }
                         ]
                     }
                 }
             },
             "additionalProperties": false
-        }
+        },
+		"public_key_crypto": {
+			"type": "object",
+			"required": [ "format", "public_key" ],
+			"properties": {
+				"format": { "type": "string", "enum": [ "PEM" ] },
+				"public_key": { "type": "string" }
+			}
+		}
     },
     "id": "https://matt.directorof.me/api/-/auth/app/stand-up-report",
     "$schema": "http://json-schema.org/draft-06/schema#",
@@ -101,6 +109,12 @@
             "patternProperties": {
                 "^.*$": { "$ref": "#/definitions/tokens" }
             }
-        }
+        },
+		"crypto": {
+			"type": "object",
+			"properties": {
+				"RSA": { "$ref": "#/definitions/public_key_crypto" }
+			}
+		}
     }
 }

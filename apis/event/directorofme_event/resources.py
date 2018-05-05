@@ -78,7 +78,7 @@ class EventType(Resource):
             400:
                 description: Validation error on save or in request body.
                 schema: ErrorSchema
-            401:
+            403:
                 description: No permission to update this EventType object.
                 schema: ErrorSchema
             404:
@@ -115,7 +115,7 @@ class EventType(Resource):
             400:
                 description: Validation error on save or in request body.
                 schema: ErrorSchema
-            401:
+            403:
                 description: No permission to update this EventType object.
                 schema: ErrorSchema
             404:
@@ -151,7 +151,7 @@ class EventType(Resource):
         responses:
             204:
                 description: EventType deleted.
-            401:
+            403:
                 description: No permission to delete this EventType object.
                 schema: ErrorSchema
             404:
@@ -242,7 +242,7 @@ class EventTypes(Resource):
             400:
                 description: Validation Error when creating the new object.
                 schema: ErrorSchema
-            401:
+            403:
                 description: No permission to create a new EventType object.
                 schema: ErrorSchema
         """
@@ -308,7 +308,7 @@ class Event(Resource):
         responses:
             204:
                 description: Event deleted.
-            401:
+            403:
                 description: No permission to delete this Event object.
                 schema: ErrorSchema
             404:
@@ -452,7 +452,7 @@ class Events(Resource):
             400:
                 description: Validation Error when creating the new object.
                 schema: ErrorSchema
-            401:
+            403:
                 description: No permission to create a new Event object.
                 schema: ErrorSchema
             404:
