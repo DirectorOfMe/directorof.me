@@ -1,4 +1,4 @@
-WEB_LOCATION ?= example
+WEB_FILES_LOCATION ?= example
 
 LIB_DIR      ?= ../../lib
 SHARE_DIR    ?= ../../share
