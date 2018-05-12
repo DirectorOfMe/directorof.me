@@ -22,6 +22,7 @@ PROXY_HOST           ?= $(SERVER_ADDR)
 PROXY_PORT           ?= $(SERVER_PORT)
 
 API_NAME             ?= event
+WEB_LOCATION         ?= $(API_WEB_LOCATION)
 
 PSQL_DB              ?= $(EVENT_API_PSQL_DB)
 PSQL_USER            ?= $(EVENT_API_PSQL_USER)

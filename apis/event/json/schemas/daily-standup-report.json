@@ -74,6 +74,12 @@
                         { "$ref": "#/definitions/forecast" }
                     ]
                 },
+                "initial": {
+                    "anyOf": [
+                        { "type": "null" },
+                        { "$ref": "#/definitions/forecast" }
+                    ]
+                },
                 "changes": {
                     "type": "array",
                     "items": {
