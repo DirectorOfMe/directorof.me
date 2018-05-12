@@ -6,11 +6,11 @@ import flask_jwt_extended as flask_jwt
 from flask_restful import Resource, abort, reqparse
 from oauthlib.oauth2 import OAuth2Error
 
+from directorofme.oauth import Client
 from directorofme.authorization import session, groups, requires, standard_permissions
 
 from . import api
-from .. import db
-from ..oauth import Client
+from .. import db, config
 from ..models import Profile, InstalledApp
 from ..exceptions import EmailNotVerified, NoUserForEmail
 
@@ -58,13 +58,13 @@ def _session_from_profile(profile, installed_app_id):
 def with_service_client(fn):
     @functools.wraps(fn)
     def inner(obj, service, *args, **kwargs):
-        ClientForService = Client.client_by_name(service)
+        ClientForService = Client.by_name(service)
         if ClientForService is None:
             return abort(404, message="no oauth service named {}".format(service))
 
         extra_args = {k: v for k, v in _parse_session_args().items() if k == "installed_app_id"}
         callback_url = api.url_for(OAuthCallback, api_version="-", service=service, _external=True, **extra_args)
-        return fn(obj, ClientForService(callback_url, *args, **kwargs))
+        return fn(obj, ClientForService(config, callback_url=callback_url, *args, **kwargs))
 
     return inner
 

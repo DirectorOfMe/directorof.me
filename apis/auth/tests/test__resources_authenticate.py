@@ -15,14 +15,14 @@ from directorofme.authorization import groups, session
 from directorofme.authorization.exceptions import PermissionDeniedError
 
 from directorofme_auth import app, api, models, db as real_db
-from directorofme_auth.oauth import Client as OAuthClient, Google
+from directorofme.oauth import Client as OAuthClient, Google
 from directorofme_auth.resources.authenticate import OAuth, OAuthCallback, RefreshToken, Session, SessionForApp, \
                                                      with_service_client
 ### FIXTURES
 test_auth_url = "https://example.com/auth?callback=mine"
 @pytest.fixture
 def authorization_url():
-    with mock.patch("directorofme_auth.oauth.Client.authorization_url") as method:
+    with mock.patch("directorofme.oauth.Client.authorization_url") as method:
         method.return_value = test_auth_url
         yield method
 
@@ -56,12 +56,12 @@ def refresh_token_decoder(request_context):
 
 @pytest.fixture
 def fetch_token(request_context):
-    with mock.patch("directorofme_auth.oauth.Google.fetch_token") as fetch_token:
+    with mock.patch("directorofme.oauth.Google.fetch_token") as fetch_token:
         yield fetch_token
 
 @pytest.fixture
 def confirm_email(request_context):
-    with mock.patch("directorofme_auth.oauth.Google.confirm_email") as confirm_email:
+    with mock.patch("directorofme.oauth.Google.confirm_email") as confirm_email:
         yield confirm_email
 
 
@@ -104,7 +104,7 @@ class TestOAuth:
 
 class TestOAuthCallback:
     def test__get_error_from_auth_endpoint(self, request_context):
-        with mock.patch("directorofme_auth.oauth.Google.check_callback_request_for_errors") as checker:
+        with mock.patch("directorofme.oauth.Google.check_callback_request_for_errors") as checker:
             checker.return_value = "Error"
             with pytest.raises(BadRequest):
                 OAuthCallback().get("google")

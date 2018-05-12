@@ -104,7 +104,7 @@ class TestApp:
         missing_url.url = "https://example.com/"
         db.session.add(missing_url)
         db.session.commit()
-        assert existing(missing_url, "name").url == "https://example.com/", \
+        assert existing(missing_url, "name").url.url == "https://example.com/", \
                "save works if url set"
 
     def test__requested_scopes(self, db, disable_permissions):

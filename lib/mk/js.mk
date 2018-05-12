@@ -1,10 +1,10 @@
-WEB_LOCATION  ?=
-WEB_FILES_SRC ?= build/
-LIB_DIR       ?= ../../lib
-SHARE_DIR     ?= ../../share
-TPL_DIR       ?= $(SHARE_DIR)/templates .
+WEB_FILES_LOCATION  ?=
+WEB_FILES_SRC       ?= build/
+LIB_DIR             ?= ../../lib
+SHARE_DIR           ?= ../../share
+TPL_DIR             ?= $(SHARE_DIR)/templates .
 
-PACKAGE_JSON_ENV = WEB_LOCATION="$(WEB_LOCATION)"
+PACKAGE_JSON_ENV = $(WEB_LOCATION)
 
 ### Targets for JS Packages
 build/asset-manifest.json: yarn.lock

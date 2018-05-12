@@ -100,15 +100,20 @@
             "type": "string",
             "pattern": "[0-2]?[0-9]:[0-9][0-9]"
         },
-        "channels": {
+		"host": {
+			"type": "string",
+			"format": "url"
+		},
+		"channels": {
             "type": "array",
             "items": { "$ref": "#/definitions/channel" }
         },
         "integrations": {
             "type": "object",
             "patternProperties": {
-                "^.*$": { "$ref": "#/definitions/tokens" }
-            }
+                "^._token*$": { "$ref": "#/definitions/tokens" }
+            },
+			"additionalProperties": true
         },
 		"crypto": {
 			"type": "object",

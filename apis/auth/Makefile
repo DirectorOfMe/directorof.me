@@ -5,8 +5,7 @@ BIN_DIR              ?= ../../bin
 PKG_NAME             ?= directorofme_auth
 PKG_VERSION          ?= 0.1
 PKG_DEPS             ?= $(FLASK_PKG_DEPS),\
-					    python-slugify>=1.2.4,\
-						requests-oauthlib>=0.8.0,
+					    python-slugify>=1.2.4,
 
 FLASK_APP            ?= $(PKG_NAME):app
 SERVICE_NAME         ?= $(PKG_NAME)
@@ -22,6 +21,7 @@ PROXY_HOST           ?= $(SERVER_ADDR)
 PROXY_PORT           ?= $(SERVER_PORT)
 
 API_NAME             ?= auth
+WEB_LOCATION         ?= $(API_WEB_LOCATION)
 
 PSQL_DB              ?= $(AUTH_API_PSQL_DB)
 PSQL_USER            ?= $(AUTH_API_PSQL_USER)
@@ -47,6 +47,7 @@ FLASK_EXTRA_VARS     ?= GOOGLE_CLIENT_ID="$(GOOGLE_CLIENT_ID)" \
 						SLACK_CLIENT_SECRET="$(AUTH_API_SLACK_CLIENT_SECRET)" \
 						SLACK_AUTH_URL="$(AUTH_API_SLACK_AUTH_URL)" \
 						SLACK_TOKEN_URL="$(AUTH_API_SLACK_TOKEN_URL)" \
+						OAUTHLIB_RELAX_TOKEN_SCOPE=1 \
 						JWT_PRIVATE_KEY_FILE=$(JWT_INSTALL_DIR)/$(JWT_KEY_DIR)/jwt_ec512.pem
 
 .PHONY: default

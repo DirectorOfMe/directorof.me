@@ -3,7 +3,7 @@
         {
             "name": "script_component",
             "header": "My Daily Script",
-            "max_number_of_items": 4
+            "max_number_of_topics": 4
         }, {
             "name": "schedule_component",
             "header": "Today's Forecast",
@@ -52,8 +52,9 @@
             "max_number_of_pulls": 5
         }
     ],
-    "title": "Stand-Up Report -- {{formatDate generated \"short\"}}",
+    "title": "Stand-Up Report",
     "at": "08:00",
+	"host": "https://matt.directorof.me",
     "channels": [
         {
             "type": "email",
@@ -61,14 +62,17 @@
             "template": "email/responsive-two-column.tpl"
         }, {
             "type": "slack",
-            "deliver_to": "@matt"
+			"user": "@matt",
+            "deliver_to": "https://hooks.slack.com/services/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"
         }
     ],
     "integrations": {
         "slack": {
+			"configuration_url":"https://directorofme.slack.com/services/BAJMQFT33",
+            "webhook_url": "https://hooks.slack.com/services/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",
             "access_token": {
                 "encryption": "RSA",
-                "value": "gAAAAABa7OrkklHuYlYlJp5CkciGBjJBtNgy1mT09DT5abqHgTV1ukQz4W4__nLmOga4erm4oCudqoDSeGu9QYrGMrqIbwkitpWEP12GLHKRyaojdQnhjB_xMZmWMrSgWT_-R0lMuMoh"
+                "value": "K8UEyTubJsC1YUPnDOOposTPLKxoE5WS0BoswFq6rGHI72F8yiUlgkhuu5jb59kJ750ZDbsq78w3\noNRllXrNZKTd05vcxpWBWb3uYl1Av4TdJitw3APJaqStQANN5HSxO1f2YjUOt/2bAdVvG4bwTSEb\nZvIpk+1gcUvrRZzWe0xpvSoph4eoR38ZdguH/bQ3DhyT9TSomNdcWUGtYZCmsTiD/L06woUelPvo\nLdejYuuaeEVvCZMipKvFUbITAp1Tvkiy5nr3xaRYbwPCGTvQYXlUZJZHaFOSJD0Nd7URRHLFOQvM\nSi79zSs4JA0tOO/YwCV2ZwL2tmwSBIhEJazlcz5yKrERsnH8pR9EPd4bV529axlDIs9It5WWQMXA\n8oKXzgLqyagopksrpOdSbaVdt4HS9Pil+g3awzgq33evl/4+1VUY8fuDrvQs3KOT2GB7ODCqOsH6\nkmWqe2b7BwvKIq7XnxpAyiRvrKOPuoVnuW1+kLfusUFgr+c+T8uq9/cxt/VVovABT+/34hK1mQhG\ncAFDq57ry2ecQcB+naOmJ5rtJtvEZ1944CCwc9qEkKgBs1ja2DSlw/aGgd3TZAUQLqO30p+Lp8Sq\nHyeQMRlhrbGeXPVTKhZx5atveaRtowZ5ihcMg85XfFO9Nl3liAyLSOx7kqKIQyvhQ5gXpVRjgpA=\n"
             }
         },
         "directorofme": {
@@ -81,7 +85,7 @@
 	"crypto": {
 		"RSA": {
 			"format": "PEM",
-			"public_key": "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAyWK2qBMkvUSqcTHiE4nO\nWszmZmERPBKLpJx1jgFsoRkihfBC84+ejSY3JZUQoWUqBXUo5qdoGhRbNg+N9N+L\nYWFisycE6zkjiU+FpId8w5N1cJWVdRfB+H7G7NE69Tl8OpYWaRYcXLfnBYkDB4WP\nEfaKlZdRB6e119+kwZJNoHuSnVRU4r6fiuhOMhk/ETy7sOUhBAKAFwztVzKgvuob\n94n/cUTXH2FKTMmQ0BqLQzxn94qmHPaI7HaRdBvASScl2ZxXPZuWUluwMD+frnRT\n2PCDGogpPkSGlymh24cShTmjCa08nUC5FGnUvLUSZ0IIT9okUU5g6JcblA0L4Jr+\nIzC3bvhUhhLmdkqHXe3701BmwYTX5DMIbtdkzx6GlhpyO0KGZQ+Cyb/nrZG/jCXZ\ncZo3fxU691fQo1K06rslbeT63sw8by/Anf5WMNuzCWHo8Kd3PdP2E8nUaOj3gNJx\njxg0gAGN7ITao9+5GXwfXyaUQaa/GvxD/dhUOv5tzZ6J0AgrFHtLOZNcr8i8dQ+m\noRjS5lcKxKQ0XCyF0M5Uc2MGg+Sptf24tCVk7P4v4sbr7/+Li9v3B3YsRMMBkV15\nH/R8uVuWheGB/kMU7YLGz7S5MKvtiMP4Iljw9185zMbLsW3g/9HmnVUlAq8DWJtb\n3vei3OqsBQ9E7oS8bNBxn78CAwEAAQ=="
+			"public_key": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA3jib/AlOpsJ0yjmazUO1\nYiNUSJUwWL00ln6CW/e7uDyEpCG6u4miC22PWpunkK6UWvOERtZuT5c95vKVX/aY\nI5PM9KIlIJbLrGY3Hluv+GedY1PflWyD22ysxgUtygOj97vjXpfze/3jN+pDnGbi\nUI32B1IgG9HeQYq4Z4WUZzJmCTex0DsmUVRifraLstIfkXhOa9z8Efjp68K0h6qs\nhAaFox4rbqKGSk/b30MWbhdZXEMyY/gvmkHvRmL6s7alAioyBkCcvxoi3Xjb6Nf1\nK4K8dQd5WBXF5696V1XhenlG/ZTlHulAWB/rRwE4xiVy2MJwgUIIeRPJmFiI3xND\n7Dtnt0BGGI6Y1qeiXbSexbSoh5nd0S6ylBNBhqVswd51RQN0kBCSPfAvSgd1q1Jh\nDXRI9TF3Fht8gM/F9Sr+ErL5fcBJbWM/AeXQ2r0EY0O7fBXIMgjlQKj3wLeH1S9W\ng2l7l2RNM2q/u1NCOjwgs+4a5u1/3WtXuGo6/61jFZlablBnecHRpVugflHkdT0z\nyeaMY9TfdeQKMVysY6iNn6vVTeH1+aboVUKataQVue8XF1sa0nmqGTvXcDQyp5he\nQiykewpU54kMWA+oDGz2gT8XOMZxuC4aO/C4jS9ROyTgD1QpJyIcCDA7nCyzzky1\nERwbBMseww0K0WaW/1mQHhUCAwEAAQ==\n-----END PUBLIC KEY-----"
 		}
 	}
 }

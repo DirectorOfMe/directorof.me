@@ -59,7 +59,7 @@ proxy.conf: $(SHARE_DIR)/templates/nginx/locations/proxy.conf
 
 .PHONY: install-www
 install-www:
-	$(INSTALL_WEB_PAGES) $(WEB_FILES_SRC) $(WEB_LOCATION)
+	$(INSTALL_WEB_PAGES) $(WEB_FILES_SRC) $(WEB_FILES_LOCATION)
 
 #### Targets used by main installer to configure nginx itself
 .PHONY: clean-proxy.conf
