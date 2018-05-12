@@ -5,8 +5,7 @@ BIN_DIR     ?= ../../../bin
 
 PKG_NAME    ?= directorofme
 PKG_VERSION ?= 0.1
-PKG_DEPS    ?= $(FLASK_PKG_DEPS), \
-			   requests-oauthlib>=0.8.0,
+PKG_DEPS    ?= $(FLASK_PKG_DEPS)
 
 .PHONY: default
 default: build-setup-py

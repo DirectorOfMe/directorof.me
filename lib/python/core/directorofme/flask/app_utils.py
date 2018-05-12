@@ -58,6 +58,7 @@ def default_config(name=None):
                 "SQLALCHEMY_DATABASE_URI": os.environ.get("APP_DB_ENGINE"),
                 "SQLALCHEMY_TRACK_MODIFICATIONS": False,
                 "PREFERRED_URL_SCHEME": "https",
+                "ERROR_404_HELP": False,
                 "SERVER_NAME": os.environ.get("SERVER_NAME"),
                 "JWT_PUBLIC_KEY_FILE": os.environ.get("JWT_PUBLIC_KEY_FILE"),
                 "JWT_PRIVATE_KEY_FILE": os.environ.get("JWT_PRIVATE_KEY_FILE"),
