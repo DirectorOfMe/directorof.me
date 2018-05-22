@@ -172,7 +172,7 @@ class TestSpec:
         spec = api.Spec(title="Test Spec", version="0.0.1")
         assert "Error" in spec.to_dict()["definitions"], "added to spec"
         assert set(spec.to_dict()["parameters"].keys()) == \
-               {"api_version", "slug", "uuid", "page", "results_per_page"}, "parameters set by __init__"
+               {"api_version", "slug", "uuid", "page", "results_per_page", "service"}, "parameters set by __init__"
 
     def test__getattr__(self):
         spec = api.Spec(title="Test Spec", version="0.0.1")

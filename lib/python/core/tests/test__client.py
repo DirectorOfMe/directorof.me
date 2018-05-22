@@ -79,6 +79,6 @@ class TestDOM:
 
     def test__refresh(self, dom_client):
         with mock.patch.object(dom_client, "put") as mock_put:
-            mock_get.return_value = { "session": True }
+            mock_put.return_value = { "session": True }
             assert dom_client.refresh() == { "session": True }, "refresh calls put"
-            mock_get.assert_called_with("auth/refresh")
+            mock_put.assert_called_with("auth/refresh")

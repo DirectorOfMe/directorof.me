@@ -234,6 +234,11 @@ class Spec:
                            example="1")
         self.add_parameter("results_per_page", "query", description="how many results to return per page",
                            type="int", example="25", minimum=1, maximum=50)
+        self.add_parameter("service", "path",
+                           description="name of 3rd party service to authenticate against",
+                           required=True,
+                           type="string",
+                           example="google")
 
         @self.register_schema("Error")
         class ErrorSchema(marshmallow.Schema):
