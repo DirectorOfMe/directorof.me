@@ -76,4 +76,4 @@ class DOM(Session):
         return self.check(super().patch(url=self.url(url), *args, **kwargs))
 
     def refresh(self):
-        return self.get("auth/refresh")
+        return self.put("auth/refresh")

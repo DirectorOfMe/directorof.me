@@ -78,7 +78,7 @@ class TestDOM:
                 mock_method.assert_called_with(url="https://test.directorof.me/api/-/foo/bar")
 
     def test__refresh(self, dom_client):
-        with mock.patch.object(dom_client, "get") as mock_get:
+        with mock.patch.object(dom_client, "put") as mock_put:
             mock_get.return_value = { "session": True }
-            assert dom_client.refresh() == { "session": True }, "refresh calls get"
+            assert dom_client.refresh() == { "session": True }, "refresh calls put"
             mock_get.assert_called_with("auth/refresh")
