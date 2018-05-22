@@ -8,10 +8,10 @@ from werkzeug.contrib.fixers import ProxyFix
 from . import JSONEncoder
 from ..authorization.exceptions import MisconfiguredAuthError
 
-__all__ = [ "app_for_api", "default_config", "rest_errors_map", "versioned_api" ]
+__all__ = [ "directorofme_app", "default_config", "rest_errors_map", "versioned_api" ]
 
 
-def app_for_api(app_name, user_config):
+def directorofme_app(app_name, user_config):
     '''Construct a well-configured Flask application for building a DOM API'''
     config = default_config(app_name)
     app_config = config["app"]

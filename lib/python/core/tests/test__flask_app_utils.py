@@ -7,7 +7,7 @@ from werkzeug.contrib.fixers import ProxyFix
 
 from unittest import mock
 
-from directorofme.flask import app_for_api, default_config, JSONEncoder, versioned_api
+from directorofme.flask import directorofme_app, default_config, JSONEncoder, versioned_api
 from directorofme.testing import dict_from_response
 from directorofme.authorization.exceptions import MisconfiguredAuthError, PermissionDeniedError
 
@@ -30,8 +30,8 @@ open_mock.side_effect = open_side_effect
 
 
 @mock.patch("builtins.open", open_mock)
-def test__app_for_api_basic(clear_env):
-    app = app_for_api("app", { "app": { "JWT_PUBLIC_KEY_FILE": "public_key" }})
+def test__directorofme_app_basic(clear_env):
+    app = directorofme_app("app", { "app": { "JWT_PUBLIC_KEY_FILE": "public_key" }})
 
     assert isinstance(app, flask.Flask), "return a Flask app"
     assert isinstance(app.wsgi_app, ProxyFix), "proxy fix installed"
@@ -43,28 +43,28 @@ def test__app_for_api_basic(clear_env):
 
 
 @mock.patch("builtins.open", open_mock)
-def test__app_for_api_keys(clear_env):
+def test__directorofme_app_keys(clear_env):
     # no public key raises
     with pytest.raises(MisconfiguredAuthError):
-        app_for_api("app", {})
+        directorofme_app("app", {})
 
     open_mock.assert_called_with(None)
     open_mock.reset_mock()
 
     open_mock.not_found = "public_key"
     with pytest.raises(MisconfiguredAuthError):
-        app_for_api("app", { "app": { "JWT_PUBLIC_KEY_FILE": "public_key" } })
+        directorofme_app("app", { "app": { "JWT_PUBLIC_KEY_FILE": "public_key" } })
 
     open_mock.assert_called_with("public_key")
     open_mock.reset_mock()
 
     open_mock.not_found = None
-    app = app_for_api("app", { "app": { "JWT_PUBLIC_KEY_FILE": "public_key" }})
+    app = directorofme_app("app", { "app": { "JWT_PUBLIC_KEY_FILE": "public_key" }})
     assert app.config["JWT_PUBLIC_KEY"] == "public_key", "public key set correctly for non-auth server"
     open_mock.reset_mock()
 
     with pytest.raises(MisconfiguredAuthError):
-        app_for_api("app", { "app": { "JWT_PUBLIC_KEY_FILE": "public_key", "IS_AUTH_SERVER": True }})
+        directorofme_app("app", { "app": { "JWT_PUBLIC_KEY_FILE": "public_key", "IS_AUTH_SERVER": True }})
 
     open_mock.assert_has_calls([mock.call("public_key"), mock.call(None)])
     open_mock.reset_mock()
@@ -79,14 +79,14 @@ def test__app_for_api_keys(clear_env):
 
     open_mock.not_found = "private_key"
     with pytest.raises(MisconfiguredAuthError):
-        app_for_api("app", well_formed_config)
+        directorofme_app("app", well_formed_config)
 
     # happy path
     open_mock.assert_has_calls([mock.call("public_key"), mock.call("private_key")])
     open_mock.reset_mock()
     open_mock.not_found = None
 
-    app = app_for_api("app", well_formed_config)
+    app = directorofme_app("app", well_formed_config)
     assert app.config["JWT_PUBLIC_KEY"] == "public_key", "public key set from read"
     assert app.config["JWT_PUBLIC_KEY"] == "public_key", "private key set from read"
 

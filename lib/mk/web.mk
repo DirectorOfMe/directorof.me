@@ -9,6 +9,8 @@ WEB_CONF_DIR      ?=
 WEB_LOG_DIR       ?=
 WEB_FILES_DIR     ?=
 WEB_USE_SSL       ?=
+WEB_SERVER_PORT   ?=
+WEB_SERVER_SSL_PORT   ?=
 
 PROXY_NAME        ?=
 PROXY_HOST        ?=
@@ -40,7 +42,9 @@ RENDER_EXPORTS    ?= WEB_SERVER_NAME="$(WEB_SERVER_NAME)" \
 				     WEB_CONF_DIR="$(WEB_CONF_DIR)" \
 				     WEB_LOG_DIR="$(WEB_LOG_DIR)" \
 				     WEB_FILES_DIR="$(WEB_FILES_DIR)" \
-				     WEB_USE_SSL="$(WEB_USE_SSL)"
+				     WEB_USE_SSL="$(WEB_USE_SSL)" \
+				     WEB_SERVER_PORT="$(WEB_SERVER_PORT)" \
+				     WEB_SERVER_SSL_PORT="$(WEB_SERVER_SSL_PORT)" \
 
 PROXY_EXPORTS     ?= PROXY_NAME="$(PROXY_NAME)" \
 				     PROXY_HOST="$(PROXY_HOST)" \
@@ -128,7 +132,6 @@ $(SHARE_DIR)/ssl/nginx.crt: $(SHARE_DIR)/ssl/.d
 $(SHARE_DIR)/ssl/.d:
 	install -m 0700 -d $(SHARE_DIR)/ssl && touch $@
 
-
 /etc/nginx/.d:
 	sudo install -o root -g root -m 0755 -d /etc/nginx && sudo touch $@
 
@@ -143,7 +146,7 @@ $(SHARE_DIR)/ssl/.d:
 	sudo install -o root -g root -m 0644 $@.tmp $@; sudo rm -f $@.tmp
 
 .PHONY: install-error-pages
-install-error-pages: error-pages web-user /var/www-versions/.d
+install-error-pages: error-pages web-user /var/www-versions/.d /var/www/.d
 	$(INSTALL_WEB_PAGES) www-errors errors
 
 .PHONY: error-pages
@@ -172,7 +175,7 @@ check-nginx:
 # TODO: after we get this working, remove all the default crap
 .PHONY: nginx
 nginx:
-	which nginx || { \
+	sudo which nginx || { \
 		$(APT) install nginx nginx-extras && \
 		sudo service nginx stop && \
 		sudo rm -rf /etc/nginx/ /var/www/ && \

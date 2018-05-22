@@ -55,18 +55,19 @@ def build_apps(groups):
     ]
 
     schema = None
-    with open(os.path.join(os.path.dirname(__file__), "../../json/schemas/daily-standup-app-config.json")) as f:
+    with open(os.path.join(os.path.dirname(__file__), "../../json/schemas/rythym-app-config.json")) as f:
         schema = json.load(f)
     jsonschema.Draft4Validator.check_schema(schema)
 
     slugged_event = slugify("directorofme_event")
     return  apps + [
-        App(url="/daily-stand-up",
-            name="Daily Stand-Up Report",
+        App(url="/rythym",
+            name="Your Daily Rythym",
             config_schema = schema,
-            desc="""Start your day off with all the information you need. The Daily Stand-Up report is
-                    delivered to you each morning via E-Mail or Chat and has all the information you
-                     need to have your best day every day.""",
+            desc="""Have your best day every day with the Daily Rythym App.
+                    The Daily Rhythm combines information from your tools and
+                    integrates them into a chat bot for you to help you see
+                    the future.""",
             requested_access_groups = [
                 groups["s-{}-read".format(slugged_event)],
                 groups["s-{}-write".format(slugged_event)]
@@ -80,7 +81,7 @@ def build_apps(groups):
 def build_profiles(groups, apps):
     # founders
     config = None
-    with open(os.path.join(os.path.dirname(__file__), "../../json/examples/daily-standup-app-config.json")) as f:
+    with open(os.path.join(os.path.dirname(__file__), "../../json/examples/rythym-app-config.json")) as f:
         config = json.load(f)
 
     profiles = []

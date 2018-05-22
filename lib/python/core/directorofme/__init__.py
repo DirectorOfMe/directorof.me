@@ -15,3 +15,4 @@ from . import specify
 from . import flask
 from . import orm
 from . import oauth
+from . import client

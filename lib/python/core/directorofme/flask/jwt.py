@@ -70,6 +70,7 @@ class JWTManager(flask_jwt.JWTManager):
     def configure_app(self, app: flask.Flask):
         app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
         app.config["JWT_COOKIE_CSRF_PROTECT"] = True
+        app.config["JWT_REFRESH_CSRF_HEADER_NAME"] = "X-CSRF-REFRESH-TOKEN"
 
         # change the default to ES512
         app.config.setdefault("JWT_ALGORITHM", "ES512")

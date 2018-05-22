@@ -7,7 +7,7 @@ authentication and authorization functionality for directorofme.
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_restful import Resource
-from directorofme.flask import versioned_api, app_for_api, JWTManager
+from directorofme.flask import versioned_api, directorofme_app, JWTManager
 from directorofme.flask.api import Spec
 from directorofme.authorization import groups, orm
 from directorofme.flask import DOMSQLAlchemy
@@ -30,7 +30,7 @@ jwt = JWTManager()
 spec = Spec(title='DirectorOf.Me Event API', version='0.0.1',)
 from . import resources
 
-app = app_for_api(config["name"], config)
+app = directorofme_app(config["name"], config)
 spec.init_app(app)
 
 @api.resource("/swagger.json", endpoint="spec_api")
