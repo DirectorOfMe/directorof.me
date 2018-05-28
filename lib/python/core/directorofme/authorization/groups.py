@@ -39,7 +39,15 @@ class Group(Spec):
     type = Attribute(GroupTypes)
 
     def __init__(self, **kwargs):
+        type_ = kwargs.get("type")
+        if isinstance(type_, str):
+            try:
+                kwargs["type"] = getattr(GroupTypes, type_)
+            except AttributeError:
+                raise ValueError("Invalid type `{}`".format(type_))
+
         super().__init__(**kwargs)
+
         # will throw if name is not set and either display name or type are not set
         self.name = self.generate_name()
 

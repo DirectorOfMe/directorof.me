@@ -3,24 +3,19 @@ import flask
 import functools
 import flask_jwt_extended as flask_jwt
 
-from flask_restful import Resource, abort, reqparse
+from flask_restful import Resource, abort
 from oauthlib.oauth2 import OAuth2Error
 
 from directorofme.oauth import Client
 from directorofme.authorization import session, groups, requires, standard_permissions
+from directorofme.flask.api import dump_with_schema, first_or_abort, uuid_or_abort, load_query_params
 
-from . import api
-from .. import db, config
+from . import api, schemas
+from .. import db, config, spec, marshmallow
 from ..models import Profile, InstalledApp
-from ..exceptions import EmailNotVerified, NoUserForEmail
+from ..exceptions import EmailNotVerified
 
-__all__ = [ "OAuth", "OAuthCallback", "RefreshToken", "Session", "with_service_client" ]
-
-
-def _parse_session_args():
-    parser = reqparse.RequestParser()
-    parser.add_argument('installed_app_id', type=uuid.UUID, help='UUID of the Installed App this session is for')
-    return parser.parse_args()
+__all__ = [ "OAuth", "OAuthCallback", "Session", "with_service_client" ]
 
 
 def _session_from_profile(profile, installed_app_id):
@@ -41,9 +36,7 @@ def _session_from_profile(profile, installed_app_id):
         }
 
         if installed_app_id is not None:
-            installed_app = InstalledApp.query.filter(InstalledApp.id == installed_app_id).first()
-            if installed_app is None:
-                abort(404, message="No app found for {}".format(installed_app_id))
+            installed_app = first_or_abort(InstalledApp.query.filter(InstalledApp.id == installed_app_id))
 
             new_session.app = session.SessionApp.from_conforming_type(installed_app)
             with session.do_as_root:
@@ -62,27 +55,88 @@ def with_service_client(fn):
         if ClientForService is None:
             return abort(404, message="no oauth service named {}".format(service))
 
-        extra_args = {k: v for k, v in _parse_session_args().items() if k == "installed_app_id"}
-        callback_url = api.url_for(OAuthCallback, api_version="-", service=service, _external=True, **extra_args)
-        return fn(obj, ClientForService(config, callback_url=callback_url, *args, **kwargs))
+        # stuff installed_app_id into state var if present
+        extra_args = {"state": kwargs.get(k) for k in ("installed_app_id", ) if kwargs.get(k)}
+        kwargs.update({"installed_app_id": kwargs.pop("state", None) for k in ("state",) if kwargs.get(k)})
+
+        callback_url = api.url_for(OAuthCallback, api_version="-", service=service, _external=True)
+        return fn(obj, ClientForService(config, callback_url=callback_url, **extra_args), *args, **kwargs)
 
     return inner
 
-
+@spec.register_resource
 @api.resource("/oauth/<string:service>", endpoint="oauth_api")
 class OAuth(Resource):
+    """
+    An endpoint for authenticating with OAuth and a 3rd party.
+    """
     @requires.anybody
+    @load_query_params(schemas.SessionQuerySchema)
     @with_service_client
-    def get(self, client):
+    def get(self, client, installed_app_id=None):
+        """
+        ---
+        description: Start the OAuth authentication process.
+        parameters:
+            - api_version
+            - service
+            - in: query
+              name: installed_app_id
+              type: string
+              format: uuid
+              description: optional id for application that should be loaded for this session.
+        responses:
+            302:
+                description: Redirect to 3rd party authorization url.
+            404:
+                description: No service registered with the provided name.
+                schema: ErrorSchema
+        """
         url = client.authorization_url()
         return { "auth_url": url }, 302, { "Location": url }
 
+
 ###: TODO: re-implement to Oauth2 token / refresh endpoint specs
+@spec.register_resource
 @api.resource("/oauth/<string:service>/callback", endpoint="oauth_callback_api")
 class OAuthCallback(Resource):
+    """
+    Callback used by third parties after successful authentication.
+    """
     @requires.anybody
+    @dump_with_schema(schemas.SessionResponseSchema)
+    @load_query_params(schemas.SessionQuerySchema)
     @with_service_client
-    def get(self, client):
+    def get(self, client, installed_app_id=None):
+        """
+        ---
+        description: Callback from 3rd party OAuth Url.
+        parameters:
+            - api_version
+            - service
+            - in: query
+              name: installed_app_id
+              type: string
+              format: uuid
+              description: optional id for application that should be loaded for this session.
+        responses:
+            201:
+                description: New session successfully created.
+                schema: SessionResponseSchema
+                headers:
+                    Location:
+                        description: URL for the newly created session.
+                        type: string
+                        format: url
+            400:
+                description: Error forwarded from 3rd party, or email has not
+                             been verified by 3rd party.
+                schema: ErrorSchema
+            404:
+                description: No service registered with the provided name or
+                             no user found for email provided by third party.
+                schema: ErrorSchema
+        """
         error = client.check_callback_request_for_errors(flask.request)
         if error:
             return abort(400, message=error)
@@ -95,31 +149,72 @@ class OAuthCallback(Resource):
 
             profile = None
             with session.do_as_root:
-                profile = Profile.query.filter(Profile.email == email).first()
-
-            if not profile:
-                raise NoUserForEmail(email)
+                profile = first_or_abort(Profile.query.filter(Profile.email == email))
 
             # Now that we have our groups installed, we can query for the requested app
-            new_session = _session_from_profile(profile, _parse_session_args().get("installed_app_id"))
+            new_session = _session_from_profile(profile, installed_app_id)
             flask.session.overwrite(new_session)
             flask.session.save = True
-            return flask.session
+            return flask.session, 201, { "Location": api.url_for(Session) }
 
         except OAuth2Error as e:
             return abort(400, message=str(e))
         except EmailNotVerified as e:
             return abort(400, message="Email ({}) not verified".format(str(e)))
-        except NoUserForEmail as e:
-            return abort(404, message="No user associated with email ({})".format(email))
 
 
-@api.resource("/refresh", endpoint="refresh_jwt")
-class RefreshToken(Resource):
+@api.resource("/session", endpoint="session_api")
+class Session(Resource):
+    """
+    Get or refresh a session.
+    """
+    @requires.user
+    @dump_with_schema(schemas.SessionResponseSchema)
+    def get(self):
+        """
+        ---
+        description: Fetch the session data associated with the current access token.
+        parameters:
+            - api_version
+        responses:
+            200:
+                description: Decoded session data associate with the current access token.
+                schema: SessionResponseSchema
+            403:
+                description: No token for this session, or the token is not authenticated.
+                schema: ErrorSchema
+        """
+        return flask.session
+
     @requires.anybody
     @flask_jwt.jwt_refresh_token_required
-    def get(self):
+    @dump_with_schema(schemas.SessionResponseSchema)
+    def put(self):
+        """
+        ---
+        description: Refresh a session using a refresh_token.
+        parameters:
+            - api_version
+        responses:
+            200:
+                description: Decoded session data associate with the current access token.
+                schema: SessionResponseSchema
+            401:
+                description: No refresh token provided.
+                schema: ErrorSchema
+            404:
+                description: Profile not found.
+                schema: ErrorSchema
+        """
         session_data = flask_jwt.get_jwt_identity() or {}
+        if session_data:
+            session_data = schemas.SessionResponseSchema().load(session_data)
+            if session_data.errors:
+                messages = ["{}: {}".format(k,v) for k,v in session_data.errors.items()]
+                abort(400, message="Validation failed: {}".format(", ".join(messages)))
+
+            session_data = session_data.data
+
         app_data = session_data.get("app", {})
 
         session_data["save"] = True
@@ -129,19 +224,46 @@ class RefreshToken(Resource):
         flask.session.overwrite(session.Session(**session_data))
         return flask.session
 
-@api.resource("/session", endpoint="session_api")
-class Session(Resource):
-    @requires.user
-    def get(self):
-        return flask.session
-
 @api.resource("/session/<installed_app_id>", endpoint="session_for_app_api")
 class SessionForApp(Resource):
+    """
+    Create a new token for a particular application that the current token has access to.
+    """
     @requires.user
-    def get(self, installed_app_id):
-        profile = Profile.query.filter(Profile.id == flask.session.profile.id).first()
-        new_session = _session_from_profile(profile, installed_app_id)
+    @dump_with_schema(schemas.SessionResponseSchema)
+    def post(self, installed_app_id):
+        """
+        ---
+        description: Create a new token for a particular application.
+        parameters:
+            - api_version
+            - in: path
+              name: installed_app_id
+              type: string
+              format: uuid
+              description: uuid of the installed app to create a token for.
+        responses:
+            201:
+                description: New session successfully created.
+                schema: SessionResponseSchema
+                headers:
+                    Location:
+                        description: URL for the newly created session.
+                        type: string
+                        format: url
+            400:
+                description: Invalid uuid.
+                schema: ErrorSchema
+            403:
+                description: Insufficient permissions to create new session.
+                schema: ErrorSchema
+            404:
+                description: Profile not found.
+                schema: ErrorSchema
+        """
+        profile = first_or_abort(Profile.query.filter(Profile.id == flask.session.profile.id))
+        new_session = _session_from_profile(profile, uuid_or_abort(str(installed_app_id)))
 
         flask.session.overwrite(new_session)
         flask.session.save = True
-        return flask.session
+        return flask.session, 201, { "Location": api.url_for(Session) }

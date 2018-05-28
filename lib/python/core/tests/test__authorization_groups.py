@@ -37,6 +37,12 @@ class TestGroup:
         assert isinstance(gen_name, Group), "display name and type passed works"
         assert isinstance(gen_name.name, str), "str name generated if not passed"
 
+        assert Group(display_name="root", type="system").type is GroupTypes.system, \
+               "type passed as string works"
+
+        with pytest.raises(ValueError):
+            Group(display_name="root", GroupTypes="foo")
+
     def test__generate_name_happy_path(self):
         group = Group(display_name="root", type=GroupTypes.system)
 

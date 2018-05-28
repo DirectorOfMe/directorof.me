@@ -47,3 +47,11 @@ def token_mock(identity=None, user_claims=None):
 def dump_and_load(obj, app=None):
     kwargs = { "cls": app.json_encoder } if app is not None else {}
     return json.loads(json.dumps(obj, **kwargs))
+
+def comparable_links(links):
+    ret_links = {}
+    for k,v in links.items():
+        base, qs = v.split("?")
+        ret_links[k] = (base,) + tuple(sorted(qs.split("&")))
+
+    return ret_links

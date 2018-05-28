@@ -1,7 +1,8 @@
-from flask_restful import Resource, abort
+from flask_restful import abort
 
 from directorofme.flask.api import dump_with_schema, load_with_schema, with_pagination_params, \
-                                   uuid_or_abort, first_or_abort, load_query_params, with_cursor_params
+                                   uuid_or_abort, first_or_abort, load_query_params, with_cursor_params, Resource
+
 from directorofme.authorization.exceptions import PermissionDeniedError
 from directorofme.authorization import session
 from sqlalchemy.exc import IntegrityError
@@ -85,7 +86,7 @@ class EventType(Resource):
                 description: Could not find existing EventType for slug.
                 schema: ErrorSchema
         """
-        return self._update(event_type_data, slug)
+        return self.generic_update(db, api, models.EventType, "slug", slug, event_type_data)
 
     @load_with_schema(EventTypeRequestSchema, partial=True)
     @dump_with_schema(EventTypeResponseSchema)
@@ -122,24 +123,7 @@ class EventType(Resource):
                 description: Could not find existing EventType for slug.
                 schema: ErrorSchema
         """
-        return self._update(event_type_data, slug)
-
-    def _update(self, event_type_data, slug):
-        """Post/Patch helper"""
-        event_type = first_or_abort(models.EventType.query.filter(models.EventType.slug == slug))
-        orig_slug = event_type.slug
-        for k,v in event_type_data.items():
-            setattr(event_type, k, v)
-
-        try:
-            db.session.add(event_type)
-            db.session.commit()
-        except IntegrityError:
-            abort(400, message="Please choose a unique name or slug")
-
-        if event_type.slug != orig_slug:
-            return event_type, 301, { "Location": api.url_for(EventType, slug=event_type.slug) }
-        return event_type
+        return self.generic_update(db, api, models.EventType, "slug", slug, event_type_data)
 
     def delete(self, slug):
         """
@@ -158,9 +142,7 @@ class EventType(Resource):
                 description: Could not find existing EventType for slug.
                 schema: ErrorSchema
         """
-        db.session.delete(first_or_abort(models.EventType.query.filter(models.EventType.slug == slug)))
-        db.session.commit()
-        return None, 204
+        return self.generic_delete(db, models.EventType, "slug", slug)
 
 
 @spec.register_resource
@@ -169,20 +151,11 @@ class EventTypes(Resource):
     """
     An endpoint for retrieving and manipulating collections of event types.
     """
-    @spec.register_schema("EventTypeCollection")
-    class EventTypeCollectionSchema(marshmallow.Schema):
-        page = marshmallow.Integer()
-        results_per_page = marshmallow.Integer()
-
-        collection = marshmallow.Nested(EventType.EventTypeResponseSchema, many=True)
-        _links = marshmallow.Hyperlinks({
-            "self": marshmallow.URLFor("event.event_types_collection_api",
-                                       page="<page>", results_per_page="<results_per_page>"),
-            "next": marshmallow.URLFor("event.event_types_collection_api",
-                                       page="<next_page>", results_per_page="<results_per_page>"),
-            "prev": marshmallow.URLFor("event.event_types_collection_api",
-                                       page="<prev_page>", results_per_page="<results_per_page>"),
-        })
+    @spec.register_schema("EventTypeCollectionSchema")
+    class EventTypeCollectionSchema(
+        spec.paginated_collection_schema(EventType.EventTypeResponseSchema, "event.event_types_collection_api")
+    ):
+        pass
 
     @dump_with_schema(EventTypeCollectionSchema)
     @with_pagination_params()
@@ -202,20 +175,7 @@ class EventTypes(Resource):
                 description: An invalid value was sent for a parameter.
                 schema: ErrorSchema
         """
-        objs = models.EventType.query\
-                    .order_by(models.EventType.created)\
-                    .limit(results_per_page + 1)\
-                    .offset((page - 1) * results_per_page)\
-                    .all()
-
-        extra = objs.pop() if len(objs) > results_per_page else None
-        return {
-            "page": page,
-            "next_page": page + (1 if extra else 0),
-            "prev_page": max(page - 1, 1),
-            "results_per_page": results_per_page,
-            "collection": objs,
-        }
+        return self.paged(models.EventType.query, page, results_per_page, models.EventType.created)
 
 
     @load_with_schema(EventType.EventTypeRequestSchema)
@@ -246,16 +206,10 @@ class EventTypes(Resource):
                 description: No permission to create a new EventType object.
                 schema: ErrorSchema
         """
-        try:
-            new_obj = models.EventType(**event_type_data)
-            db.session.add(new_obj)
-            db.session.commit()
-            return new_obj, 201, { "Location": api.url_for(EventType, slug=new_obj.slug) }
-        except IntegrityError:
-            abort(400, message="Please choose a unique name or slug")
+        return self.generic_insert(db, api, models.EventType, event_type_data, "slug", url_cls=EventType)
 
 
-@api.resource("/events/<string:uuid>", endpoint="events_api")
+@api.resource("/events/<string:id>", endpoint="events_api")
 class Event(Resource):
     @spec.register_schema("EventRequest")
     class EventRequestSchema(marshmallow.Schema):
@@ -273,38 +227,38 @@ class Event(Resource):
         event_time = marshmallow.DateTime(required=True)
 
         _links = marshmallow.Hyperlinks({
-            "self": marshmallow.URLFor("event.events_api", uuid="<id>"),
+            "self": marshmallow.URLFor("event.events_api", id="<id>"),
             "collection": marshmallow.URLFor("event.events_collection_api"),
             "event_type": marshmallow.URLFor("event.event_types_api", slug="<event_type_slug>"),
         })
 
     @dump_with_schema(EventResponseSchema)
-    def get(self, uuid):
+    def get(self, id):
         """
         ---
         description: Retrieve an event by id.
         parameters:
             - api_version
-            - uuid
+            - id
         responses:
             200:
                 description: Successfully retrieve an Event
                 schema: EventTypeResponseSchema
             400:
-                description: Invalid uuid.
+                description: Invalid id.
                 schema: ErrorSchema
             404:
                 description: Could not find an EventType with current access level.
                 schema: ErrorSchema
         """
-        return first_or_abort(models.Event.query.filter(models.Event.id == uuid_or_abort(uuid)))
+        return first_or_abort(models.Event.query.filter(models.Event.id == uuid_or_abort(id)))
 
-    def delete(self, uuid):
+    def delete(self, id):
         """
         description: Delete an Event
         parameters:
             - api_version
-            - uuid
+            - id
         responses:
             204:
                 description: Event deleted.
@@ -312,12 +266,10 @@ class Event(Resource):
                 description: No permission to delete this Event object.
                 schema: ErrorSchema
             404:
-                description: Could not find existing EventType for uuid.
+                description: Could not find existing EventType for id.
                 schema: ErrorSchema
         """
-        db.session.delete(first_or_abort(models.Event.query.filter(models.Event.id == uuid_or_abort(uuid))))
-        db.session.commit()
-        return None, 204
+        return self.generic_delete(db, models.Event, "id", uuid_or_abort(id))
 
 
 @api.resource("/events/", endpoint="events_collection_api")
@@ -372,8 +324,8 @@ class Events(Resource):
               description: get all events prior to and including this event
         responses:
             200:
-                description: Successfully retrieve an EventType
-                schema: EventTypeCollectionSchema
+                description: Successfully retrieved a collection of Event objects.
+                schema: EventCollectionSchema
             400:
                 description: An invalid value was sent for a parameter.
                 schema: ErrorSchema
@@ -461,8 +413,4 @@ class Events(Resource):
         event_data["event_type"] = first_or_abort(
             models.EventType.query.filter(models.EventType.slug == event_data.pop("event_type_slug"))
         )
-
-        new_obj = models.Event(**event_data)
-        db.session.add(new_obj)
-        db.session.commit()
-        return new_obj, 201, { "Location": api.url_for(Event, uuid=new_obj.id) }
+        return self.generic_insert(db, api, models.Event, event_data, "id", url_cls=Event)

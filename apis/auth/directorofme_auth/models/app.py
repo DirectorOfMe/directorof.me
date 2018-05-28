@@ -46,6 +46,9 @@ class App(db.Model):
     #: JSON Schema defining the expected format for :class:`.InstalledApp` config.
     config_schema = Column(JSONType)
 
+    #: Public key used to encrypt data for this app (can be decrypted by a non-stored private key)
+    public_key = Column(String(1024), nullable=True, default=None)
+
     #: Groups this app would like to add into the session
     requested_access_groups = relationship("Group", secondary=requested_access_groups, backref="requested_by")
 

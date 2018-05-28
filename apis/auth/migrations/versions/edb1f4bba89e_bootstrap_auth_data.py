@@ -14,7 +14,7 @@ import jsonschema
 
 # revision identifiers, used by Alembic.
 revision = 'edb1f4bba89e'
-down_revision = '8c0968acb34f'
+down_revision = '9b85d192b76c'
 branch_labels = None
 depends_on = None
 
@@ -51,6 +51,14 @@ def build_apps(groups):
             requested_access_groups = [groups["s-{}-read".format(slugify(db.Model.__scope__.display_name))]],
             read=(everybody.name,),
             write=(admin.name,),
+        ),
+        App(
+            name="Admin",
+            desc="Heightened access for doing maintenance stuff and things.",
+            url="/admin",
+            requested_access_groups = [g for g in groups.values() if g.type == GroupTypes.scope],
+            read=(admin.name,),
+            write=(admin.name,)
         )
     ]
 
@@ -69,6 +77,7 @@ def build_apps(groups):
                     integrates them into a chat bot for you to help you see
                     the future.""",
             requested_access_groups = [
+                groups["s-{}-read".format(slugify(db.Model.__scope__.display_name))],
                 groups["s-{}-read".format(slugged_event)],
                 groups["s-{}-write".format(slugged_event)]
             ],

@@ -117,7 +117,7 @@ class TestGoogle:
         assert client.token_url == "https://google.com/token", "google token_url set from config"
         assert not client.offline, "offline defaults to False"
         assert tuple(client.auth_kwargs.keys()) == ("prompt",), "auth_kwargs set from config"
-        SessionMock.assert_called_with("google-id", redirect_uri="/callback", **google_scopes)
+        SessionMock.assert_called_with("google-id", redirect_uri="/callback", state=None, **google_scopes)
 
         client = Google(google_config, callback_url="/callback", offline=True)
         assert client.offline, "offline set by __init__"
@@ -146,7 +146,7 @@ class TestSlack:
         assert not client.offline, "offline defaults to False"
         assert client.auth_kwargs ==  {}, "auth_kwargs set from config"
         SessionMock.assert_called_with("slack-id", redirect_uri="/callback",
-                                       scope="identity.basic,identity.email")
+                                       scope="identity.basic,identity.email", state=None)
 
     def test__confirm_email(self, slack_config):
         client = Slack(slack_config, callback_url="/callback")

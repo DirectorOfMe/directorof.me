@@ -12,7 +12,7 @@ from unittest import mock
 from directorofme.authorization import groups, session
 from directorofme_event import app, spec, db as real_db
 from directorofme_event.models import Event, EventType
-from directorofme.testing import dict_from_response, token_mock, existing, dump_and_load
+from directorofme.testing import dict_from_response, token_mock, existing, dump_and_load, comparable_links
 
 profile_id = uuid.uuid1()
 group_of_one = groups.Group(display_name=str(profile_id), type=groups.GroupTypes.data)
@@ -247,13 +247,6 @@ def event_type_collection(db):
 
     yield objs
 
-def _comparable_links(links):
-    ret_links = {}
-    for k,v in links.items():
-        base, qs = v.split("?")
-        ret_links[k] = (base,) + tuple(sorted(qs.split("&")))
-
-    return ret_links
 
 class TestEventTypes:
     def test__get(self, test_client, event_type_collection):
@@ -264,7 +257,7 @@ class TestEventTypes:
             assert response.status_code == 200, "with no access a 200 is returned"
 
             response_dict = dict_from_response(response)
-            response_dict["_links"] = _comparable_links(response_dict["_links"])
+            response_dict["_links"] = comparable_links(response_dict["_links"])
             assert response_dict == {
                 "page": 1,
                 "results_per_page": 50,
@@ -297,7 +290,7 @@ class TestEventTypes:
 
             response_dict = dict_from_response(response)
             assert len(response_dict["collection"]) == 1, "one result returned"
-            assert _comparable_links(response_dict["_links"]) == {
+            assert comparable_links(response_dict["_links"]) == {
                 "self": (url, "page=2", "results_per_page=50"),
                 "next": (url, "page=2", "results_per_page=50"),
                 "prev": (url, "page=1", "results_per_page=50"),
@@ -435,7 +428,7 @@ class TestEvents:
             assert response.status_code == 200, "with no access a 200 is returned"
 
             response_dict = dict_from_response(response)
-            response_dict["_links"] = _comparable_links(response_dict["_links"])
+            response_dict["_links"] = comparable_links(response_dict["_links"])
             assert response_dict == {
                 "results_per_page": 50,
                 "collection": [],
@@ -467,7 +460,7 @@ class TestEvents:
 
             response_dict = dict_from_response(response)
             assert len(response_dict["collection"]) == 1, "one result returned"
-            assert _comparable_links(response_dict["_links"]) == {
+            assert comparable_links(response_dict["_links"]) == {
                 "self": (url, "results_per_page=50", "since_id={}".format(str(event_collection[-2].id))),
                 "prev": (url, "max_id={}".format(str(event_collection[-2].id)), "results_per_page=50"),
                 "next": (url, "results_per_page=50", "since_id={}".format(str(event_collection[-1].id))),

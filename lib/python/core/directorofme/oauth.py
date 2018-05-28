@@ -11,7 +11,7 @@ __all__ = [ "Client", "Google", "Slack" ]
 class Client(RegisterByName, metaclass=RegisterByName.make_registrymetaclass()):
     '''Generic OAuth client to hold state for all requests'''
     def __init__(self, callback_url, client_id, auth_url, token_url, auth_kwargs,
-                 session_kwargs, client_secret=None, offline=False):
+                 session_kwargs, client_secret=None, offline=False, state=None):
         self.client_id = client_id
         self.client_secret = client_secret
         self.auth_url = auth_url
@@ -19,7 +19,7 @@ class Client(RegisterByName, metaclass=RegisterByName.make_registrymetaclass()):
         self.auth_kwargs = auth_kwargs
         self.offline = offline
 
-        self.session = OAuth2Session(self.client_id, redirect_uri=callback_url, **session_kwargs)
+        self.session = OAuth2Session(self.client_id, redirect_uri=callback_url, state=state, **session_kwargs)
 
     def __getattr__(self, name):
             return getattr(self.session, name)
@@ -44,7 +44,7 @@ class Google(Client):
     '''Google OAuth client, pulling from flask config'''
     name = "google"
 
-    def __init__(self, config, callback_url=None, scopes=tuple(), offline=False):
+    def __init__(self, config, callback_url=None, scopes=tuple(), offline=False, state=None):
         auth_kwargs = { "prompt": "consent" }
         if offline:
             auth_kwargs["access_type"] ="offline"
@@ -59,7 +59,8 @@ class Google(Client):
             auth_kwargs,
             { "scope": scopes },
             config.get("GOOGLE_CLIENT_SECRET"),
-            offline=offline
+            offline=offline,
+            state=state
         )
 
     def confirm_email(self, token=None):
@@ -71,7 +72,8 @@ class Google(Client):
 class Slack(Client):
     name = "slack"
 
-    def __init__(self, config, callback_url=None, scopes=("identity.basic", "identity.email"), **kwargs):
+    def __init__(self, config, callback_url=None, scopes=("identity.basic", "identity.email"), state=None,
+                 **kwargs):
         super().__init__(
             callback_url,
             config.get("SLACK_CLIENT_ID"),
@@ -80,6 +82,7 @@ class Slack(Client):
             {},
             { "scope": ",".join(scopes) },
             config.get("SLACK_CLIENT_SECRET"),
+            state=state
         )
 
     def confirm_email(self, token=None):

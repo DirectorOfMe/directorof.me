@@ -44,10 +44,10 @@ class DOM(Session):
         return url_.url
 
     def check(self, response):
-        if response.status_code in (204, 304):
-            return None
-        elif response.status_code < 400:
+        if response.status_code in (200, 201, 301, 302):
             return response.json()
+        elif response.status_code in (204, 304):
+            return None
 
         errors = {
             400: BadRequest,
@@ -56,24 +56,31 @@ class DOM(Session):
             404: NotFound
         }
 
-        if response.status_code in errors:
+        try:
             raise errors[response.status_code](response.json().get("message"))
-        raise ServerError(response.text)
+        except KeyError:
+            raise ServerError(response.text)
 
     def get(self, url, *args, **kwargs):
         return self.check(super().get(url=self.url(url), *args, **kwargs))
 
-    def post(self, url, *args, **kwargs):
-        return self.check(super().post(url=self.url(url), *args, **kwargs))
+    def post(self, url, data=None, *args, **kwargs):
+        return self.check(super().post(url=self.url(url), json=data, *args, **kwargs))
 
-    def put(self, url, *args, **kwargs):
-        return self.check(super().put(url=self.url(url), *args, **kwargs))
+    def put(self, url, data=None, *args, **kwargs):
+        return self.check(super().put(url=self.url(url), json=data, *args, **kwargs))
 
-    def delete(self, url, *args, **kwargs):
-        return self.check(super().delete(url=self.url(url), *args, **kwargs))
+    def delete(self, url, data=None, *args, **kwargs):
+        return self.check(super().delete(url=self.url(url), json=data, *args, **kwargs))
 
-    def patch(self, url, *args, **kwargs):
-        return self.check(super().patch(url=self.url(url), *args, **kwargs))
+    def patch(self, url, data=None, *args, **kwargs):
+        return self.check(super().patch(url=self.url(url), json=data, *args, **kwargs))
 
     def refresh(self):
-        return self.put("auth/refresh")
+        resp = self.put("auth/session")
+        if self.cookies.get("csrf_access_token") is not None:
+            self.headers["X-CSRF-TOKEN"] = self.cookies["csrf_access_token"]
+        if self.cookies.get("csrf_refresh_token") is not None:
+            self.headers["X-CSRF-REFRESH-TOKEN"] = self.cookies["csrf_refresh_token"]
+
+        return resp

@@ -2,7 +2,7 @@ import pytest
 
 from unittest import mock
 
-from sqlalchemy import Column, String, and_, create_engine, Integer
+from sqlalchemy import Column, String, and_, Integer
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.attributes import InstrumentedAttribute
@@ -516,20 +516,8 @@ class NotSubclass(Permissioned):
     id = Column(UUIDType, primary_key = True)
 
 @pytest.fixture
-def Session():
-    return sessionmaker(query_cls=orm.PermissionedQuery)
-
-@pytest.fixture
 def session(Session):
     return Session()
-
-@pytest.fixture
-def engine():
-    return create_engine('sqlite://')
-
-@pytest.fixture
-def bound_session(Session, engine):
-    return Session(bind=engine)
 
 @pytest.fixture
 def bound_session_with_permed(engine, bound_session):

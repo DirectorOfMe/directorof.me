@@ -3,13 +3,14 @@ import functools
 import flask
 import marshmallow
 
-from flask_restful import abort
+from flask_restful import Resource as FlaskResource, abort
+from sqlalchemy.exc import IntegrityError
 
 from collections import namedtuple
 from apispec import APISpec
 
 __all__ = [ "first_or_abort", "uuid_or_abort", "load_with_schema", "dump_with_schema",
-            "with_pagination_params", "with_cursor_params", "Spec" ]
+            "with_pagination_params", "with_cursor_params", "Spec", "Resource" ]
 
 def _abort_if_errors(result):
     if result.errors:
@@ -142,16 +143,74 @@ def with_cursor_params(default_results_per_page=50):
 
     return inner
 
+
+class Resource(FlaskResource):
+    """Base DOM Resource"""
+    @classmethod
+    def paged(cls, query, page, results_per_page, order_by, **kwargs):
+        """Return a collection-like dict for a paginated (not cursored) collection results set"""
+        objs = query.order_by(order_by).limit(results_per_page + 1).offset((page - 1) * results_per_page).all()
+        extra = objs.pop() if len(objs) > results_per_page else None
+
+        collection = {
+            "page": page,
+            "next_page": page + (1 if extra else 0),
+            "prev_page": max(page - 1, 1),
+            "results_per_page": results_per_page,
+            "collection": objs,
+        }
+        collection.update(kwargs)
+        return collection
+
+    @classmethod
+    def generic_insert(cls, db, api, Model, data, url_field, url_cls=None):
+        """Post helper method"""
+        try:
+            obj = Model(**data)
+            db.session.add(obj)
+            db.session.commit()
+            return obj, 201, { "Location": api.url_for(url_cls or cls, **{url_field: getattr(obj, url_field)}) }
+        except IntegrityError:
+            abort(400, message="Please choose a unique name or slug")
+
+    @classmethod
+    def generic_update(cls, db, api, Model, url_field, url_value, data, url_cls=None):
+        """Patch/Put helper method"""
+        obj = first_or_abort(db.session.query(Model).filter(getattr(Model, url_field) == url_value))
+        url_value = getattr(obj, url_field)
+
+        for k,v in data.items():
+            setattr(obj, k, v)
+
+        try:
+            db.session.add(obj)
+            db.session.commit()
+        except IntegrityError:
+            abort(400, message="Please choose a unique name or slug")
+
+        if getattr(obj, url_field) != url_value:
+            return obj, 301, { "Location": api.url_for(url_cls or cls, **{ url_field: getattr(obj, url_field) }) }
+        return obj
+
+    @classmethod
+    def generic_delete(cls, db, Model, url_field, url_value):
+        """Delete helper"""
+        db.session.delete(first_or_abort(db.session.query(Model).filter(getattr(Model, url_field) == url_value)))
+        db.session.commit()
+        return None, 204
+
+
 Path = namedtuple("Path", ("args", "kwargs"))
 
 class Spec:
     name = "dom-apispec"
-    def __init__(self, app=None, **spec_kwargs):
+    def __init__(self, ma, app=None, **spec_kwargs):
         spec_kwargs.setdefault("plugins", [
             'apispec.ext.flask',
             'apispec.ext.marshmallow',
         ])
 
+        self.ma = ma
         self.spec = APISpec(**spec_kwargs, )
         self.app = None
         self.paths = []
@@ -213,6 +272,20 @@ class Spec:
 
         return inner
 
+    def paginated_collection_schema(self, Nested, url, **kwargs):
+        class PaginatedCollectionSchema(marshmallow.Schema):
+            page = marshmallow.fields.Integer()
+            results_per_page = marshmallow.fields.Integer()
+
+            collection = self.ma.Nested(Nested, many=True)
+            _links = self.ma.Hyperlinks({
+                "self": self.ma.URLFor(url, **kwargs, page="<page>", results_per_page="<results_per_page>"),
+                "next": self.ma.URLFor(url, **kwargs, page="<next_page>", results_per_page="<results_per_page>"),
+                "prev": self.ma.URLFor(url, **kwargs, page="<prev_page>", results_per_page="<results_per_page>")
+            })
+
+        return PaginatedCollectionSchema
+
     def _setup_shared(self):
         self.add_parameter("api_version", "path",
                            description="api version for this request",
@@ -223,7 +296,7 @@ class Spec:
                            description="unique name for this endpoint",
                            type="string",
                            example="slug")
-        self.add_parameter("uuid", "path",
+        self.add_parameter("id", "path",
                            description="unique id for this endpoint",
                            type="string", format="uuid",
                            example="e50253ac-4dc2-11e8-aba3-0e1402415a00")

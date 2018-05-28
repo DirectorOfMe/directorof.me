@@ -23,7 +23,7 @@ from . import models
 
 marshmallow = Marshmallow(app)
 
-spec = Spec(app, title='DirectorOf.Me Event API', version='0.0.1',)
+spec = Spec(marshmallow, app, title='DirectorOf.Me Event API', version='0.0.1',)
 from . import resources
 
 @api.resource("/swagger.json", endpoint="spec_api")

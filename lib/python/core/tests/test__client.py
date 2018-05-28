@@ -75,10 +75,20 @@ class TestDOM:
             with mock.patch("requests.Session.{}".format(method)) as mock_method:
                 mock_method.return_value = response
                 assert getattr(dom_client, method)("foo/bar") == { "test": method }, "method pass-through works"
-                mock_method.assert_called_with(url="https://test.directorof.me/api/-/foo/bar")
+                kwargs = { "url": "https://test.directorof.me/api/-/foo/bar" }
+                if method != "get":
+                    kwargs["json"] = None
+                mock_method.assert_called_with(**kwargs)
 
     def test__refresh(self, dom_client):
+        def mock_put_side_effect(*args, **kwargs):
+            dom_client.cookies["csrf_access_token"] = "csrf_access_token"
+            dom_client.cookies["csrf_refresh_token"] = "csrf_refresh_token"
+            return { "session": True }
+
         with mock.patch.object(dom_client, "put") as mock_put:
-            mock_put.return_value = { "session": True }
+            mock_put.side_effect = mock_put_side_effect
             assert dom_client.refresh() == { "session": True }, "refresh calls put"
-            mock_put.assert_called_with("auth/refresh")
+            mock_put.assert_called_with("auth/session")
+            assert dom_client.headers["X-CSRF-TOKEN"] == "csrf_access_token"
+            assert dom_client.headers["X-CSRF-REFRESH-TOKEN"] == "csrf_refresh_token"

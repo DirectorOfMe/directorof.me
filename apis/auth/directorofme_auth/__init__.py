@@ -10,9 +10,11 @@ from flask_restful import Resource
 from directorofme.flask import versioned_api, directorofme_app, JWTManager
 from directorofme.flask.api import Spec
 from directorofme.authorization import groups, orm
+from flask_marshmallow import Marshmallow
 from directorofme.flask import DOMSQLAlchemy
 
-__all__ = [ "app", "api", "config", "db", "exceptions", "jwt", "migrate", "resources", "models" ]
+__all__ = [ "app", "api", "config", "db", "exceptions", "jwt", "migrate", "marshmallow",
+            "resources", "models", "spec" ]
 
 # ORDER MATTERS HERE
 from .config import config
@@ -27,11 +29,12 @@ from . import models
 api = versioned_api(config.get("api_name"))
 jwt = JWTManager()
 
-spec = Spec(title='DirectorOf.Me Event API', version='0.0.1',)
+marshmallow = Marshmallow()
+
+spec = Spec(marshmallow, title='DirectorOf.Me Event API', version='0.0.1',)
 from . import resources
 
 app = directorofme_app(config["name"], config)
-spec.init_app(app)
 
 @api.resource("/swagger.json", endpoint="spec_api")
 class Spec(Resource):
@@ -45,5 +48,9 @@ db.app = app
 
 jwt.init_app(app)
 jwt.app = app
+
+marshmallow.init_app(app)
+spec.init_app(app)
+
 
 migrate = Migrate(app, db, version_table=db.Model.version_table(), include_symbol=db.Model.include_symbol)

@@ -43,7 +43,7 @@ class Group(db.Model):
         secondary=group_to_group,
         primaryjoin="Group.id == {}.c.parent_group_id".format(db.Model.prefix_name("group_to_group")),
         secondaryjoin="Group.id == {}.c.member_group_id".format(db.Model.prefix_name("group_to_group")),
-        backref="member_of"
+        backref="member_of",
     )
 
     #: used by feature groups to identify a scope (realm) for discovery
