@@ -18,10 +18,10 @@ def _abort_if_errors(result):
         abort(400, message="Validation failed: {}".format(", ".join(messages)))
     return result.data
 
-def first_or_abort(query):
+def first_or_abort(query, status=404):
     obj = query.first()
     if obj is None:
-        abort(404, message="Could not find object")
+        abort(status, message="Could not find object")
     return obj
 
 def uuid_or_abort(uuid_):
@@ -298,6 +298,11 @@ class Spec:
                            description="unique name for this endpoint",
                            type="string",
                            example="slug")
+        self.add_parameter("email", "path",
+                           description="email address for this profile",
+                           type="string",
+						   format="email",
+                           example="test@example.com")
         self.add_parameter("id", "path",
                            description="unique id for this endpoint",
                            type="string", format="uuid",

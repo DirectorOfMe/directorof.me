@@ -9,7 +9,7 @@ import marshmallow
 from unittest import mock
 from apispec import APISpec
 from sqlalchemy import Column, String, Integer
-from werkzeug.exceptions import NotFound, BadRequest
+from werkzeug.exceptions import NotFound, BadRequest, Conflict
 
 from directorofme.flask import api
 from directorofme.authorization import orm
@@ -84,6 +84,9 @@ def test__first_or_abort():
 
     with pytest.raises(NotFound):
         api.first_or_abort(query)
+
+    with pytest.raises(Conflict):
+        api.first_or_abort(query, 409)
 
 def test__uuid_or_abort():
     uuid_ = uuid.uuid1()
@@ -311,7 +314,7 @@ class TestSpec:
         spec = api.Spec(ma, title="Test Spec", version="0.0.1")
         assert "Error" in spec.to_dict()["definitions"], "added to spec"
         assert set(spec.to_dict()["parameters"].keys()) == \
-               {"api_version", "slug", "id", "page", "results_per_page", "service"}, "parameters set by __init__"
+               {"api_version", "slug", "email", "id", "page", "results_per_page", "service"}, "parameters set by __init__"
 
     def test__getattr__(self, ma):
         spec = api.Spec(ma, title="Test Spec", version="0.0.1")
