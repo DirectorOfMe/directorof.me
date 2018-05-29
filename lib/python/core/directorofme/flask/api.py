@@ -181,7 +181,7 @@ class Resource(FlaskResource):
         url_value = getattr(obj, url_field)
 
         if processor:
-            data = processor(data)
+            data = processor(data, url_value)
 
         for k,v in data.items():
             setattr(obj, k, v)

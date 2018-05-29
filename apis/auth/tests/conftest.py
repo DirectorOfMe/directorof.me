@@ -37,7 +37,7 @@ def test_profile(db, user_group):
     scope_groups = Group.create_scope_groups(groups.Scope(display_name="main"))
     app = App(name="main", requested_access_groups=scope_groups, desc="main app", url="https://example.com/")
     profile = Profile.create_profile("test", "test@example.com")
-    installed_app = InstalledApp.install_for_group(app, profile.group_of_one)
+    installed_app = app.install_for_group(profile.group_of_one)
 
     db.session.add_all(scope_groups)
     db.session.add(app)

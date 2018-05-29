@@ -246,7 +246,7 @@ class TestSession:
         assert session_obj == session_should_be(), "session is saved by the refresh method"
         assert dump_and_load(session_obj, app) == session_should_be(test_session_data), "session data correct"
 
-        test_app =  { "id": uuid.uuid1(), "app_id": uuid.uuid1(), "app_name": "foo", "config": {} }
+        test_app =  { "id": uuid.uuid1(), "app_id": uuid.uuid1(), "app_slug": "foo", "config": {} }
         with mock.patch.dict(test_session_data, {"app": test_app}):
             session_obj = Session().put()
             assert uuid.UUID(session_obj["app"]["id"]) == test_app["id"], "session app is set"
@@ -269,7 +269,7 @@ class TestSessionForApp:
                  mock.patch.object(flask.session, "profile", session_profile):
             assert flask.session.app is None, "no app"
             installed_app = models.InstalledApp.query.first()
-            assert installed_app.app_name == "main", "app is correct"
+            assert installed_app.app_slug == "main", "app is correct"
 
             session_obj, status_code, headers = SessionForApp().post(str(installed_app.id))
             assert session_obj == session_should_be(), "session is overwritten"
@@ -286,7 +286,7 @@ class TestSessionForApp:
             with mock.patch.object(flask.session, "profile", session_profile):
                 session_no_app = dump_and_load(flask.session, app)
                 installed_app = models.InstalledApp.query.first()
-                assert installed_app.app_name == "main", "app is correct"
+                assert installed_app.app_slug == "main", "app is correct"
 
         with token_mock(copy.deepcopy(session_no_app)) as mocked_token:
             response = test_client.post("/api/-/auth/session/{}".format(installed_app.id))

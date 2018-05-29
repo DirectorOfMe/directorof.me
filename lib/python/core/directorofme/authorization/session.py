@@ -13,7 +13,7 @@ class SessionApp(Spec):
     '''JSON serializable application object'''
     id = Attribute(uuid.UUID)
     app_id = Attribute(uuid.UUID)
-    app_name = Attribute(str)
+    app_slug = Attribute(str)
     config = Attribute(typing.Dict[str, typing.Any])
 
 class SessionProfile(Spec):

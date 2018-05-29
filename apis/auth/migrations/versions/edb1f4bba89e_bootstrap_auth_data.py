@@ -103,7 +103,7 @@ def build_profiles(groups, apps):
                 jsonschema.validate(config, app.config_schema)
                 kwargs = { "config": config }
 
-            InstalledApp.install_for_group(app, profile.group_of_one, **kwargs)
+            app.install_for_group(profile.group_of_one, **kwargs)
 
         profiles.append(profile)
 

@@ -69,7 +69,7 @@ def unscoped_identity(app):
             dump_and_load(groups.user, app),
             dump_and_load(group_of_one, app)
         ],
-        "app": { "id": str(uuid.uuid1()), "app_id": str(uuid.uuid1()), "app_name": "event", "config": {} },
+        "app": { "id": str(uuid.uuid1()), "app_id": str(uuid.uuid1()), "app_slug": "event", "config": {} },
         "default_object_perms": {
             "read": [ group_of_one.name ], "write": [ group_of_one.name ], "delete": [ group_of_one.name ]
         },

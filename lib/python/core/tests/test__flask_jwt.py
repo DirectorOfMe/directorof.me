@@ -14,7 +14,7 @@ class TestJWTSessionInterface:
     mock_identity = {
         "profile": { "id": 1, "email": "hi@example.com" },
         "groups": [], "environment": {},
-        "app": { "id": 1, "app_id": 2, "app_name": "main", "config": {} },
+        "app": { "id": 1, "app_id": 2, "app_slug": "main", "config": {} },
         "default_object_perms": { "read": (groups.user.name,) },
     }
 
@@ -28,7 +28,7 @@ class TestJWTSessionInterface:
                 session = flask.session
                 assert decode_mock.called, "mock was installed correctly"
                 assert session.profile.email == "hi@example.com", "session profile installed"
-                assert session.app.app_name == "main", "session app installed"
+                assert session.app.app_slug == "main", "session app installed"
                 assert session.default_object_perms == self.mock_identity["default_object_perms"], \
                        "default object perms installed"
 

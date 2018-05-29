@@ -56,6 +56,16 @@ class App(db.Model):
     def requested_scopes(self):
         return Group.scopes(self.requested_access_groups)
 
+    def install_for_group(self, group, config=None, access_groups=None, **perms):
+        if access_groups is None:
+            access_groups = self.requested_access_groups
+
+        if isinstance(group, Group) or isinstance(group, AuthGroup):
+            group = group.name
+
+        reads = perms.get("read", tuple()) + (group,)
+        return InstalledApp(app=self, read=reads, config=config, access_groups=access_groups, **perms)
+
 
 class InstalledApp(db.Model):
     '''InstalledApp is an instance of :class:`.App` that has been installed
@@ -81,20 +91,9 @@ class InstalledApp(db.Model):
     access_groups = relationship("Group", secondary=granted_access_groups, backref="granted_to")
 
     @property
-    def app_name(self):
-        return self.app.name
+    def app_slug(self):
+        return self.app.slug
 
     @property
     def scopes(self):
         return Group.scopes(self.access_groups)
-
-    @classmethod
-    def install_for_group(cls, app, group, config=None, access_groups=None, **perms):
-        if access_groups is None:
-            access_groups = app.requested_access_groups
-
-        if isinstance(group, Group) or isinstance(group, AuthGroup):
-            group = group.name
-
-        reads = perms.get("read", tuple()) + (group,)
-        return cls(app=app, read=reads, config=config, access_groups=access_groups, **perms)
