@@ -15,24 +15,22 @@ class EventType(Resource):
     """
     An endpoint for retrieving and manipulating event type definitions.
     """
-    @spec.register_schema("EventTypeRequest")
-    class EventTypeRequestSchema(marshmallow.Schema):
+    @spec.register_schema("EventTypeSchema")
+    class EventTypeSchema(marshmallow.Schema):
         name = marshmallow.String(required=True)
         desc = marshmallow.String(required=True)
         data_schema = marshmallow.Dict()
 
-    @spec.register_schema("EventTypeResponse")
-    class EventTypeResponseSchema(EventTypeRequestSchema):
-        slug = marshmallow.String(required=True)
-        created = marshmallow.DateTime()
-        updated = marshmallow.DateTime()
+        slug = marshmallow.String(required=True, dump_only=True)
+        created = marshmallow.DateTime(dump_only=True)
+        updated = marshmallow.DateTime(dump_only=True)
 
         _links = marshmallow.Hyperlinks({
             "self": marshmallow.URLFor("event.event_types_api", slug="<slug>"),
             "collection": marshmallow.URLFor("event.event_types_collection_api"),
-        })
+        }, dump_only=True)
 
-    @dump_with_schema(EventTypeResponseSchema)
+    @dump_with_schema(EventTypeSchema)
     def get(self, slug):
         """
         ---
@@ -43,7 +41,7 @@ class EventType(Resource):
         responses:
             200:
                 description: Successfully retrieve an EventType
-                schema: EventTypeResponseSchema
+                schema: EventTypeSchema
             404:
                 description: Could not find an EventType with current access level.
                 schema: ErrorSchema
@@ -51,8 +49,8 @@ class EventType(Resource):
         return first_or_abort(models.EventType.query.filter(models.EventType.slug == slug))
 
 
-    @load_with_schema(EventTypeRequestSchema)
-    @dump_with_schema(EventTypeResponseSchema)
+    @load_with_schema(EventTypeSchema)
+    @dump_with_schema(EventTypeSchema)
     def put(self, event_type_data, slug):
         """
         ---
@@ -61,16 +59,16 @@ class EventType(Resource):
             - api_version
             - slug
             - in: body
-              schema: EventTypeRequestSchema
+              schema: EventTypeSchema
               description: Data to update the event type with.
               name: event_type
         responses:
             200:
                 description: Successfully update an EventType
-                schema: EventTypeResponseSchema
+                schema: EventTypeSchema
             301:
                 description: Update which caused the slug to change.
-                schema: EventTypeResponseSchema
+                schema: EventTypeSchema
                 headers:
                     Location:
                         description: new URL for the updated EventType.
@@ -88,8 +86,8 @@ class EventType(Resource):
         """
         return self.generic_update(db, api, models.EventType, "slug", slug, event_type_data)
 
-    @load_with_schema(EventTypeRequestSchema, partial=True)
-    @dump_with_schema(EventTypeResponseSchema)
+    @load_with_schema(EventTypeSchema, partial=True)
+    @dump_with_schema(EventTypeSchema)
     def patch(self, event_type_data, slug):
         """
         ---
@@ -98,16 +96,16 @@ class EventType(Resource):
             - api_version
             - slug
             - in: body
-              schema: EventTypeRequestSchema
+              schema: EventTypeSchema
               description: Data to update the event type with.
               name: event_type
         responses:
             200:
                 description: Successfully update an EventType
-                schema: EventTypeResponseSchema
+                schema: EventTypeSchema
             301:
                 description: Update which caused the slug to change.
-                schema: EventTypeResponseSchema
+                schema: EventTypeSchema
                 headers:
                     Location:
                         description: new URL for the updated EventType.
@@ -153,7 +151,7 @@ class EventTypes(Resource):
     """
     @spec.register_schema("EventTypeCollectionSchema")
     class EventTypeCollectionSchema(
-        spec.paginated_collection_schema(EventType.EventTypeResponseSchema, "event.event_types_collection_api")
+        spec.paginated_collection_schema(EventType.EventTypeSchema, "event.event_types_collection_api")
     ):
         pass
 
@@ -178,8 +176,8 @@ class EventTypes(Resource):
         return self.paged(models.EventType.query, page, results_per_page, models.EventType.created)
 
 
-    @load_with_schema(EventType.EventTypeRequestSchema)
-    @dump_with_schema(EventType.EventTypeResponseSchema)
+    @load_with_schema(EventType.EventTypeSchema)
+    @dump_with_schema(EventType.EventTypeSchema)
     def post(self, event_type_data):
         """
         ---
@@ -187,13 +185,13 @@ class EventTypes(Resource):
         parameters:
             - api_version
             - in: body
-              schema: EventTypeRequestSchema
+              schema: EventTypeSchema
               description: Data to create the event type with.
               name: event_type
         responses:
             201:
                 description: Successfully created the new object.
-                schema: EventTypeResponseSchema
+                schema: EventTypeSchema
                 headers:
                     Location:
                         description: URL for the newly created EventType.
@@ -211,28 +209,26 @@ class EventTypes(Resource):
 
 @api.resource("/events/<string:id>", endpoint="events_api")
 class Event(Resource):
-    @spec.register_schema("EventRequest")
-    class EventRequestSchema(marshmallow.Schema):
+    @spec.register_schema("EventSchema")
+    class EventSchema(marshmallow.Schema):
         event_type_slug = marshmallow.String(required=True)
         event_time = marshmallow.DateTime()
         data = marshmallow.Dict(required=True)
 
+        id = marshmallow.UUID(required=True, dump_only=True)
+        created = marshmallow.DateTime(required=True, dump_only=True)
+        updated = marshmallow.DateTime(required=True, dump_only=True)
 
-    @spec.register_schema("EventResponse")
-    class EventResponseSchema(EventRequestSchema):
-        id = marshmallow.UUID(required=True)
-        created = marshmallow.DateTime(required=True)
-        updated = marshmallow.DateTime(required=True)
-
-        event_time = marshmallow.DateTime(required=True)
+        event_time = marshmallow.DateTime(required=True, dump_only=True)
 
         _links = marshmallow.Hyperlinks({
             "self": marshmallow.URLFor("event.events_api", id="<id>"),
             "collection": marshmallow.URLFor("event.events_collection_api"),
             "event_type": marshmallow.URLFor("event.event_types_api", slug="<event_type_slug>"),
-        })
+        }, dump_only=True)
 
-    @dump_with_schema(EventResponseSchema)
+
+    @dump_with_schema(EventSchema)
     def get(self, id):
         """
         ---
@@ -243,7 +239,7 @@ class Event(Resource):
         responses:
             200:
                 description: Successfully retrieve an Event
-                schema: EventTypeResponseSchema
+                schema: EventTypeSchema
             400:
                 description: Invalid id.
                 schema: ErrorSchema
@@ -277,7 +273,7 @@ class Events(Resource):
     @spec.register_schema("EventCollection")
     class EventCollectionSchema(marshmallow.Schema):
         results_per_page = marshmallow.Integer()
-        collection = marshmallow.Nested(Event.EventResponseSchema, many=True)
+        collection = marshmallow.Nested(Event.EventSchema, many=True)
 
         _links = marshmallow.Hyperlinks({
             "self": marshmallow.URLFor("event.events_collection_api",
@@ -329,8 +325,8 @@ class Events(Resource):
             400:
                 description: An invalid value was sent for a parameter.
                 schema: ErrorSchema
-            404:
-                description: No EventType for provided event_type_slug, or Event for provided last_seen_id.
+            409:
+                description: No Event for provided since_id or max_id.
                 schema: ErrorSchema
         """
         results_per_page = min(max(results_per_page, 1), 50)
@@ -338,10 +334,10 @@ class Events(Resource):
         query = models.Event.query
         if since_id:
             #factor down to one query
-            after = first_or_abort(models.Event.query.filter(models.Event.id == since_id))
+            after = first_or_abort(models.Event.query.filter(models.Event.id == since_id), 409)
             query = query.filter(models.Event.cursor > after.cursor)
         elif max_id:
-            before = first_or_abort(models.Event.query.filter(models.Event.id == max_id))
+            before = first_or_abort(models.Event.query.filter(models.Event.id == max_id), 409)
             query = query.filter(models.Event.cursor <= before.cursor)
         if event_type_slug:
             query = query.join(models.Event.event_type).filter(models.EventType.slug == event_type_slug)
@@ -380,8 +376,8 @@ class Events(Resource):
             "collection": objs,
         }
 
-    @load_with_schema(Event.EventRequestSchema)
-    @dump_with_schema(Event.EventResponseSchema)
+    @load_with_schema(Event.EventSchema)
+    @dump_with_schema(Event.EventSchema)
     def post(self, event_data):
         """
         ---
@@ -389,13 +385,13 @@ class Events(Resource):
         parameters:
             - api_version
             - in: body
-              schema: EventRequestSchema
+              schema: EventSchema
               description: Data to create the event with.
               name: event
         responses:
             201:
                 description: Successfully created the new object.
-                schema: EventResponseSchema
+                schema: EventSchema
                 headers:
                     Location:
                         description: URL for the newly created Event.

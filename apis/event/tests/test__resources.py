@@ -471,6 +471,16 @@ class TestEvents:
             assert mock_token.called, "mock used"
             assert len(dict_from_response(response)["collection"]) == 1, "filtered down to one event"
 
+    def test__get_with_bad_max_id_or_since_id(self, test_client):
+        with token_mock(authorized_for_read_identity) as mock_token:
+            response = test_client.get("/api/-/event/events/?since_id={}".format(str(uuid.uuid1())))
+            assert mock_token.called, "mock used"
+            assert response.status_code == 409, "invalid since_id returns 409"
+
+            response = test_client.get("/api/-/event/events/?max_id={}".format(str(uuid.uuid1())))
+            assert mock_token.called, "mock used"
+            assert response.status_code == 409, "invalid max_id returns 409"
+
     def test__post(self, test_client, event_type):
         url = "/api/-/event/events/"
 

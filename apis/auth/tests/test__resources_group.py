@@ -200,13 +200,13 @@ class TestGroupMembersOrMemberOfList:
             assert response.status_code == 201, "permission denied if no write access"
             assert response.headers["Location"].endswith("/d-brand-new"), "permission denied if no write access"
 
-            names = [c["name"] for c in dict_from_response(response)["collection"]]
-            assert names == [c.name for c in existing_members] + ["d-brand-new"], "member is appended"
+            names = sorted([c["name"] for c in dict_from_response(response)["collection"]])
+            assert names == sorted([c.name for c in existing_members] + ["d-brand-new"]), "member is appended"
 
         with token_mock(authorized_for_all_identity) as mock_token:
             response = json_request(test_client, "post", url, data=new_payload)
             assert response.status_code == 200, "successfully appending existing object returns 200"
-            assert names == [c["name"] for c in dict_from_response(response)["collection"]], \
+            assert names == sorted([c["name"] for c in dict_from_response(response)["collection"]]), \
                    "members list is the same after re-appending exising member"
 
         with token_mock(authorized_for_all_identity) as mock_token:

@@ -15,7 +15,7 @@ class Group(Resource):
     """
     An endpoint for retrieving and manipulating groups
     """
-    @dump_with_schema(schemas.GroupResponseSchema)
+    @dump_with_schema(schemas.GroupSchema)
     def get(self, name):
         """
         ---
@@ -29,15 +29,15 @@ class Group(Resource):
         responses:
             200:
                 description: Successfully retrieve a Group
-                schema: GroupResponseSchema
+                schema: GroupSchema
             404:
                 description: Could not find a Group with current access level.
                 schema: ErrorSchema
         """
         return first_or_abort(models.Group.query.filter(models.Group.name == name))
 
-    @load_with_schema(schemas.GroupRequestSchema)
-    @dump_with_schema(schemas.GroupResponseSchema)
+    @load_with_schema(schemas.GroupSchema)
+    @dump_with_schema(schemas.GroupSchema)
     def put(self, group_data, name):
         """
         ---
@@ -49,16 +49,16 @@ class Group(Resource):
               description: slugified group name.
               in: path
             - in: body
-              schema: GroupRequestSchema
+              schema: GroupSchema
               description: Data to create the group type with.
               name: group
         responses:
             200:
                 description: Successfully update a Group
-                schema: GroupResponseSchema
+                schema: GroupSchema
             301:
                 description: Update which caused the name to change.
-                schema: GroupResponseSchema
+                schema: GroupSchema
                 headers:
                     Location:
                         description: new URL for the updated Group.
@@ -76,8 +76,8 @@ class Group(Resource):
         """
         return self.generic_update(db, api, models.Group, "name", name, group_data)
 
-    @load_with_schema(schemas.GroupRequestSchema, partial=True)
-    @dump_with_schema(schemas.GroupResponseSchema)
+    @load_with_schema(schemas.GroupSchema, partial=True)
+    @dump_with_schema(schemas.GroupSchema)
     def patch(self, group_data, name):
         """
         ---
@@ -89,16 +89,16 @@ class Group(Resource):
               description: slugified group name.
               in: path
             - in: body
-              schema: GroupRequestSchema
+              schema: GroupSchema
               description: Data to create the group type with.
               name: group
         responses:
             200:
                 description: Successfully update a Group
-                schema: GroupResponseSchema
+                schema: GroupSchema
             301:
                 description: Update which caused the name to change.
-                schema: GroupResponseSchema
+                schema: GroupSchema
                 headers:
                     Location:
                         description: new URL for the updated Group.
@@ -156,7 +156,7 @@ def dump_by_list_name(**named_schemas):
 @spec.register_resource
 @api.resource("/groups/<name>/<list_name>", endpoint="groups_api:list")
 class GroupMembersOrMemberOfList(Resource):
-    @dump_by_list_name(members=schemas.GroupMembersResponseSchema, member_of=schemas.GroupMemberOfResponseSchema)
+    @dump_by_list_name(members=schemas.GroupMembersSchema, member_of=schemas.GroupMemberOfSchema)
     def get(self, name, list_name):
         """
         ---
@@ -172,15 +172,15 @@ class GroupMembersOrMemberOfList(Resource):
         responses:
             200:
                 description: Successfully retrieve the collection of Member Group objects.
-                schema: GroupMembersResponseSchema
+                schema: GroupMembersSchema
             404:
                 description: Parent group cannot be found
                 schema: ErrorSchema
         """
         return first_or_abort(models.Group.query.filter(models.Group.name == name))
 
-    @load_with_schema(schemas.GroupRequestSchema)
-    @dump_by_list_name(members=schemas.GroupMembersResponseSchema, member_of=schemas.GroupMemberOfResponseSchema)
+    @load_with_schema(schemas.GroupSchema)
+    @dump_by_list_name(members=schemas.GroupMembersSchema, member_of=schemas.GroupMemberOfSchema)
     def post(self, new_group_data, name, list_name):
         """
         ---
@@ -190,7 +190,7 @@ class GroupMembersOrMemberOfList(Resource):
             - name: list_type
               description: Either members or member_of.
             - in: body
-              schema: GroupMembersRequestSchema
+              schema: GroupMembersSchema
               description: Group to append to the members list.
               name: group_data
         responses:
@@ -198,14 +198,14 @@ class GroupMembersOrMemberOfList(Resource):
                 description: Successfully append an existing Group to this members list.
                 schema:
                   oneOf:
-                    - GroupMembersResponseSchema
-                    - GroupMemberOfResponseSchema
+                    - GroupMembersSchema
+                    - GroupMemberOfSchema
             201:
                 description: Successfully created a new Group and appended it to the members list.
                 schema:
                   oneOf:
-                    - GroupMembersResponseSchema
-                    - GroupMemberOfResponseSchema
+                    - GroupMembersSchema
+                    - GroupMemberOfSchema
                 headers:
                     Location:
                         description: URL for the newly created Group.
@@ -241,8 +241,8 @@ class GroupMembersOrMemberOfList(Resource):
 
 
 
-    @load_with_schema(schemas.GroupRequestSchema)
-    @dump_by_list_name(members=schemas.GroupMembersResponseSchema, member_of=schemas.GroupMemberOfResponseSchema)
+    @load_with_schema(schemas.GroupSchema)
+    @dump_by_list_name(members=schemas.GroupMembersSchema, member_of=schemas.GroupMemberOfSchema)
     def delete(self, group_data, name, list_name):
         """
         ---
@@ -256,7 +256,7 @@ class GroupMembersOrMemberOfList(Resource):
               description: slugified group name.
               in: path
             - in: body
-              schema: GroupRequestSchema
+              schema: GroupSchema
               description: Data to remove the Group using
               name: group
         responses:
@@ -264,8 +264,8 @@ class GroupMembersOrMemberOfList(Resource):
                 description: Successfully update a Group's member list
                 schema:
                   oneOf:
-                    - GroupMembersResponseSchema
-                    - GroupMemberOfResponseSchema
+                    - GroupMembersSchema
+                    - GroupMemberOfSchema
             400:
                 description: Validation error on saving new Group in `list_type` list.
                 schema: ErrorSchema
@@ -284,9 +284,8 @@ class GroupMembersOrMemberOfList(Resource):
         })
 
 
-    @load_with_schema(schemas.GroupMembersRequestSchema)
-    @dump_by_list_name(members=schemas.GroupMembersResponseSchema, member_of=schemas.GroupMemberOfResponseSchema)
-    def put(self, collection_data, name, list_name):
+    @dump_by_list_name(members=schemas.GroupMembersSchema, member_of=schemas.GroupMemberOfSchema)
+    def put(self, name, list_name):
         """
         ---
         description: Update a grouplist for a group in it's entirety with existing or new groups.
@@ -299,7 +298,7 @@ class GroupMembersOrMemberOfList(Resource):
               description: slugified group name.
               in: path
             - in: body
-              schema: GroupMembersRequestSchema
+              schema: GroupMembersSchema
               description: Data to create the group type with.
               name: group
         responses:
@@ -307,8 +306,8 @@ class GroupMembersOrMemberOfList(Resource):
                 description: Successfully update a Group's member list
                 schema:
                   oneOf:
-                    - GroupMembersResponseSchema
-                    - GroupMemberOfResponseSchema
+                    - GroupMembersSchema
+                    - GroupMemberOfSchema
             400:
                 description: Validation error on saving new Group in `list_type` list.
                 schema: ErrorSchema
@@ -319,18 +318,20 @@ class GroupMembersOrMemberOfList(Resource):
                 description: Could not find existing Group for name.
                 schema: ErrorSchema
         """
-        collection_map = collections.OrderedDict()
-        for d in collection_data["collection"]:
-            obj = models.Group(**d)
-            collection_map[obj.name] = obj
+        @load_with_schema(schemas.GroupMembersSchema if list_name == "members" else schemas.GroupMemberOfSchema)
+        def inner(collection_data):
+            collection_map = collections.OrderedDict()
+            for d in collection_data[list_name]:
+                obj = models.Group(**d)
+                collection_map[obj.name] = obj
 
-        for o in models.Group.query.filter(models.Group.name.in_([g.name for g in collection_map.values()])):
-            collection_map[o.name] = o
+            for o in models.Group.query.filter(models.Group.name.in_([g.name for g in collection_map.values()])):
+                collection_map[o.name] = o
 
-        print(collection_data)
-        print(collection_map)
-        return self.generic_update(db, api, models.Group, "name", name,
-                                   { list_name: list(collection_map.values()) })
+            return self.generic_update(db, api, models.Group, "name", name,
+                                       { list_name: list(collection_map.values()) })
+
+        return inner()
 
 
 @spec.register_resource
@@ -369,8 +370,8 @@ class Groups(Resource):
         return self.paged(query, page, results_per_page, models.Group.created, type=type,
                           scope_name=scope_name)
 
-    @load_with_schema(schemas.GroupRequestSchema)
-    @dump_with_schema(schemas.GroupResponseSchema)
+    @load_with_schema(schemas.GroupSchema)
+    @dump_with_schema(schemas.GroupSchema)
     def post(self, group_data):
         """
         ---
@@ -378,13 +379,13 @@ class Groups(Resource):
         parameters:
             - api_version
             - in: body
-              schema: GroupRequestSchema
+              schema: GroupSchema
               description: Data to create the group type with.
               name: group_data
         responses:
             201:
                 description: Successfully created the new object.
-                schema: GroupResponseSchema
+                schema: GroupSchema
                 headers:
                     Location:
                         description: URL for the newly created Group.

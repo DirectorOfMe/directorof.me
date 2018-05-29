@@ -105,7 +105,7 @@ class OAuthCallback(Resource):
     Callback used by third parties after successful authentication.
     """
     @requires.anybody
-    @dump_with_schema(schemas.SessionResponseSchema)
+    @dump_with_schema(schemas.SessionSchema)
     @load_query_params(schemas.SessionQuerySchema)
     @with_service_client
     def get(self, client, installed_app_id=None):
@@ -123,7 +123,7 @@ class OAuthCallback(Resource):
         responses:
             201:
                 description: New session successfully created.
-                schema: SessionResponseSchema
+                schema: SessionSchema
                 headers:
                     Location:
                         description: URL for the newly created session.
@@ -176,7 +176,7 @@ class Session(Resource):
     Get or refresh a session.
     """
     @requires.user
-    @dump_with_schema(schemas.SessionResponseSchema)
+    @dump_with_schema(schemas.SessionSchema)
     def get(self):
         """
         ---
@@ -186,7 +186,7 @@ class Session(Resource):
         responses:
             200:
                 description: Decoded session data associate with the current access token.
-                schema: SessionResponseSchema
+                schema: SessionSchema
             403:
                 description: No token for this session, or the token is not authenticated.
                 schema: ErrorSchema
@@ -195,7 +195,7 @@ class Session(Resource):
 
     @requires.anybody
     @flask_jwt.jwt_refresh_token_required
-    @dump_with_schema(schemas.SessionResponseSchema)
+    @dump_with_schema(schemas.SessionSchema)
     def put(self):
         """
         ---
@@ -205,7 +205,7 @@ class Session(Resource):
         responses:
             200:
                 description: Decoded session data associate with the current access token.
-                schema: SessionResponseSchema
+                schema: SessionSchema
             401:
                 description: No refresh token provided.
                 schema: ErrorSchema
@@ -215,7 +215,7 @@ class Session(Resource):
         """
         session_data = flask_jwt.get_jwt_identity() or {}
         if session_data:
-            session_data = schemas.SessionResponseSchema().load(session_data)
+            session_data = schemas.SessionSchema().load(session_data)
             if session_data.errors:
                 messages = ["{}: {}".format(k,v) for k,v in session_data.errors.items()]
                 abort(400, message="Validation failed: {}".format(", ".join(messages)))
@@ -238,7 +238,7 @@ class SessionForApp(Resource):
     Create a new token for a particular application that the current token has access to.
     """
     @requires.user
-    @dump_with_schema(schemas.SessionResponseSchema)
+    @dump_with_schema(schemas.SessionSchema)
     def post(self, installed_app_id):
         """
         ---
@@ -253,7 +253,7 @@ class SessionForApp(Resource):
         responses:
             201:
                 description: New session successfully created.
-                schema: SessionResponseSchema
+                schema: SessionSchema
                 headers:
                     Location:
                         description: URL for the newly created session.
@@ -303,7 +303,7 @@ class Sudo(Resource):
         responses:
             201:
                 description: New session successfully created.
-                schema: SessionResponseSchema
+                schema: SessionSchema
                 headers:
                     Location:
                         description: URL for the newly created session.
