@@ -7,9 +7,6 @@ from directorofme_auth import models
 from directorofme.testing import dict_from_response, token_mock, existing, dump_and_load, comparable_links,\
                                  scoped_identity, group_of_one, json_request
 
-### TESTING THESE
-from directorofme_auth.resources.group import Group
-
 unscoped_identity = scoped_identity(app)
 authorized_for_read_identity = scoped_identity(app, real_db.Model.__scope__.read)
 authorized_for_all_identity = scoped_identity(

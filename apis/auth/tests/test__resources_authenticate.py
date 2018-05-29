@@ -6,11 +6,11 @@ import werkzeug
 import pytest
 
 from unittest import mock
-from werkzeug.exceptions import NotFound, BadRequest
+from werkzeug.exceptions import NotFound, BadRequest, Unauthorized, Conflict
 from oauthlib.oauth2 import OAuth2Error
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
-from directorofme.testing import token_mock, dump_and_load
+from directorofme.testing import token_mock, dump_and_load, json_request, dict_from_response
 from directorofme.authorization import groups, session
 from directorofme.authorization.exceptions import PermissionDeniedError
 
@@ -37,6 +37,13 @@ test_session_data = dump_and_load({
     "groups": [groups.everybody, groups.user, groups.Group(display_name="test", type=groups.GroupTypes.data)],
     "default_object_perms": { "read": (groups.everybody.name,) }
 }, app)
+
+def cookie_checker(response):
+    cookies_should_be = [ "JWT_ACCESS_COOKIE_NAME", "JWT_REFRESH_COOKIE_NAME",
+                          "JWT_ACCESS_CSRF_COOKIE_NAME", "JWT_REFRESH_CSRF_COOKIE_NAME" ]
+    set_cookies = set([h.partition("=")[0] for h in response.headers.getlist("Set-Cookie")])
+    assert set_cookies == { app.config[name] for name in cookies_should_be }, "cookies set correctly"
+
 
 def session_should_be(data=None):
     response = dump_and_load(data or flask.session, app)
@@ -135,7 +142,7 @@ class TestOAuthCallback:
         fetch_token.return_value = "token"
         confirm_email.return_value = ("test@example.com", True)
 
-        with pytest.raises(NotFound):
+        with pytest.raises(Unauthorized):
             OAuthCallback().get("google")
 
 
@@ -146,7 +153,7 @@ class TestOAuthCallback:
         assert OAuthCallback().get("google")[0] is not None, "profile exists"
 
         flask.request.values.dicts.append(werkzeug.MultiDict([("state", str(uuid.uuid1()))]))
-        with pytest.raises(NotFound):
+        with pytest.raises(Conflict):
             OAuthCallback().get("google")
 
     def test__get_directly_happypaths(self, fetch_token, confirm_email, test_profile):
@@ -172,12 +179,6 @@ class TestOAuthCallback:
         ).issubset(set(flask.session.groups)), "app group in session"
         assert flask.session.save, "session is updated by login"
 
-    def cookie_checker(self, response):
-        cookies_should_be = [ "JWT_ACCESS_COOKIE_NAME", "JWT_REFRESH_COOKIE_NAME",
-                              "JWT_ACCESS_CSRF_COOKIE_NAME", "JWT_REFRESH_CSRF_COOKIE_NAME" ]
-        set_cookies = set([h.partition("=")[0] for h in response.headers.getlist("Set-Cookie")])
-        assert set_cookies == { app.config[name] for name in cookies_should_be }, "cookies set correctly"
-
     def test__oauth_callback_route(self, fetch_token, confirm_email, test_profile, test_client, db):
         fetch_token.return_value = "token"
         confirm_email.return_value = ("test@example.com", True)
@@ -186,7 +187,7 @@ class TestOAuthCallback:
         with real_db.Model.enable_permissions():
             response = test_client.get("/api/-/auth/oauth/google/callback")
 
-            self.cookie_checker(response)
+            cookie_checker(response)
             assert response.status_code == 201, "response code is a 201"
             assert response.headers["Location"].endswith("/api/-/auth/session"), "location is correct"
             assert response.get_json() == session_should_be(), "response object correct for login"
@@ -199,7 +200,7 @@ class TestOAuthCallback:
         with real_db.Model.enable_permissions():
             response = test_client.get("/api/-/auth/oauth/google/callback")
 
-        self.cookie_checker(response)
+        cookie_checker(response)
         response_dict = response.get_json()
         response_dict["groups"].sort(key=lambda x: x["name"])
         assert response_dict == session_should_be({
@@ -293,3 +294,50 @@ class TestSessionForApp:
             assert response.get_json()["app"]["id"] == str(installed_app.id), "app installed"
             assert response.status_code == 201, "status code is 201"
             assert response.headers["Location"].endswith("/api/-/auth/session"), "location is correct"
+
+            response = test_client.post("/api/-/auth/session/{}".format(str(uuid.uuid1())))
+            assert response.status_code == 404, "Not found UUID returns 404"
+
+
+admin_session = dump_and_load({
+    "app": None, "environment": {},
+    "profile": { "id": uuid.uuid1(), "email": "hi@example.com" },
+    "groups": [groups.everybody, groups.admin, groups.user],
+    "default_object_perms": { "read": (groups.everybody.name,) }
+}, app)
+
+class TestSudo:
+    def test__post_no_admin(self, test_client):
+        with token_mock(test_session_data) as mocked_token:
+            response = json_request(test_client, "post", "/api/-/auth/sudo/hi@example.com", data={})
+            assert response.status_code == 403, "permission denied to non-admin"
+
+    def test__post_no_profile(self, test_client):
+        with token_mock(admin_session) as mocked_token:
+            response = json_request(test_client, "post", "/api/-/auth/sudo/test@example.com", data={})
+            assert response.status_code == 404, "Unauthorized if no profile exists"
+
+    def test__post_happypath(self, request_context, test_client, test_profile):
+        with token_mock(admin_session) as mocked_token:
+            response = json_request(test_client, "post", "/api/-/auth/sudo/test@example.com", data={})
+            assert response.status_code == 201, "Success"
+            assert response.headers["Location"].endswith("/api/-/auth/session"), "location header set"
+            assert dict_from_response(response)["profile"]["email"] == "test@example.com", "profile switched"
+            assert dict_from_response(response)["app"] is None, "no app if app isn't passed"
+            cookie_checker(response)
+
+    def test__post_with_app(self, request_context, test_profile, test_client):
+        installed_app_id = str(models.InstalledApp.query.first().id)
+        with token_mock(admin_session) as mocked_token:
+            url = "/api/-/auth/sudo/test@example.com?installed_app_id={}".format(installed_app_id)
+            response = json_request(test_client, "post", url, data={})
+            assert response.status_code == 201, "Success"
+            assert dict_from_response(response)["app"]["id"] == installed_app_id, "app installed"
+
+            url = "/api/-/auth/sudo/test@example.com?installed_app_id=abc"
+            response = json_request(test_client, "post", url, data={})
+            assert response.status_code == 400, "Bad UUID returns 400"
+
+            url = "/api/-/auth/sudo/test@example.com?installed_app_id={}".format(str(uuid.uuid1()))
+            response = json_request(test_client, "post", url, data={})
+            assert response.status_code == 409, "Not found UUID returns 409"

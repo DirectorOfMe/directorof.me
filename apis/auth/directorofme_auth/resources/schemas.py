@@ -144,20 +144,48 @@ class LicenseResponseSchema(LicenseRequestSchema):
     })
 
 @spec.register_schema("GroupsByLicenseSchema")
-class GroupsByLicenseSchema(
-    spec.paginated_collection_schema(GroupResponseSchema, "auth.licenses_api.groups", id="<id>")
+class LicenseGroups(
+    spec.paginated_collection_schema(GroupResponseSchema, "auth.licenses_api:groups", id="<id>")
 ):
     pass
 
 @spec.register_schema("ProfilesByLicenseSchema")
-class ProfilesByLicenseSchema(
-    spec.paginated_collection_schema(ProfileResponseSchema, "auth.licenses_api.licenses", id="<id>")
+class LicenseProfiles(
+    spec.paginated_collection_schema(ProfileResponseSchema, "auth.licenses_api:profiles", id="<id>")
 ):
     pass
 
 @spec.register_schema("ProfileCollectionSchema")
-class LicensesByProfileSchema(
-    spec.paginated_collection_schema(LicenseResponseSchema, "auth.profiles_api.licenses", email="<email>")
+class ProfileLicenses(
+    spec.paginated_collection_schema(LicenseResponseSchema, "auth.profiles_api:licenses", email="<email>")
 ):
     pass
 
+### App
+@spec.register_schema("AppRequestSchema")
+class AppRequestSchema(marshmallow.Schema):
+    name = marshmallow.String(required=True)
+    desc = marshmallow.String(required=True)
+    url = marshmallow.Url(required=True)
+
+    callback_url = marshmallow.Url(allow_none=True)
+    config_schema = marshmallow.Dict(allow_none=True)
+    public_key = marshmallow.String(allow_none=True)
+    requested_scopes = marshmallow.List(marshmallow.String, required=True)
+
+
+@spec.register_schema("AppRequestSchema")
+class AppResponseSchema(marshmallow.Schema):
+    slug = marshmallow.String(required=True)
+    created = marshmallow.DateTime()
+    updated = marshmallow.DateTime()
+
+    _links = marshmallow.Hyperlinks({
+        "self": marshmallow.URLFor("auth.apps_api"),
+        "collection": marshmallow.URLFor("auth.apps_collection_api"),
+        "publish": marshmallow.URLFor("/apps/<slug>/publish/f-users")
+    })
+
+@spec.register_schema("AppCollectionSchema")
+class AppCollectionSchema(spec.paginated_collection_schema(AppResponseSchema, "auth.apps_collection_api")):
+    pass

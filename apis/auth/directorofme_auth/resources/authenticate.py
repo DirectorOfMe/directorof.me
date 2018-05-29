@@ -4,6 +4,7 @@ import functools
 import flask_jwt_extended as flask_jwt
 
 from flask_restful import Resource, abort
+from werkzeug.exceptions import Conflict
 from oauthlib.oauth2 import OAuth2Error
 
 from directorofme.oauth import Client
@@ -36,7 +37,7 @@ def _session_from_profile(profile, installed_app_id):
         }
 
         if installed_app_id is not None:
-            installed_app = first_or_abort(InstalledApp.query.filter(InstalledApp.id == installed_app_id))
+            installed_app = first_or_abort(InstalledApp.query.filter(InstalledApp.id == installed_app_id), 409)
 
             new_session.app = session.SessionApp.from_conforming_type(installed_app)
             with session.do_as_root:
@@ -132,9 +133,14 @@ class OAuthCallback(Resource):
                 description: Error forwarded from 3rd party, or email has not
                              been verified by 3rd party.
                 schema: ErrorSchema
+            401:
+                description: No user found for email provided by third party.
+                schema: ErrorSchema
             404:
-                description: No service registered with the provided name or
-                             no user found for email provided by third party.
+                description: No service registered with the provided name.
+                schema: ErrorSchema
+            409:
+                description: No app found with the provided name.
                 schema: ErrorSchema
         """
         error = client.check_callback_request_for_errors(flask.request)
@@ -149,7 +155,7 @@ class OAuthCallback(Resource):
 
             profile = None
             with session.do_as_root:
-                profile = first_or_abort(Profile.query.filter(Profile.email == email))
+                profile = first_or_abort(Profile.query.filter(Profile.email == email), 401)
 
             # Now that we have our groups installed, we can query for the requested app
             new_session = _session_from_profile(profile, installed_app_id)
@@ -163,6 +169,7 @@ class OAuthCallback(Resource):
             return abort(400, message="Email ({}) not verified".format(str(e)))
 
 
+@spec.register_resource
 @api.resource("/session", endpoint="session_api")
 class Session(Resource):
     """
@@ -224,6 +231,7 @@ class Session(Resource):
         flask.session.overwrite(session.Session(**session_data))
         return flask.session
 
+@spec.register_resource
 @api.resource("/session/<installed_app_id>", endpoint="session_for_app_api")
 class SessionForApp(Resource):
     """
@@ -254,16 +262,70 @@ class SessionForApp(Resource):
             400:
                 description: Invalid uuid.
                 schema: ErrorSchema
+            401:
+                description: No profile associated with session.
+                schema: ErrorSchema
             403:
                 description: Insufficient permissions to create new session.
                 schema: ErrorSchema
             404:
-                description: Profile not found.
+                description: No app found with the provided ID.
                 schema: ErrorSchema
         """
-        profile = first_or_abort(Profile.query.filter(Profile.id == flask.session.profile.id))
-        new_session = _session_from_profile(profile, uuid_or_abort(str(installed_app_id)))
+        profile = first_or_abort(Profile.query.filter(Profile.id == flask.session.profile.id), 401)
+        try:
+            new_session = _session_from_profile(profile, uuid_or_abort(str(installed_app_id)))
+        except Conflict:
+            abort(404, message="No app for id {}".format(str(installed_app_id)))
 
+        flask.session.overwrite(new_session)
+        flask.session.save = True
+        return flask.session, 201, { "Location": api.url_for(Session) }
+
+
+@spec.register_resource
+@api.resource("/sudo/<string:email>", endpoint="sudo_api")
+class Sudo(Resource):
+    @requires.admin
+    @load_query_params(schemas.SessionQuerySchema)
+    def post(self, email, installed_app_id=None):
+        """
+        ---
+        description: Create a token for a different user (admin only).
+        parameters:
+            - api_version
+            - email
+            - in: path
+              name: installed_app_id
+              type: string
+              format: uuid
+              description: uuid of the installed app to create a token for.
+        responses:
+            201:
+                description: New session successfully created.
+                schema: SessionResponseSchema
+                headers:
+                    Location:
+                        description: URL for the newly created session.
+                        type: string
+                        format: url
+            400:
+                description: Invalid uuid.
+                schema: ErrorSchema
+            403:
+                description: Not an admin.
+                schema: ErrorSchema
+            404:
+                description: No profile found with the provided email.
+                schema: ErrorSchema
+            409:
+                description: No app found with the provided id.
+                schema: ErrorSchema
+        """
+        with session.do_as_root:
+            profile = first_or_abort(Profile.query.filter(Profile.email == email))
+
+        new_session = _session_from_profile(profile, installed_app_id)
         flask.session.overwrite(new_session)
         flask.session.save = True
         return flask.session, 201, { "Location": api.url_for(Session) }

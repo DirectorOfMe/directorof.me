@@ -1,6 +1,7 @@
 import functools
 import collections
 
+from flask_restful import abort
 from sqlalchemy.exc import IntegrityError
 from directorofme.flask.api import dump_with_schema, load_with_schema, with_pagination_params, first_or_abort,\
                                    load_query_params, Resource
