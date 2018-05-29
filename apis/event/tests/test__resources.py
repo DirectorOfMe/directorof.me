@@ -12,34 +12,15 @@ from unittest import mock
 from directorofme.authorization import groups, session
 from directorofme_event import app, spec, db as real_db
 from directorofme_event.models import Event, EventType
-from directorofme.testing import dict_from_response, token_mock, existing, dump_and_load, comparable_links
+from directorofme.testing import dict_from_response, token_mock, existing, dump_and_load, comparable_links,\
+                                 scoped_identity, group_of_one, json_request
 
-profile_id = uuid.uuid1()
-group_of_one = groups.Group(display_name=str(profile_id), type=groups.GroupTypes.data)
-
-unscoped_identity = {
-    "profile": { "id": str(profile_id), "email": "test@example.com" },
-    "groups": [
-        dump_and_load(groups.everybody, app),
-        dump_and_load(groups.user, app),
-        dump_and_load(group_of_one, app)
-    ],
-    "app": { "id": str(uuid.uuid1()), "app_id": str(uuid.uuid1()), "app_name": "event", "config": {} },
-    "default_object_perms": {
-        "read": [ group_of_one.name ], "write": [ group_of_one.name ], "delete": [ group_of_one.name ]
-    },
-    "environment": {}
-}
-
-authorized_for_read_identity = copy.deepcopy(unscoped_identity)
-authorized_for_read_identity["groups"].append(dump_and_load(real_db.Model.__scope__.read, app))
-authorized_for_all_identity = copy.deepcopy(authorized_for_read_identity)
-authorized_for_all_identity["groups"] += [
-    dump_and_load(groups.admin, app),
-    dump_and_load(real_db.Model.__scope__.write, app),
-    dump_and_load(real_db.Model.__scope__.delete, app),
-]
-
+unscoped_identity = scoped_identity(app)
+authorized_for_read_identity = scoped_identity(app, real_db.Model.__scope__.read)
+authorized_for_all_identity = scoped_identity(
+    app, real_db.Model.__scope__.read, real_db.Model.__scope__.write, real_db.Model.__scope__.delete,
+    groups.admin
+)
 
 @pytest.fixture
 def test_client():
@@ -95,12 +76,6 @@ def event(db):
             obj = existing(event)
 
     yield obj
-
-
-
-def json_request(client, method, url, data):
-    return getattr(client, method)(url, data=json.dumps(data), content_type="application/json")
-
 
 class TestEventType:
     def test__get(self, test_client, event_type):

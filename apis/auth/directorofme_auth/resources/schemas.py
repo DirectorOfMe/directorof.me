@@ -71,14 +71,14 @@ class GroupCollectionQuerySchema(marshmallow.Schema):
 
 @spec.register_schema("GroupCollectionSchema")
 class GroupCollectionSchema(spec.paginated_collection_schema(GroupResponseSchema, "auth.groups_collection_api",
-                                                             type="<type>", scope_name="<scope_name>",
-                                                             members_of="<mambers_of>", parents_of="<parents_of>")
+                                                             type="<type>", scope_name="<scope_name>")
 ):
     pass
 
 @spec.register_schema("GroupMembersRequestSchema")
 class GroupMembersRequestSchema(marshmallow.Schema):
     collection = marshmallow.Nested(GroupRequestSchema, many=True, required=True)
+
 
 @spec.register_schema("GroupMembersResponseSchema")
 class GroupMembersResponseSchema(marshmallow.Schema):

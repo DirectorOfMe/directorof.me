@@ -6,7 +6,7 @@ directorofme -- the main libraries for providing shared functionality to
 @author: Matt Story <matt.story@directorof.me>
 '''
 
-__all__ = [ "authorization", "testing", "specify", "flask", "orm", "registry", "oauth" ]
+__all__ = [ "authorization", "testing", "specify", "flask", "orm", "registry", "oauth", "client" ]
 
 from . import registry
 from . import authorization

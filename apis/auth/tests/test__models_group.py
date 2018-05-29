@@ -35,25 +35,25 @@ class TestGroup:
         assert incomplete_two.name == "s-hi", "name auto-set when display_name is set"
 
         named = Group(name="different", display_name="nope", type=GroupTypes.scope)
-        assert named.name == "different", "name not overridden when passed to init"
+        assert named.name == "s-nope", "name is overridden if it is not congruent with other values"
 
         named_two = Group(name="different-two")
         assert named_two.name == "different-two", "passed name is OK"
 
         named_two.display_name = "nope"
         named_two.type = GroupTypes.feature
-        assert named_two.name == "different-two", "observer doesn't change name"
+        assert named_two.name == "f-nope", "observer does change name even if set"
 
     def test__unique_name(self, db, disable_permissions):
-        assert Group.query.filter(Group.name == "name").first() is None, \
+        assert Group.query.filter(Group.name == "0-hi").first() is None, \
                "no group with name name"
 
-        db.session.add(Group(name="name", display_name="hi", type=GroupTypes.system))
+        db.session.add(Group(display_name="hi", type=GroupTypes.system))
         db.session.commit()
-        assert isinstance(Group.query.filter(Group.name == "name").first(), Group), \
+        assert isinstance(Group.query.filter(Group.name == "0-hi").first(), Group), \
                "object successfully saved"
 
-        db.session.add(Group(name="name", display_name="no", type=GroupTypes.data))
+        db.session.add(Group(display_name="hi", type=GroupTypes.system))
         commit_with_integrity_error(db)
 
     def test__unique_display_name_and_type(self, db, disable_permissions):
@@ -121,8 +121,8 @@ class TestGroup:
                "name set, type passed is still name"
         assert group.slugify_name(display_name="foo") == "hi", \
                "name set, display_name passed is still name"
-        assert group.slugify_name(display_name="foo", type=GroupTypes.data) == "hi", \
-               "name set, display_name and type passed is still name"
+        assert group.slugify_name(display_name="foo", type=GroupTypes.data) == "d-foo", \
+               "name set, display_name and type passed changes"
 
         group.display_name = "foo"
         assert group.slugify_name() == "hi", "name and display_name set, returns name"
@@ -130,8 +130,8 @@ class TestGroup:
         group.type = GroupTypes.data
         assert group.slugify_name() == "hi", "name and type set, returns name"
         group.display_name = "foo"
-        assert group.slugify_name() == "hi", \
-               "name and display_name and type set, returns name"
+        assert group.slugify_name() == "d-foo", \
+               "name and display_name and type set, returns new name"
 
         group.name = None
         assert group.slugify_name() == "d-foo", "display_name and type set generates"

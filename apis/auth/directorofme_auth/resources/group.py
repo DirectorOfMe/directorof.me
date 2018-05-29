@@ -1,4 +1,5 @@
 import functools
+import collections
 
 from sqlalchemy.exc import IntegrityError
 from directorofme.flask.api import dump_with_schema, load_with_schema, with_pagination_params, first_or_abort,\
@@ -144,7 +145,6 @@ def dump_by_list_name(**named_schemas):
         def inner_inner(*args, name, list_name,**kwargs):
             if list_name not in ("members", "member_of"):
                 abort(400, "Invalid membership list name, must be either `members` or `member_of`")
-            print(args, name, list_name, kwargs)
             return dump_with_schema(named_schemas[list_name])(fn)(*args, name, list_name, **kwargs)
 
         return inner_inner
@@ -193,6 +193,12 @@ class GroupMembersOrMemberOfList(Resource):
               description: Group to append to the members list.
               name: group_data
         responses:
+            200:
+                description: Successfully append an existing Group to this members list.
+                schema:
+                  oneOf:
+                    - GroupMembersResponseSchema
+                    - GroupMemberOfResponseSchema
             201:
                 description: Successfully created a new Group and appended it to the members list.
                 schema:
@@ -204,17 +210,14 @@ class GroupMembersOrMemberOfList(Resource):
                         description: URL for the newly created Group.
                         type: string
                         format: url
-            200:
-                description: Successfully append an existing Group to this members list.
-                schema:
-                  oneOf:
-                    - GroupMembersResponseSchema
-                    - GroupMemberOfResponseSchema
             400:
                 description: Validation Error when creating the new Group.
                 schema: ErrorSchema
             403:
                 description: No permission to create a new Group object.
+                schema: ErrorSchema
+            404:
+                description: Cannot access parent or child object.
                 schema: ErrorSchema
         """
         target = first_or_abort(models.Group.query.filter(models.Group.name == name))
@@ -226,11 +229,8 @@ class GroupMembersOrMemberOfList(Resource):
 
         getattr(target, list_name).append(new_obj)
 
-        try:
-            db.session.add(target, new_obj)
-            db.session.commit()
-        except IntegrityError:
-            abort(400, "Duplicate value for name or id")
+        db.session.add(target, new_obj)
+        db.session.commit()
 
         headers = {}
         if status_code == 201:
@@ -283,8 +283,9 @@ class GroupMembersOrMemberOfList(Resource):
         })
 
 
+    @load_with_schema(schemas.GroupMembersRequestSchema)
     @dump_by_list_name(members=schemas.GroupMembersResponseSchema, member_of=schemas.GroupMemberOfResponseSchema)
-    def put(self, name, list_name):
+    def put(self, collection_data, name, list_name):
         """
         ---
         description: Update a grouplist for a group in it's entirety with existing or new groups.
@@ -297,10 +298,7 @@ class GroupMembersOrMemberOfList(Resource):
               description: slugified group name.
               in: path
             - in: body
-              schema:
-                oneOf:
-                  - GroupMembersRequestSchema
-                  - GroupMemberOfRequestSchema
+              schema: GroupMembersRequestSchema
               description: Data to create the group type with.
               name: group
         responses:
@@ -320,24 +318,18 @@ class GroupMembersOrMemberOfList(Resource):
                 description: Could not find existing Group for name.
                 schema: ErrorSchema
         """
-        load_schema = schemas.GroupMembersRequestSchema
-        if list_name != "members":
-            load_schema = schemas.GroupMemberOfRequestSchema
+        collection_map = collections.OrderedDict()
+        for d in collection_data["collection"]:
+            obj = models.Group(**d)
+            collection_map[obj.name] = obj
 
-        @load_with_schema(load_schema)
-        def inner(collection_data):
-            collection_map = {}
-            for d in collection_data["collection"]:
-                obj = models.Group(**d)
-                collection_map["name"] = obj
+        for o in models.Group.query.filter(models.Group.name.in_([g.name for g in collection_map.values()])):
+            collection_map[o.name] = o
 
-            for o in models.Group.query.filter(models.Group.name.in_([g.name for g in collection_map.values()])):
-                collection_map["name"] = o
-
-            return self.generic_update(db, api, models.Group, "name", name,
-                                       { list_name: list(collection_map.values()) })
-
-        return inner()
+        print(collection_data)
+        print(collection_map)
+        return self.generic_update(db, api, models.Group, "name", name,
+                                   { list_name: list(collection_map.values()) })
 
 
 @spec.register_resource
@@ -374,7 +366,7 @@ class Groups(Resource):
                 query = query.filter(col == val)
 
         return self.paged(query, page, results_per_page, models.Group.created, type=type,
-                          scope_name=scope_name, members_of=members_of, parents_of=parents_of)
+                          scope_name=scope_name)
 
     @load_with_schema(schemas.GroupRequestSchema)
     @dump_with_schema(schemas.GroupResponseSchema)

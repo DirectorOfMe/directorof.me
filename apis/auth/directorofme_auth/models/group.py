@@ -69,7 +69,6 @@ class Group(db.Model):
         '''
         try:
             return AuthGroup(**{
-                "name": self.name,
                 "display_name": kwargs.get("display_name", self.display_name),
                 "type": kwargs.get("type", self.type),
             }).name

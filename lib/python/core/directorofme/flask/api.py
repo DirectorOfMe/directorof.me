@@ -171,6 +171,7 @@ class Resource(FlaskResource):
             db.session.commit()
             return obj, 201, { "Location": api.url_for(url_cls or cls, **{url_field: getattr(obj, url_field)}) }
         except IntegrityError:
+            db.session.rollback()
             abort(400, message="Please choose a unique name or slug")
 
     @classmethod
@@ -186,6 +187,7 @@ class Resource(FlaskResource):
             db.session.add(obj)
             db.session.commit()
         except IntegrityError:
+            db.session.rollback()
             abort(400, message="Please choose a unique name or slug")
 
         if getattr(obj, url_field) != url_value:

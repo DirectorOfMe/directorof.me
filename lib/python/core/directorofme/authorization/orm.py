@@ -220,7 +220,6 @@ class PermissionedModel(PrefixedModel):
         finally:
             cls.permissions_enabled = permissions_enabled
 
-
     @classmethod
     def _scope_and_obj_perms_from_action(cls, action):
         try:
@@ -244,6 +243,7 @@ class PermissionedModel(PrefixedModel):
 
         # check scope permissions
         scope_group = getattr(cls.__scope__, scope_perm_name, None)
+
         if scope_group is not None and scope_group not in groups_list:
             # if we don't have scope access permission is denied
             return _PermissionCheck.denied
@@ -323,7 +323,7 @@ class PermissionedQuery(orm.Query):
 
         for desc in self.column_descriptions:
             type_ = desc.get("type")
-            if isinstance(type_, type) and  issubclass(type_, PermissionedModel) and type_.permissions_enabled():
+            if isinstance(type_, type) and issubclass(type_, PermissionedModel) and type_.permissions_enabled():
                 query = self.enable_assertions(False).filter(type_.permissions_criterion(action))
 
         return query
