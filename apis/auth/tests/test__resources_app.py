@@ -45,21 +45,9 @@ def app(db, request_context):
     yield app
 
 
-class TestApp:
-    def test__get(self, app, test_client):
-        with token_mock(unscoped_identity):
-            response = test_client.get("/api/-/auth/apps/{}".format(app.slug))
-            assert response.status_code == 404, "unauthorized access returns a 404"
-
-        with token_mock(authorized_for_read_identity) as mock_token:
-            response = test_client.get("/api/-/auth/apps/{}".format(app.slug))
-            assert response.status_code == 200, "successful select returns a 200"
-
-        response = dict_from_response(response)
-        response["requested_scopes"].sort()
-
-        assert response == {
-            "slug": app.slug,
+@pytest.fixture
+def canned_response(app):
+    yield { "slug": app.slug,
             "name": app.name,
             "desc": app.desc,
             "url": app.url.url,
@@ -75,14 +63,28 @@ class TestApp:
                 "self": "/api/-/auth/apps/{}".format(app.slug),
                 "collection": "/api/-/auth/apps/",
                 "publish": "/api/-/auth/apps/{}/publish/f-user".format(app.slug)
-            }
-        }
+             }
+         }
 
-    def test__put(self, db, app, test_client):
-        url = "/api/-/auth/apps/{}".format(app.slug)
-        put_obj = None
+
+class TestApp:
+    def test__get(self, app, test_client, canned_response):
+        with token_mock(unscoped_identity):
+            response = test_client.get("/api/-/auth/apps/{}".format(app.slug))
+            assert response.status_code == 404, "unauthorized access returns a 404"
+
         with token_mock(authorized_for_read_identity) as mock_token:
-            put_obj = dict_from_response(test_client.get(url))
+            response = test_client.get("/api/-/auth/apps/{}".format(app.slug))
+            assert response.status_code == 200, "successful select returns a 200"
+
+        response = dict_from_response(response)
+        response["requested_scopes"].sort()
+
+        assert response == canned_response
+
+    def test__put(self, db, app, test_client, canned_response):
+        url = "/api/-/auth/apps/{}".format(app.slug)
+        put_obj = canned_response
 
         with token_mock(unscoped_identity):
             response = json_request(test_client, "put", url, data=put_obj)
@@ -149,4 +151,78 @@ class TestApp:
 
 
 class TestApps:
-    pass
+    def test__get(self, request_context, test_client, app, canned_response):
+        url = "/api/-/auth/apps/"
+        with token_mock(unscoped_identity) as mock_token:
+            response = test_client.get(url)
+            assert response.status_code == 200, "no permissions returns 200"
+            assert dict_from_response(response)["collection"] == [], "no permissions results in empty list"
+
+        with token_mock(authorized_for_read_identity) as mock_token:
+            response = test_client.get(url)
+            assert response.status_code == 200, "successful get returns 200"
+
+            result = dict_from_response(response)
+            result["collection"].sort(key=lambda x: x['name'])
+            for a in result["collection"]:
+                a["requested_scopes"].sort()
+            result["_links"] = comparable_links(result["_links"])
+
+            assert result == {
+                "collection": [ canned_response ],
+                "page": 1,
+                "results_per_page": 50,
+                "_links": {
+                    "self": (url, "page=1", "results_per_page=50",),
+                    "next": (url, "page=1", "results_per_page=50",),
+                    "prev": (url, "page=1", "results_per_page=50",),
+                }
+            }
+
+    def test__post(self, db, request_context, test_client, canned_response):
+        url = "/api/-/auth/apps/"
+        canned_response["name"] = "New Name"
+        canned_response["slug"] = "new-name"
+        canned_response["_links"]["self"] = "/api/-/auth/apps/new-name"
+        canned_response["_links"]["publish"] = "/api/-/auth/apps/new-name/publish/f-user"
+
+        with token_mock(authorized_for_read_identity):
+            response = json_request(test_client, "post", url, data=canned_response)
+            assert response.status_code == 403, "read but no write returns a 403"
+
+        db.session.rollback()
+        with token_mock(authorized_for_all_identity):
+            response = json_request(test_client, "post", url, data=canned_response)
+            assert response.status_code == 201, "with correct permissions, object is created"
+            assert response.headers["Location"].endswith("/api/-/auth/apps/new-name"), "location header set"
+
+            response = dict_from_response(response)
+            response["requested_scopes"].sort()
+            for ts in ("created", "updated"):
+                assert response[ts].endswith("+00:00"), "ts is right"
+                canned_response[ts] = response[ts]
+
+            assert response == canned_response, "response body is correct"
+
+
+class TestPublishApp:
+    def test__publish_unpublish(self, db, request_context, test_client, app):
+        url = "/api/-/auth/apps/test/publish/s-test-read"
+
+        assert "s-test-read" not in app.read, "s-test-read does not have read access"
+
+        with token_mock(unscoped_identity):
+            assert test_client.post(url).status_code == 404, "not found if no permissions"
+            assert test_client.delete(url).status_code == 404, "not found if no permissions"
+
+        with token_mock(authorized_for_read_identity):
+            assert test_client.post(url).status_code == 403, "pemission denied if no permissions"
+            db.session.rollback()
+            assert test_client.delete(url).status_code == 403, "pemission denied if no permissions"
+            db.session.rollback()
+
+        with token_mock(authorized_for_all_identity):
+            assert test_client.post(url).status_code == 204, "success"
+            assert "s-test-read" in existing(app).read, "s-test-read has read access"
+            assert test_client.delete(url).status_code == 204, "success"
+            assert "s-test-read" not in existing(app).read, "s-test-read has read access"

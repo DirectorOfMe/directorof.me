@@ -165,7 +165,7 @@ class Apps(Resource):
 
     @load_with_schema(schemas.AppSchema)
     @dump_with_schema(schemas.AppSchema)
-    def post(self):
+    def post(self, app_data):
         """
         ---
         description: Apply a partial update to an App.
@@ -192,15 +192,11 @@ class Apps(Resource):
             403:
                 description: No write permissions for this object.
                 schema: ErrorSchema
-            404:
-                description: Cannot find the requested App.
-                schema: ErrorSchema
             409:
                 description: Requested a scope that does not exist
                 schema: ErrorSchema
         """
-        app_data = App.validate(app_data)
-        return self.generic_insert(db, api, models.App, "name", app_data["name"], app_data, url_cls=App)
+        return self.generic_insert(db, api, models.App, App.validate(app_data), "slug", url_cls=App)
 
 
 @spec.register_resource
@@ -228,7 +224,7 @@ class PublishApp(Resource):
         """
         app = first_or_abort(models.App.query.filter(models.App.slug == slug))
         group = first_or_abort(models.Group.query.filter(models.Group.name == group_name))
-        app.read = app.read[:App.read.max_permissions] + (group.name,)
+        app.read = app.read[:models.App.read.max_permissions] + (group.name,)
 
         db.session.add(app)
         db.session.commit()
@@ -257,7 +253,7 @@ class PublishApp(Resource):
         """
         app = first_or_abort(models.App.query.filter(models.App.slug == slug))
         group = first_or_abort(models.Group.query.filter(models.Group.name == group_name))
-        app.read = tuple(set(app.read) - set(group.name))
+        app.read = tuple(set(app.read) - set([group.name]))
 
         db.session.add(app)
         db.session.commit()
