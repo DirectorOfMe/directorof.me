@@ -175,10 +175,13 @@ class Resource(FlaskResource):
             abort(400, message="Please choose a unique name or slug")
 
     @classmethod
-    def generic_update(cls, db, api, Model, url_field, url_value, data, url_cls=None):
+    def generic_update(cls, db, api, Model, url_field, url_value, data, url_cls=None, processor=None):
         """Patch/Put helper method"""
         obj = first_or_abort(db.session.query(Model).filter(getattr(Model, url_field) == url_value))
         url_value = getattr(obj, url_field)
+
+        if processor:
+            data = processor(data)
 
         for k,v in data.items():
             setattr(obj, k, v)
@@ -301,7 +304,7 @@ class Spec:
         self.add_parameter("email", "path",
                            description="email address for this profile",
                            type="string",
-						   format="email",
+                           format="email",
                            example="test@example.com")
         self.add_parameter("id", "path",
                            description="unique id for this endpoint",

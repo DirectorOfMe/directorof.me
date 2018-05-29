@@ -266,6 +266,14 @@ class TestResource:
             assert fixture.foo == "foo-1", "foo not updated"
             assert fixture.bar == "baz", "bar is updated"
 
+            def processor(data):
+                return { "bar": "this" }
+
+            fixture = FixtureResource.generic_update(db, flask_api, Fixture, "foo", "foo-1", {"bar": "not this"},
+                                                     processor=processor)
+            assert fixture.foo == "foo-1", "foo not updated"
+            assert fixture.bar == "this", "bar is updated"
+
             # 301 happy path
             fixture, status_code, headers = FixtureResource.generic_update(
                 db, flask_api, Fixture, "foo", "foo-1", { "foo": "foo-3" }
