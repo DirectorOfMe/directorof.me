@@ -5,6 +5,7 @@ import copy
 import contextlib
 
 from unittest import mock
+from oauthlib.oauth2 import OAuth2Error
 
 from requests_oauthlib import OAuth2Session
 from directorofme.authorization.exceptions import MisconfiguredAuthError
@@ -77,9 +78,9 @@ class TestClient:
         with pytest.raises(AttributeError):
             oauth_client.does_not_exist
 
-    def test__confirm_email_is_abstract(self, oauth_client):
+    def test__confirm_identity_is_abstract(self, oauth_client):
         with pytest.raises(NotImplementedError):
-            oauth_client.confirm_email()
+            oauth_client.confirm_identity()
 
     def test__check_callback_request_for_errors(self, request_context_with_session, oauth_client):
         assert oauth_client.check_callback_request_for_errors(flask.request) is None, "no errors returns None"
@@ -123,14 +124,13 @@ class TestGoogle:
         assert client.offline, "offline set by __init__"
         assert sorted(client.auth_kwargs.keys()) == ["access_type", "prompt"], "access_type sent with auth_kwargs"
 
-    def test__confirm_email(self, google_config):
+    def test__confirm_identity(self, google_config):
         client = Google(google_config, callback_url="/callback")
 
-        with mock_get(client, { "email": "me@example.com", "email_verified": True }) as get_mock:
-            assert client.confirm_email(token={ "id_token": "token" }) == ("me@example.com", True), \
+        with mock_get(client, { "name": "Me", "email": "me@example.com", "email_verified": True }) as get_mock:
+            assert client.confirm_identity(token={ "id_token": "token" }) == ("me@example.com", True, "Me"), \
                    "return value is correct"
-            get_mock.assert_called_with("https://www.googleapis.com/oauth2/v3/tokeninfo",
-                                        params={ "id_token": "token" })
+            get_mock.assert_called_with("https://www.googleapis.com/oauth2/v3/userinfo")
 
 
 class TestSlack:
@@ -148,12 +148,12 @@ class TestSlack:
         SessionMock.assert_called_with("slack-id", redirect_uri="/callback",
                                        scope="identity.basic,identity.email", state=None)
 
-    def test__confirm_email(self, slack_config):
+    def test__confirm_identity(self, slack_config):
         client = Slack(slack_config, callback_url="/callback")
 
-        with mock_get(client, { "ok": True, "user": { "email": "me@example.com" }}) as get_mock:
-            assert client.confirm_email() == ("me@example.com", True), "return value is correct"
+        with mock_get(client, { "ok": True, "user": { "email": "me@example.com", "name": "Me" }}) as get_mock:
+            assert client.confirm_identity() == ("me@example.com", True, "Me"), "return value is correct"
             get_mock.assert_called_with("https://slack.com/api/users.identity")
 
-        with mock_get(client, { "ok": False }) as get_mock:
-            assert client.confirm_email() == (None, False), "not ok returns no email"
+        with mock_get(client, { "ok": False }), pytest.raises(OAuth2Error):
+            assert client.confirm_identity() == (None, False, None), "not ok returns no email"

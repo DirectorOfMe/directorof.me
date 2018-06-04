@@ -59,7 +59,11 @@ class TestJWTSessionInterface:
         app.config["JWT_PUBLIC_KEY"] = "public key (fake)"
         app.config["JWT_PRIVATE_KEY"] = "private key (fake)"
 
-        JWTManager(app)
+        with mock.patch("flask_jwt_extended.create_refresh_token") as refresh_mock, \
+                 mock.patch("flask_jwt_extended.get_csrf_token") as csrf_mock:
+            refresh_mock.return_value = "refresh"
+            csrf_mock.return_value = "csrf"
+            JWTManager(app)
 
         with mock.patch("flask_jwt_extended.create_access_token") as access_mock, \
                  mock.patch("flask_jwt_extended.create_refresh_token") as refresh_mock, \
@@ -112,10 +116,16 @@ class TestJWTManager:
             jwt = JWTManager()
             ConfigureAppMock.assert_not_called()
 
+            JWTManager(app)
             jwt.init_app(app)
             ConfigureAppMock.assert_called_with(app)
 
-        with mock.patch('directorofme.flask.jwt.JWTManager.configure_app') as ConfigureAppMock:
+        with mock.patch('directorofme.flask.jwt.JWTManager.configure_app') as ConfigureAppMock, \
+                mock.patch("flask_jwt_extended.create_refresh_token") as refresh_mock, \
+                mock.patch("flask_jwt_extended.get_csrf_token") as csrf_mock:
+            refresh_mock.return_value = "refresh"
+            csrf_mock.return_value = "csrf"
+
             jwt = JWTManager(app)
             ConfigureAppMock.assert_called_with(app)
 
@@ -125,7 +135,12 @@ class TestJWTManager:
         app.config["JWT_PUBLIC_KEY"] = "public key (fake)"
         app.config["JWT_PRIVATE_KEY"] = "private key (fake)"
 
-        JWTManager(app)
+        with mock.patch("flask_jwt_extended.create_refresh_token") as refresh_mock, \
+                 mock.patch("flask_jwt_extended.get_csrf_token") as csrf_mock:
+            refresh_mock.return_value = "refresh"
+            csrf_mock.return_value = "csrf"
+            JWTManager(app)
+
         assert app.config["JWT_TOKEN_LOCATION"] == ["cookies"], "tokens stored in cookies"
         assert app.config["JWT_COOKIE_CSRF_PROTECT"], "CSRF protection is enabled"
         assert app.config["JWT_ALGORITHM"] == "ES512", "ES512 algorithm selected"

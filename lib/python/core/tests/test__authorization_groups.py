@@ -4,7 +4,7 @@ import json
 from directorofme.flask import JSONEncoder
 from directorofme.authorization import standard_permissions
 from directorofme.authorization.groups import GroupTypes, Group, Scope, root, admin, nobody, \
-                                              everybody, anybody, user, staff, base_groups
+                                              everybody, anybody, user, staff, base_groups, push
 
 class TestGroupTypes:
     def test__GroupTypes_spec(self):
@@ -190,13 +190,14 @@ class TestScope:
 
 
 def test__base_groups():
-    assert set(base_groups) == {root, admin, nobody, everybody, user, staff}, "base groups has all base groups"
+    assert set(base_groups) == {root, admin, nobody, everybody, user, staff, push}, "base groups has all base groups"
     assert root.name == "0-root", "root name is correct"
     assert admin.name == "0-admin", "admin name is correct"
-    assert nobody.name == "0-nobody", "admin name is correct"
+    assert nobody.name == "0-nobody", "nobody name is correct"
+    assert push.name == "0-push", "push name is correct"
 
-    assert everybody.name == "0-everybody", "admin name is correct"
+    assert everybody.name == "0-everybody", "everybody name is correct"
     assert everybody is anybody, "anybody is an alias for everybody"
 
-    assert user.name == "f-user", "admin name is correct"
+    assert user.name == "f-user", "user name is correct"
     assert staff.name == "f-staff", "staff name is correct"

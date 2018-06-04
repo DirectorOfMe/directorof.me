@@ -67,6 +67,14 @@ class JWTManager(flask_jwt.JWTManager):
         self.configure_app(app)
         super().init_app(app)
 
+        # maintenance token
+        if app.config.get("IS_AUTH_SERVER"):
+            push_session = session.Session.empty()
+            push_session.groups = [ groups.push ]
+            with app.app_context():
+                app.config["PUSH_REFRESH_TOKEN"] = flask_jwt.create_refresh_token(push_session)
+                app.config["PUSH_REFRESH_CSRF_TOKEN"] = flask_jwt.get_csrf_token(app.config["PUSH_REFRESH_TOKEN"])
+
     def configure_app(self, app: flask.Flask):
         app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
         app.config["JWT_COOKIE_CSRF_PROTECT"] = True

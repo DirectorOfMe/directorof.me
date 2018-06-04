@@ -9,10 +9,10 @@ from sqlalchemy.exc import IntegrityError
 from collections import namedtuple
 from apispec import APISpec
 
-__all__ = [ "first_or_abort", "uuid_or_abort", "load_with_schema", "dump_with_schema",
+__all__ = [ "abort_if_errors", "first_or_abort", "uuid_or_abort", "load_with_schema", "dump_with_schema",
             "with_pagination_params", "with_cursor_params", "Spec", "Resource" ]
 
-def _abort_if_errors(result):
+def abort_if_errors(result):
     if result.errors:
         messages = ["{}: {}".format(k,v) for k,v in result.errors.items()]
         abort(400, message="Validation failed: {}".format(", ".join(messages)))
@@ -38,7 +38,7 @@ def load_with_schema(Schema, **load_kwargs):
     def inner(fn):
         @functools.wraps(fn)
         def inner_inner(*args, **kwargs):
-            data = _abort_if_errors(Schema().load(flask.request.get_json() or {}, **load_kwargs))
+            data = abort_if_errors(Schema().load(flask.request.get_json() or {}, **load_kwargs))
             return fn(*args, data, **kwargs)
 
         return inner_inner
@@ -63,7 +63,7 @@ def dump_with_schema(Schema, **dump_kwargs):
             if obj is None:
                 abort(404, message="No object found")
 
-            obj = _abort_if_errors(Schema().dump(obj, **dump_kwargs))
+            obj = abort_if_errors(Schema().dump(obj, **dump_kwargs))
             if response_tuple is None:
                 return obj
             return (obj,) + response_tuple
@@ -81,7 +81,7 @@ def load_query_params(Schema):
     def inner(fn):
         @functools.wraps(fn)
         def inner_inner(*args, **kwargs):
-            kwargs.update(_abort_if_errors(Schema().load(flask.request.values)))
+            kwargs.update(abort_if_errors(Schema().load(flask.request.values)))
             return fn(*args, **kwargs)
 
         return inner_inner

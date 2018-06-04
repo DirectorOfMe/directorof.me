@@ -9,11 +9,13 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 
 from directorofme.authorization import groups, session, orm
+from directorofme.flask.json import JSONEncoder
 
 ### COPIED FROM FLASK ITSELF
 @pytest.fixture
 def app():
     app = flask.Flask('flask_test', root_path=os.path.dirname(__file__))
+    app.json_encoder = JSONEncoder
     return app
 
 @pytest.fixture

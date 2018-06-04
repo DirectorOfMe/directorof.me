@@ -1,4 +1,6 @@
+from furl import furl
 from requests_oauthlib import OAuth2Session
+from oauthlib.oauth2 import OAuth2Error
 
 from directorofme.registry import RegisterByName
 from directorofme.authorization.exceptions import MisconfiguredAuthError
@@ -22,9 +24,9 @@ class Client(RegisterByName, metaclass=RegisterByName.make_registrymetaclass()):
         self.session = OAuth2Session(self.client_id, redirect_uri=callback_url, state=state, **session_kwargs)
 
     def __getattr__(self, name):
-            return getattr(self.session, name)
+        return getattr(self.session, name)
 
-    def confirm_email(self, token=None):
+    def confirm_identity(self, token=None):
         raise NotImplementedError("Subclass must implement")
 
     def check_callback_request_for_errors(self, request):
@@ -63,17 +65,18 @@ class Google(Client):
             state=state
         )
 
-    def confirm_email(self, token=None):
+    def confirm_identity(self, token=None):
         params = { "id_token": token.get("id_token") }
-        id_ = self.get("https://www.googleapis.com/oauth2/v3/tokeninfo", params=params).json()
-        return id_["email"], id_["email_verified"]
+        id_ = self.get("https://www.googleapis.com/oauth2/v3/userinfo").json()
+        return id_["email"], id_["email_verified"], id_["name"]
 
 
 class Slack(Client):
     name = "slack"
 
-    def __init__(self, config, callback_url=None, scopes=("identity.basic", "identity.email"), state=None,
-                 **kwargs):
+    def __init__(self, config, callback_url=None, scopes=("identity.basic", "identity.email"),
+                 state=None, **kwargs):
+        self.app_id = config.get("SLACK_APP_ID")
         super().__init__(
             callback_url,
             config.get("SLACK_CLIENT_ID"),
@@ -85,9 +88,13 @@ class Slack(Client):
             state=state
         )
 
-    def confirm_email(self, token=None):
+    def confirm_identity(self, token=None):
         response = self.get("https://slack.com/api/users.identity").json()
         if response["ok"]:
             email = response["user"].get("email")
-            return email, bool(email)
-        return None, False
+            return email, bool(email), response["user"].get("name")
+
+        raise OAuth2Error(response.get("error", "Error connecting to slack"))
+
+    def app_url(self):
+        return furl("https://slack.com/app_redirect").add({"app": self.app_id}).url
