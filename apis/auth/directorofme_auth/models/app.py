@@ -4,6 +4,7 @@ from sqlalchemy_utils import URLType, JSONType, UUIDType
 
 from directorofme.orm import slugify_on_change
 from directorofme.authorization.groups import Group as AuthGroup
+from directorofme.crypto import RSACipher
 
 from . import Group, db
 
@@ -43,11 +44,14 @@ class App(db.Model):
     #: OAuth callback URL.
     callback_url = Column(URLType)
 
+    #: Event handler URL
+    event_url = Column(URLType)
+
     #: JSON Schema defining the expected format for :class:`.InstalledApp` config.
     config_schema = Column(JSONType)
 
     #: Public key used to encrypt data for this app (can be decrypted by a non-stored private key)
-    public_key = Column(String(1024), nullable=True, default=None)
+    public_key = Column(String(4096), nullable=True, default=None)
 
     #: Groups this app would like to add into the session
     requested_access_groups = relationship("Group", secondary=requested_access_groups, backref="requested_by")
@@ -65,6 +69,19 @@ class App(db.Model):
 
         reads = perms.get("read", tuple()) + (group,)
         return InstalledApp(app=self, read=reads, config=config, access_groups=access_groups, **perms)
+
+    @classmethod
+    def make_cipher(cls, public_key=None, private_key=None):
+         return RSACipher(public_key=public_key, private_key=private_key)
+
+    def cipher(self, private_key=None):
+        return self.make_cipher(public_key=self.public_key, private_key=private_key)
+
+    def encrypt(self, payload):
+        return self.cipher().encrypt(payload)
+
+    def decrypt(self, private_key, payload):
+        return self.cipher(private_key).decrypt(payload)
 
 
 class InstalledApp(db.Model):

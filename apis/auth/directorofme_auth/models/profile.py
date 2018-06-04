@@ -47,11 +47,11 @@ class Profile(db.Model):
     group_of_one_id = Column(UUIDType, ForeignKey(db.Model.prefix_name("group.id")), nullable=False)
 
     #: all members of this :class:`.Group` are also members of parent.
-    group_of_one = relationship("Group")
+    group_of_one = relationship(Group)
 
     # TODO: Quota enforcement
     #: all licenses associated with this profile, active or inactive
-    licenses = relationship("License", secondary=profiles_to_license,
+    licenses = relationship(License, secondary=profiles_to_license,
                             back_populates="profiles", lazy="dynamic")
 
 

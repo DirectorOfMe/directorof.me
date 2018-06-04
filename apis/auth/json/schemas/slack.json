@@ -1,0 +1,57 @@
+{
+    "definitions": {
+        "tokens": {
+            "type": "object",
+            "patternProperties": {
+                "^.*_token$": {
+                    "value": { "type": "string" },
+                    "encryption": {
+                        "anyOf": [
+                            { "type": "null" },
+                            {
+                                "type": "string",
+                                "enum": [ "RSA" ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+
+
+    "id": "https://matt.directorof.me/api/-/auth/app/slack",
+    "$schema": "http://json-schema.org/draft-06/schema#",
+
+    "description": "Schema for Slack App",
+    "type": "object",
+
+    "required": [ "user_id", "team_id", "scopes", "integrations" ],
+    "additionalProperties": false,
+
+    "properties": {
+        "user_id": {
+            "type": "string"
+        },
+        "team_id": {
+            "type": "string"
+        },
+        "scopes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "onboarding_complete": {
+            "type": "boolean"
+        },
+        "integrations": {
+            "type": "object",
+            "patternProperties": {
+                "^._token*$": { "$ref": "#/definitions/tokens" }
+            },
+			"additionalProperties": true
+        }
+    }
+}

@@ -2,12 +2,16 @@ from marshmallow_enum import EnumField
 from directorofme.authorization import groups
 from .. import spec, marshmallow
 
+@spec.register_schema("SessionQuerySchema")
+class SignUpQuerySchema(marshmallow.Schema):
+    install_slack = marshmallow.Boolean()
+
 ### Session Structures (authentication)
 @spec.register_schema("SessionQuerySchema")
-class SessionQuerySchema(marshmallow.Schema):
+class SessionQuerySchema(SignUpQuerySchema):
     installed_app_id = marshmallow.UUID()
-    state = marshmallow.UUID()
-
+    invite = marshmallow.UUID()
+    state = marshmallow.String()
 
 class SessionAppSchema(marshmallow.Schema):
     id = marshmallow.UUID(required=True)
@@ -192,6 +196,29 @@ class AppSchema(marshmallow.Schema):
 @spec.register_schema("AppCollectionSchema")
 class AppCollectionSchema(spec.paginated_collection_schema(AppSchema, "auth.apps_collection_api")):
     pass
+
+
+@spec.register_schema("AppEncryptSchema")
+class AppEncryptSchema(marshmallow.Schema):
+    encryption = marshmallow.String(required=True)
+    value = marshmallow.String(required=True)
+
+    _links = marshmallow.Hyperlinks({
+        "self": marshmallow.URLFor("auth.apps_api:encrypt", slug="<slug>"),
+        "app": marshmallow.URLFor("auth.apps_api", slug="<slug>"),
+        "decrypt": marshmallow.URLFor("auth.apps_api:decrypt", slug="<slug>")
+    }, dump_only=True)
+
+
+@spec.register_schema("AppDecryptSchema")
+class AppDecryptSchema(AppEncryptSchema):
+    private_key = marshmallow.String(required=True)
+
+    _links = marshmallow.Hyperlinks({
+        "self": marshmallow.URLFor("auth.apps_api:decrypt", slug="<slug>"),
+        "app": marshmallow.URLFor("auth.apps_api", slug="<slug>"),
+        "encrypt": marshmallow.URLFor("auth.apps_api:encrypt", slug="<slug>")
+    }, dump_only=True)
 
 
 @spec.register_schema("InstalledAppSchema")

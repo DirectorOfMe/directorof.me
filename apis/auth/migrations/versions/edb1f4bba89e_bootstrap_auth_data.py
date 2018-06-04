@@ -14,7 +14,7 @@ import jsonschema
 
 # revision identifiers, used by Alembic.
 revision = 'edb1f4bba89e'
-down_revision = '9b85d192b76c'
+down_revision = 'e145c5343ca4'
 branch_labels = None
 depends_on = None
 
@@ -43,7 +43,16 @@ def build_groups():
     return groups
 
 def build_apps(groups):
-    apps = [
+    schemas = {}
+    for app_name in ("rythym", "slack"):
+        with open(os.path.join(os.path.dirname(__file__), "../../json/schemas/{}.json".format(app_name))) as f:
+            schemas[app_name] = json.load(f)
+
+        jsonschema.Draft4Validator.check_schema(schemas[app_name])
+
+    slugged_event = slugify("directorofme_event")
+
+    return [
         App(
             name="Main",
             desc="DirectorOf.Me's main app. Everyone should have this installed.",
@@ -59,19 +68,28 @@ def build_apps(groups):
             requested_access_groups = [g for g in groups.values() if g.type == GroupTypes.scope],
             read=(admin.name,),
             write=(admin.name,)
-        )
-    ]
-
-    schema = None
-    with open(os.path.join(os.path.dirname(__file__), "../../json/schemas/rythym-app-config.json")) as f:
-        schema = json.load(f)
-    jsonschema.Draft4Validator.check_schema(schema)
-
-    slugged_event = slugify("directorofme_event")
-    return  apps + [
-        App(url="/rythym",
-            name="Your Daily Rythym",
-            config_schema = schema,
+        ),
+        # TODO: public keys
+        App(
+            name="Slack",
+            desc="DirectorOf.Me for Slack.",
+            url="/slack",
+            event_url="/api/-/slack/handle-event",
+            config_schema = schemas["slack"],
+            requested_access_groups = [
+                groups["s-{}-read".format(slugify(db.Model.__scope__.display_name))],
+                groups["s-{}-write".format(slugify(db.Model.__scope__.display_name))],
+                groups["s-{}-read".format(slugged_event)],
+                groups["s-{}-write".format(slugged_event)]
+            ],
+            read=(user.name,),
+            write=(admin.name,)
+        ),
+        App(
+            url="/rythym",
+            event_url="/api/-/rythym/handle-event",
+            name="Rythym",
+            config_schema = schemas["rythym"],
             desc="""Have your best day every day with the Daily Rythym App.
                     The Daily Rhythm combines information from your tools and
                     integrates them into a chat bot for you to help you see
@@ -85,7 +103,6 @@ def build_apps(groups):
             write=(admin.name,),
         )
     ]
-
 
 def build_profiles(groups, apps):
     # founders

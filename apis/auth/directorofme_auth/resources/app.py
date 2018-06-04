@@ -1,6 +1,5 @@
 import copy
 import jsonschema
-from Crypto.PublicKey import RSA
 
 from directorofme.authorization import groups as groups_module, requires
 
@@ -42,7 +41,7 @@ class App(Resource):
 
         if data.get("public_key"):
             try:
-                RSA.importKey(data["public_key"])
+                models.App.make_cipher(public_key=data.get("public_key"))
             except ValueError:
                 abort(400, message="public_key must be a `pem` format RSA public key")
 
@@ -156,6 +155,87 @@ class App(Resource):
                 schema: ErrorSchema
         """
         return self.generic_delete(db, models.App, "slug", slug)
+
+
+@spec.register_resource
+@api.resource("/apps/<string:slug>/encrypt", endpoint="apps_api:encrypt")
+class AppEncrypt(Resource):
+    @load_with_schema(schemas.AppEncryptSchema)
+    @dump_with_schema(schemas.AppEncryptSchema)
+    def post(self, encrypt_obj, slug):
+        """
+        ---
+        description: Encrypt a payload using an App's public key
+        parameters:
+            - api_version
+            - slug
+            - in: body
+              schema: AppEncryptSchema
+              name: encrypt
+              description: Payload to encrypt
+        responses:
+            200:
+                description: Successfully encrypted the payload.
+                schema: AppEncryptSchema
+            400:
+                description: An invalid value was sent for a parameter.
+                schema: ErrorSchema
+            404:
+                description: Could not find App associated with `slug`.
+                schema: ErrorSchema
+        """
+        if encrypt_obj["encryption"] != "RSA":
+            abort(400, message="Encryption must be one of: (`RSA`); not {}".format(encrypt_obj["encryption"]))
+
+        app = first_or_abort(models.App.query.filter(models.App.slug == slug))
+        try:
+            return {
+                "value": app.encrypt(encrypt_obj["value"]),
+                "slug": app.slug
+            }
+        except ValueError as e:
+            abort(400, message=str(e))
+
+
+@spec.register_resource
+@api.resource("/apps/<string:slug>/decrypt", endpoint="apps_api:decrypt")
+class AppDecrypt(Resource):
+    @load_with_schema(schemas.AppDecryptSchema)
+    @dump_with_schema(schemas.AppDecryptSchema)
+    def post(self, decrypt_obj, slug):
+        """
+        ---
+        description: Decrypt a payload using the private_key associated with an App.
+        parameters:
+            - api_version
+            - slug
+            - in: body
+              schema: AppDecryptSchema
+              name: decrypt
+              description: Payload to decrypt and private key to decrypt it with.
+        responses:
+            200:
+                description: Successfully decrypted the payload.
+                schema: AppDecryptSchema
+            400:
+                description: An invalid value was sent for a parameter.
+                schema: ErrorSchema
+            404:
+                description: Could not find App associated with `slug`.
+                schema: ErrorSchema
+        """
+        if decrypt_obj["encryption"] != "RSA":
+            abort(400, message="Encryption must be one of: (`RSA`); not {}".format(decrypt_obj["encryption"]))
+
+        app = first_or_abort(models.App.query.filter(models.App.slug == slug))
+        try:
+            return {
+                "value": app.decrypt(decrypt_obj["private_key"], decrypt_obj["value"]),
+                "slug": app.slug
+            }
+        except ValueError as e:
+            abort(400, message=str(e))
+
 
 @spec.register_resource
 @api.resource("/apps/", endpoint="apps_collection_api")

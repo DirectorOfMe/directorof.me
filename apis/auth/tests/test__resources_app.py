@@ -2,6 +2,7 @@ import pytest
 from datetime import timezone
 
 from directorofme.authorization import groups as groups_module
+from directorofme.crypto import RSACipher
 from directorofme_auth import app, db as real_db
 from directorofme_auth import models
 from directorofme.testing import dict_from_response, token_mock, existing, dump_and_load, comparable_links,\
@@ -13,13 +14,6 @@ authorized_for_all_identity = scoped_identity(
     app, real_db.Model.__scope__.read, real_db.Model.__scope__.write, real_db.Model.__scope__.delete,
     groups_module.admin
 )
-
-public_key = """-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDW3P3iU2MqiQa97H7+U+nryL2q
-biW7HxBQ4CIhQGgV2U0FTM6sbJ/isGpls4poH26HD2CQSDLEkYvNr4pN61hr0tnm
-TL8RijdaG/hM3XnFCcCdHF6b9i3SNNcoBTN63n0gmqkRE4Ev+yKVgrEYeRMw/keZ
-Q6P9wwuIZFaJreDK4QIDAQAB
------END PUBLIC KEY-----"""
 
 @pytest.fixture
 def app(db, request_context):
@@ -179,7 +173,7 @@ class TestApp:
             assert response.status_code == 200, "valid schema saves just fine"
             assert dict_from_response(response)["config_schema"] == { "type": "object" }, "value saved"
 
-    def test__rsa_publickey_validation(self, app, test_client):
+    def test__rsa_publickey_validation(self, app, test_client, public_key):
         with token_mock(authorized_for_all_identity):
             response = json_request(test_client, "patch", "/api/-/auth/apps/{}".format(app.slug),
                                     data={ "public_key": "abcdefg" })
@@ -200,6 +194,66 @@ class TestApp:
         with token_mock(authorized_for_all_identity):
             assert test_client.delete(url).status_code == 204, "success"
             assert test_client.delete(url).status_code == 404, "404 after successful delete"
+
+class TestAppEncrypt:
+    def test__post(self, db, app, test_client, public_key, private_key):
+        payload = { "encryption": "RSA", "value": "plain text" }
+        with token_mock(unscoped_identity):
+            resp = json_request(test_client, "post", "/api/-/auth/apps/{}/encrypt".format(app.slug), data=payload)
+            assert resp.status_code == 404, "no permissions, 404"
+
+        with token_mock(authorized_for_read_identity):
+            resp = json_request(test_client, "post", "/api/-/auth/apps/{}/encrypt".format(app.slug), data=payload)
+            assert resp.status_code == 400, "no public_key set, 400"
+
+        with db.Model.disable_permissions():
+            app.public_key = public_key
+            db.session.add(app)
+            db.session.commit()
+
+        app = existing(app)
+        with token_mock(authorized_for_read_identity):
+            resp = json_request(test_client, "post", "/api/-/auth/apps/{}/encrypt".format(app.slug), data=payload)
+            assert resp.status_code == 200, "success"
+            assert app.decrypt(private_key, dict_from_response(resp)["value"]) == "plain text", \
+                   "value encrypted correctly"
+
+        payload["encryption"] = "AES"
+        with token_mock(authorized_for_read_identity):
+            resp = json_request(test_client, "post", "/api/-/auth/apps/{}/encrypt".format(app.slug), data=payload)
+            assert resp.status_code == 400, "unsupported encryption value, 400"
+
+
+class TestAppDecrypt:
+    def test__post(self, db, app, test_client, public_key, private_key):
+        payload = {
+            "encryption": "RSA",
+            "value": RSACipher(public_key=public_key).encrypt("plain text"),
+            "private_key": "invalid but present"
+        }
+        with token_mock(unscoped_identity):
+            resp = json_request(test_client, "post", "/api/-/auth/apps/{}/decrypt".format(app.slug), data=payload)
+            assert resp.status_code == 404, "no permissions, 404"
+
+        with token_mock(authorized_for_read_identity):
+            resp = json_request(test_client, "post", "/api/-/auth/apps/{}/decrypt".format(app.slug), data=payload)
+            assert resp.status_code == 400, "invalid private_key sent, 400"
+
+        del payload["private_key"]
+        with token_mock(authorized_for_read_identity):
+            resp = json_request(test_client, "post", "/api/-/auth/apps/{}/decrypt".format(app.slug), data=payload)
+            assert resp.status_code == 400, "missing private_key, 400"
+
+        payload["private_key"] = private_key
+        with token_mock(authorized_for_read_identity):
+            resp = json_request(test_client, "post", "/api/-/auth/apps/{}/decrypt".format(app.slug), data=payload)
+            assert resp.status_code == 200, "success"
+            assert dict_from_response(resp)["value"] == "plain text", "value decrypted correctly"
+
+        payload["encryption"] = "AES"
+        with token_mock(authorized_for_read_identity):
+            resp = json_request(test_client, "post", "/api/-/auth/apps/{}/decrypt".format(app.slug), data=payload)
+            assert resp.status_code == 400, "unsupported encryption value, 400"
 
 
 class TestApps:
@@ -347,7 +401,7 @@ class TestInstalledApp:
         }
         with real_db.Model.disable_permissions():
             db.session.add(app)
-            db.session.commit()
+            db.session.flush()
 
         assert real_db.Model.permissions_enabled(), "perms back on"
         with token_mock(authorized_for_all_identity):

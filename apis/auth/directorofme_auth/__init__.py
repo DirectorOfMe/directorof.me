@@ -54,3 +54,13 @@ spec.init_app(app)
 
 
 migrate = Migrate(app, db, version_table=db.Model.version_table(), include_symbol=db.Model.include_symbol)
+
+
+@app.cli.command()
+def push_refresh_token():
+    print(app.config["PUSH_REFRESH_TOKEN"])
+
+
+@app.cli.command()
+def push_refresh_csrf_token():
+    print(app.config["PUSH_REFRESH_CSRF_TOKEN"])
