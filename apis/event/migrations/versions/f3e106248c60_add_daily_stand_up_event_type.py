@@ -44,6 +44,12 @@ def upgrade():
             read=(groups.everybody.name,),
             write=(groups.admin.name,),
         ))
+        session.add(EventType(
+            name="App Installed",
+            desc="An app was installed",
+            read=(groups.everybody.name,),
+            write=(groups.admin.name,),
+        ))
         session.commit()
 
 def downgrade():

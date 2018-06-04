@@ -1,6 +1,7 @@
 LIB_DIR              ?= ../../lib
 SHARE_DIR            ?= ../../share
 BIN_DIR              ?= ../../bin
+API_DIR              ?= ../
 
 PKG_NAME             ?= directorofme_event
 PKG_VERSION          ?= 0.1
@@ -32,13 +33,13 @@ PSQL_HOST            ?= $(EVENT_API_PSQL_HOST)
 EXTRA_PYTHONPATH     ?= $(LIB_DIR)/python/core
 
 .PHONY: default
-default: build-setup-py gunicorn-service proxy.conf
+default: build-setup-py gunicorn-service proxy.conf push-tokens
 
 .PHONY: clean
-clean: clean-setup-py clean-postgresql clean-gunicorn-service clean-proxy.conf
+clean: clean-setup-py clean-postgresql clean-gunicorn-service clean-proxy.conf clean-push-tokens
 
 .PHONY: install
-install: default install-setup-py install-gunicorn-service install-proxy.conf
+install: default install-setup-py install-gunicorn-service install-proxy.conf install-push-tokens
 
 .PHONY: dev
 dev: postgresql

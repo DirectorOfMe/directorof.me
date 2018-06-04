@@ -1,13 +1,12 @@
+from furl import furl
 from flask_restful import abort
+from sqlalchemy.exc import IntegrityError
 
+from directorofme.authorization.exceptions import PermissionDeniedError
 from directorofme.flask.api import dump_with_schema, load_with_schema, with_pagination_params, \
                                    uuid_or_abort, first_or_abort, load_query_params, with_cursor_params, Resource
 
-from directorofme.authorization.exceptions import PermissionDeniedError
-from directorofme.authorization import session
-from sqlalchemy.exc import IntegrityError
-
-from . import models, db, marshmallow, spec, api
+from . import models, db, marshmallow, spec, api, push_client
 
 @spec.register_resource
 @api.resource("/event_types/<string:slug>", endpoint="event_types_api")
@@ -403,10 +402,26 @@ class Events(Resource):
             403:
                 description: No permission to create a new Event object.
                 schema: ErrorSchema
-            404:
+            409:
                 description: No event_type for event_type_slug.
         """
         event_data["event_type"] = first_or_abort(
-            models.EventType.query.filter(models.EventType.slug == event_data.pop("event_type_slug"))
+            models.EventType.query.filter(models.EventType.slug == event_data.pop("event_type_slug")), 409
         )
-        return self.generic_insert(db, api, models.Event, event_data, "id", url_cls=Event)
+
+        # TODO: Async this (trigger or similar)
+        event = self.generic_insert(db, api, models.Event, event_data, "id", url_cls=Event)
+        try:
+            ev = event[0] if isinstance(event, tuple) else event
+            api_url = furl("auth/apps/push-event")
+            api_url.path.segments.append(ev.read[0])
+            ###: TODO: only refresh on 401 in base library ... need to fix 401 first
+            push_client.refresh()
+            ### START HERE -- THIS IS NOT SENDING A VALID ACCESS TOKEN
+            push_client.post(api_url.url, data=Event.EventSchema().dump(ev)[0])
+            ### GETTING EMTPY SESSION ON REQUEST, NOT PUSH SESSION
+        except Exception as e:
+            # TODO Logger
+            print("Error processing event: {}".format(e))
+        finally:
+            return event
