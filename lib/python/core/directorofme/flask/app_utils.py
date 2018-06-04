@@ -37,13 +37,13 @@ def directorofme_app(app_name, user_config):
     if app.config.get("PUSH_REFRESH_TOKEN_FILE"):
         try:
             with open(app.config["PUSH_REFRESH_TOKEN_FILE"]) as push_refresh_token:
-                app.config["PUSH_REFRESH_TOKEN"] = push_refresh_token.read()
+                app.config["PUSH_REFRESH_TOKEN"] = push_refresh_token.read().strip()
         except FileNotFoundError:
             raise ValueError(
                 "PUSH_REFRESH_TOKEN_FILE not found: {}".format(app.config["PUSH_REFRESH_TOKEN_FILE"]))
         try:
             with open(app.config["PUSH_REFRESH_CSRF_TOKEN_FILE"]) as push_refresh_csrf_token:
-                app.config["PUSH_REFRESH_CSRF_TOKEN"] = push_refresh_csrf_token.read()
+                app.config["PUSH_REFRESH_CSRF_TOKEN"] = push_refresh_csrf_token.read().strip()
         except TypeError:
             raise MisconfiguredAuthError(
                 "PUSH_REFRESH_CSRF_TOKEN_FILE must be set when PUSH_REFRESH_TOKEN_FILE is set")

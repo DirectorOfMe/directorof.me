@@ -1,27 +1,36 @@
 from requests import Session
 from furl import furl
 
-__all__ = [ "Unauthorized", "PermissionDenied", "BadRequest", "NotFound", "ServerError", "DOM" ]
+from json.decoder import JSONDecodeError
 
-class Unauthorized(Exception):
+import flask_jwt_extended as flask_jwt
+
+__all__ = [ "Unauthorized", "PermissionDenied", "BadRequest", "NotFound", "ServerError", "ClientError", "DOM" ]
+
+class ClientError(Exception):
     pass
 
-class PermissionDenied(Exception):
+class Unauthorized(ClientError):
     pass
 
-class BadRequest(Exception):
+class PermissionDenied(ClientError):
     pass
 
-class NotFound(Exception):
+class BadRequest(ClientError):
     pass
 
-class ServerError(Exception):
+class NotFound(ClientError):
+    pass
+
+class Conflict(ClientError):
+    pass
+
+class ServerError(ClientError):
     pass
 
 class DOM(Session):
     def __init__(self, domain, version="-", access_token=None, access_csrf_token=None,
                  refresh_token=None, refresh_csrf_token=None):
-
         self.__url = furl("https://")
         self.__url.host = domain
         self.__url.path.segments = [ "api", version ]
@@ -34,7 +43,6 @@ class DOM(Session):
 
         if access_token is not None:
             self.cookies["access_token_cookie"] = access_token
-
         if refresh_token is not None:
             self.cookies["refresh_token_cookie"] = refresh_token
 
@@ -53,11 +61,14 @@ class DOM(Session):
             400: BadRequest,
             401: Unauthorized,
             403: PermissionDenied,
-            404: NotFound
+            404: NotFound,
+            409: Conflict,
         }
 
         try:
             raise errors[response.status_code](response.json().get("message"))
+        except JSONDecodeError:
+            raise errors[response.status_code](response.text)
         except KeyError:
             raise ServerError(response.text)
 
@@ -84,3 +95,14 @@ class DOM(Session):
             self.headers["X-CSRF-REFRESH-TOKEN"] = self.cookies["csrf_refresh_token"]
 
         return resp
+
+    @classmethod
+    def from_request(cls, request, app=None):
+        access_token = request.cookies.get("access_token_cookie")
+        csrf_token = request.headers.get("X-CSRF-TOKEN")
+
+        if csrf_token is None and app is not None:
+            with app.app_context():
+                csrf_token = flask_jwt.get_csrf_token(access_token.encode("utf-8"))
+
+        return cls(request.host, access_token=access_token, access_csrf_token=csrf_token)

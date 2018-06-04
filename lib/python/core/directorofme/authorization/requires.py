@@ -3,7 +3,7 @@ import contextlib
 import flask
 from . import groups, exceptions
 
-__all__ = [ "RequiresDecorator", "group", "scope", "feature", "admin", "staff", "everybody", "anybody" ]
+__all__ = [ "RequiresDecorator", "group", "scope", "feature", "admin", "staff", "everybody", "anybody", "push" ]
 
 class RequiresDecorator(contextlib.ContextDecorator):
     def __init__(self, group_or_requirement, and_=None, or_=None, session=flask.session):
@@ -37,6 +37,7 @@ class RequiresDecorator(contextlib.ContextDecorator):
         return RequiresDecorator(self, or_=other)
 
     def test(self):
+        print("TEST", self.group.name, [g.name for g in self.session.groups])
         groups_test = self.group and self.group in self.session.groups
         requirements_test = self.requirement and self.requirement.test()
 
@@ -62,6 +63,7 @@ def scope(name, perm_name):
 def feature(name):
     return group(groups.Group(display_name=name, type=groups.GroupTypes.feature))
 
+push = group(groups.push)
 user = group(groups.user)
 admin = group(groups.admin)
 staff = group(groups.staff)

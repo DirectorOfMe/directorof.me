@@ -1,3 +1,4 @@
+import uuid
 import functools
 
 import flask
@@ -70,7 +71,9 @@ class JWTManager(flask_jwt.JWTManager):
         # maintenance token
         if app.config.get("IS_AUTH_SERVER"):
             push_session = session.Session.empty()
-            push_session.groups = [ groups.push ]
+            push_session.groups += [ groups.push ]
+            push_session.profile = session.SessionProfile(id=uuid.uuid1(), email="push@directorof.me")
+
             with app.app_context():
                 app.config["PUSH_REFRESH_TOKEN"] = flask_jwt.create_refresh_token(push_session)
                 app.config["PUSH_REFRESH_CSRF_TOKEN"] = flask_jwt.get_csrf_token(app.config["PUSH_REFRESH_TOKEN"])
