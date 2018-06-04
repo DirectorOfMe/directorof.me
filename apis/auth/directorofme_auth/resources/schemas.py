@@ -167,6 +167,7 @@ class AppSchema(marshmallow.Schema):
     name = marshmallow.String(required=True)
     desc = marshmallow.String(required=True)
     url = marshmallow.Url(required=True)
+    event_url = marshmallow.Url(required=False, allow_none=True)
 
     callback_url = marshmallow.Url(allow_none=True)
     config_schema = marshmallow.Dict(allow_none=True)
@@ -176,6 +177,7 @@ class AppSchema(marshmallow.Schema):
     created = marshmallow.DateTime(dump_only=True)
     updated = marshmallow.DateTime(dump_only=True)
     requested_scopes = marshmallow.Method(serialize="dump_scopes", deserialize="load_scopes", required=True)
+    listens_for = marshmallow.List(marshmallow.String, required=True)
 
     _links = marshmallow.Hyperlinks({
         "self": marshmallow.URLFor("auth.apps_api", slug="<slug>"),
@@ -259,3 +261,15 @@ class InstalledAppCollectionSchema(
 @spec.register_schema("InstalledAppCollectionQuerySchema")
 class InstalledAppCollectionQuerySchema(marshmallow.Schema):
     app = marshmallow.String()
+
+
+###: TODO FACTOR THIS -- COPIED FROM EVENT
+@spec.register_schema("PushEventToAppsSchema")
+class PushEventToAppsSchema(marshmallow.Schema):
+    id = marshmallow.UUID(required=True, load_only=True)
+    created = marshmallow.DateTime(required=True, load_only=True)
+    updated = marshmallow.DateTime(required=True, load_only=True)
+
+    event_type_slug = marshmallow.String(required=True)
+    event_time = marshmallow.DateTime(required=True)
+    data = marshmallow.Dict(required=True)

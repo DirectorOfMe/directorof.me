@@ -31,10 +31,9 @@ jwt = JWTManager()
 
 marshmallow = Marshmallow()
 
+app = directorofme_app(config["name"], config)
 spec = Spec(marshmallow, title='DirectorOf.Me Event API', version='0.0.1',)
 from . import resources
-
-app = directorofme_app(config["name"], config)
 
 @api.resource("/swagger.json", endpoint="spec_api")
 class Spec(Resource):
@@ -63,4 +62,8 @@ def push_refresh_token():
 
 @app.cli.command()
 def push_refresh_csrf_token():
-    print(app.config["PUSH_REFRESH_CSRF_TOKEN"])
+    import sys
+    import flask_jwt_extended as flask_jwt
+
+    with app.app_context():
+        print(flask_jwt.get_csrf_token(sys.stdin.read().strip()))

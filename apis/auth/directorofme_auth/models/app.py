@@ -1,4 +1,5 @@
 from sqlalchemy import Table, Column, String, ForeignKey
+from sqlalchemy.types import ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import URLType, JSONType, UUIDType
 
@@ -56,6 +57,8 @@ class App(db.Model):
     #: Groups this app would like to add into the session
     requested_access_groups = relationship("Group", secondary=requested_access_groups, backref="requested_by")
 
+    listens_for = Column(ARRAY(String), nullable=False, default=tuple())
+
     @property
     def requested_scopes(self):
         return Group.scopes(self.requested_access_groups)
@@ -99,7 +102,7 @@ class InstalledApp(db.Model):
     app_id = Column(UUIDType, ForeignKey(App.id), nullable=False)
 
     #: type of :class:`.App` this :class:`.InstalledApp` is.
-    app = relationship(App)
+    app = relationship(App, backref="installs")
 
     #: config for this app (conforms to :attr:`.App.config_schema`)
     config = Column(JSONType)

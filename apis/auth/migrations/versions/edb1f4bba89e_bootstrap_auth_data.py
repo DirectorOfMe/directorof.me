@@ -14,7 +14,7 @@ import jsonschema
 
 # revision identifiers, used by Alembic.
 revision = 'edb1f4bba89e'
-down_revision = 'e145c5343ca4'
+down_revision = '947c54cbb1de'
 branch_labels = None
 depends_on = None
 
@@ -76,6 +76,7 @@ def build_apps(groups):
             url="/slack",
             event_url="/api/-/slack/handle-event",
             config_schema = schemas["slack"],
+            listens_for = [ "app-installed" ],
             requested_access_groups = [
                 groups["s-{}-read".format(slugify(db.Model.__scope__.display_name))],
                 groups["s-{}-write".format(slugify(db.Model.__scope__.display_name))],

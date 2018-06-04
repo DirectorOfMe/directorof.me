@@ -1,13 +1,15 @@
+import flask
 import copy
 import jsonschema
 
-from directorofme.authorization import groups as groups_module, requires
+from directorofme.authorization import groups as groups_module, requires, session
+from directorofme.client import DOM, ClientError
 
 from flask_restful import abort
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 from . import api, schemas
-from .. import models, db, spec
+from .. import models, db, app as flask_app, spec
 from directorofme.flask.api import dump_with_schema, load_with_schema, with_pagination_params, first_or_abort,\
                                    load_query_params, Resource, uuid_or_abort
 
@@ -298,6 +300,43 @@ class Apps(Resource):
 
 
 @spec.register_resource
+@api.resource("/apps/push-event/<string:group>", endpoint="push_event_to_apps_api")
+class PushEventToApps(Resource):
+    @requires.push
+    @session.do_as_root
+    @load_with_schema(schemas.PushEventToAppsSchema)
+    def post(self, event_data, group):
+        push_client = DOM.from_request(flask.request, flask_app)
+        errors = []
+
+        for installed_app in models.InstalledApp.query.join(models.InstalledApp.app).filter(and_(
+                models.App.listens_for.any(event_data["event_type_slug"]),
+                models.App.event_url != None
+            )).filter(or_(
+                models.InstalledApp._permissions_read_0 == group,
+                models.InstalledApp._permissions_read_1 == group
+            )
+        ):
+            try:
+                push_client.post(installed_app.app.event_url.url, data={
+                    "event": schemas.PushEventToAppsSchema().dump(event_data)[0],
+                    "installed_app": schemas.InstalledAppSchema().dump(installed_app)[0]
+                })
+            except ClientError as e:
+                errors.append({
+                    "installed_app_id": str(installed_app.id),
+                    "message": str(e)
+                })
+
+        if errors:
+            return {
+                "message": "\n".join(["{}: {}".format(err["installed_app_id"], err["message"]) for err in errors])
+            }, 409
+
+        return None, 204
+
+
+@spec.register_resource
 @api.resource("/apps/<string:slug>/publish/<string:group_name>", endpoint="apps_publish_api")
 class PublishApp(Resource):
     def post(self, slug, group_name):
@@ -357,6 +396,7 @@ class PublishApp(Resource):
         db.session.commit()
 
         return None, 204
+
 
 @spec.register_resource
 @api.resource("/installed_apps/<string:id>", endpoint="installed_apps_api")
@@ -506,6 +546,28 @@ class InstalledApp(Resource):
 @spec.register_resource
 @api.resource("/installed_apps/", endpoint="installed_apps_collection_api")
 class InstalledApps(Resource):
+    ### TODO FACTOR
+    @classmethod
+    def emit_app_install_event(cls, installed_app):
+        try:
+            ### TODO: Async
+            DOM.from_request(flask.request, flask_app).post(
+                "event/events/",
+                data=schemas.PushEventToAppsSchema().dump({
+                    "event_type_slug": "app-installed",
+                    "event_time": installed_app.created,
+                    "data": {
+                        "installed_app_id": str(installed_app.id),
+                        "app_slug": installed_app.app.slug
+                }
+            }))
+        except Exception as e:
+            # TODO: Logger
+            print("Error processing event: {}".format(e))
+        finally:
+            return installed_app
+
+
     @dump_with_schema(schemas.InstalledAppCollectionSchema)
     @with_pagination_params()
     @load_query_params(schemas.InstalledAppCollectionQuerySchema)
@@ -566,7 +628,9 @@ class InstalledApps(Resource):
                 schema: ErrorSchema
         """
         data = InstalledApp.validate(data)
-        return self.generic_insert(db, api, models.InstalledApp, data, "id", url_cls=InstalledApp)
+        return self.emit_app_install_event(
+            self.generic_insert(db, api, models.InstalledApp, data, "id", url_cls=InstalledApp)
+        )
 
 
 @spec.register_resource
@@ -606,4 +670,6 @@ class InstallApp(Resource):
         app = first_or_abort(models.App.query.filter(models.App.slug == app))
         data["app_slug"] = app.slug
         data = InstalledApp.validate(data)
-        return self.generic_insert(db, api, models.InstalledApp, data, "id", url_cls=InstalledApp)
+        return InstalledApps.emit_app_install_event(
+            self.generic_insert(db, api, models.InstalledApp, data, "id", url_cls=InstalledApp)
+        )

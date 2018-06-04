@@ -12,12 +12,13 @@ from oauthlib.oauth2 import OAuth2Error
 from sqlalchemy.orm.attributes import flag_modified
 
 from directorofme.oauth import Client, Slack
+from directorofme.client import DOM
 from directorofme.authorization import session, groups, requires, standard_permissions
 from directorofme.flask.api import dump_with_schema, first_or_abort, uuid_or_abort, \
                                    load_query_params, abort_if_errors
 
 from . import api, schemas
-from .. import db, config, spec, marshmallow
+from .. import db, app as flask_app, config, spec, marshmallow
 from ..models import Profile, InstalledApp, SlackBot, App, InstalledApp
 from ..exceptions import EmailNotVerified
 
@@ -125,6 +126,32 @@ class OAuthCallback(Resource):
     """
     Callback used by third parties after successful authentication.
     """
+    ### TODO FACTOR
+    @classmethod
+    def emit_app_install_event(cls, session, installed_app):
+        try:
+            event_token = flask_jwt.create_access_token(session)
+            csrf_token = flask_jwt.get_csrf_token(event_token)
+
+            ### TODO: Async
+            DOM(flask_app.config["SERVER_NAME"], access_token=event_token, access_csrf_token=csrf_token).post(
+                "event/events/",
+                data=schemas.PushEventToAppsSchema().dump({
+                    "event_type_slug": "app-installed",
+                    "event_time": installed_app.created,
+                    "data": {
+                        "installed_app_id": str(installed_app.id),
+                        "app_slug": installed_app.app.slug
+                }
+            }).data)
+        except Exception as e:
+            # TODO: Logger
+            import traceback; traceback.print_exc()
+            print("Error processing event: {}".format(e))
+        finally:
+            return installed_app
+
+
     @requires.anybody
     @dump_with_schema(schemas.SessionSchema)
     @load_query_params(schemas.SessionQuerySchema)
@@ -179,27 +206,25 @@ class OAuthCallback(Resource):
             with session.do_as_root:
                 ### SIGN-UP FLOW
                 profile = Profile.query.filter(Profile.email == email).first()
-                slack_app = first_or_abort(App.query.filter(App.slug == "slack"), 500)
-                bot = self.bot_from_token(token, client, profile, slack_app.public_key)
-
                 if profile is None and invite is not None:
                     first_or_abort(Profile.query.filter(Profile.id == invite), 409)
                     profile = Profile.create_profile(name=name, email=email)
-                    if bot is None:
-                        return flask.session, 302, {
-                            "Location": Slack(
-                                config,
-                                callback_url=api.url_for(OAuthCallback, api_version="-", service="slack",
-                                                         _external=True),
-                                state=_pack_state({ "invite": invite }),
-                                scopes=("bot", "commands", "dnd:read", "dnd:write", "chat:write:bot"),
-                            ).authorization_url()
-                        }
-
-                    db.session.add(bot)
                     db.session.add(profile)
+                    db.session.flush()
 
+                slack_app = first_or_abort(App.query.filter(App.slug == "slack"), 500)
+                bot = self.bot_from_token(token, client, profile, slack_app.public_key)
                 db.session.flush()
+                if invite is not None and bot is None:
+                    return flask.session, 302, {
+                        "Location": Slack(
+                            config,
+                            callback_url=api.url_for(OAuthCallback, api_version="-", service="slack",
+                                                     _external=True),
+                            state=_pack_state({ "invite": invite }),
+                            scopes=("bot", "commands", "dnd:read", "dnd:write", "chat:write:bot"),
+                        ).authorization_url()
+                    }
 
             if profile is None:
                 abort(401, message="No profile for email: {}".format(email))
@@ -210,12 +235,13 @@ class OAuthCallback(Resource):
             flask.session.overwrite(new_session)
             flask.session.save = True
 
-            status_code, location = 201, api.url_for(Session)
+            status_code, location, new = 201, api.url_for(Session), False
             if invite and bot:
                 # Redirect to slack bot
                 installed_slack_app = InstalledApp.query.filter(InstalledApp.app == slack_app).first()
                 if installed_slack_app is None:
                     with session.do_as_root:
+                        new = True
                         installed_slack_app = slack_app.install_for_group(profile.group_of_one, config={
                             "integrations": {
                                 "slack": {
@@ -250,6 +276,11 @@ class OAuthCallback(Resource):
                 status_code, location = 302, client.app_url()
 
             db.session.commit()
+            ### XXX
+            if new:
+                self.emit_app_install_event(
+                    _session_from_profile(profile, installed_slack_app.id),
+                    installed_slack_app)
             return flask.session, status_code, { "Location": location }
         except OAuth2Error as e:
             return abort(400, message=str(e))
@@ -271,8 +302,9 @@ class OAuthCallback(Resource):
                     installing_profile=profile,
                     team_id=token["team_id"],
                     bot_id=token["bot"]["bot_user_id"],
-                    scopes = token["scope"][0]
+                    scopes = token["scope"][0].split(",")
                 )
+                db.session.add(bot)
 
         return bot
 
@@ -331,7 +363,6 @@ class Session(Resource):
             session_data = session_data.data
 
         app_data = session_data.get("app", {})
-
         session_data["save"] = True
         session_data["profile"] = session.SessionProfile(**session_data.get("profile", {}))
         session_data["app"] = session.SessionApp(**app_data) if app_data else None
@@ -470,7 +501,7 @@ class SignUpByInvite(Resource):
                 schema: ErrorSchema
         """
         with session.do_as_root:
-            first_or_abort(Profile.query.filter(Profile.id == invite), 404)
+            first_or_abort(Profile.query.filter(Profile.id == uuid_or_abort(invite)), 404)
 
         return None, 302, {
             "Location": Slack(
