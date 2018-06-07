@@ -6,9 +6,11 @@ import flask
 
 from unittest import mock
 
-from directorofme.authorization.session import Session, SessionProfile, SessionApp, SessionDecorator, \
-                                               do_with_groups, do_as_root
 from directorofme.authorization import groups
+from directorofme.authorization.exceptions import PermissionDeniedError
+from directorofme.authorization.session import Session, SessionProfile, SessionApp, SessionDecorator, \
+                                               do_with_groups, do_as_root, sudo
+
 from directorofme.flask import JSONEncoder
 
 
@@ -153,6 +155,22 @@ class TestSessionDecorator:
         assert ensure_call.called, "function was actually called"
 
         assert flask.session.groups == [groups.everybody], "just everybody after test"
+
+
+def test__sudo(request_context_with_session):
+    assert flask.session.groups == [groups.everybody], "test set"
+    with pytest.raises(PermissionDeniedError):
+        with sudo():
+            pass
+
+    flask.session.groups += [groups.admin]
+    with sudo():
+        assert set(flask.session.groups) == set([groups.everybody, groups.admin, groups.root]), "root added"
+    assert set(flask.session.groups) == set([groups.everybody, groups.admin]), "root removed"
+
+    flask.session.groups = [groups.everybody]
+    with sudo(requires=groups.everybody, do_as=groups.admin):
+        assert set(flask.session.groups) == set([groups.everybody, groups.admin]), "root added"
 
 
 def test__do_with_groups(request_context_with_session):

@@ -4,8 +4,8 @@ import contextlib
 
 import flask
 
-from . import groups as groups_module
 from ..specify import Spec, Attribute
+from . import groups as groups_module, requires as requires_module
 
 __all__ = [ "SessionApp", "SessionProfile", "Session", "SessionDecorator", "do_with_groups", "do_as_root" ]
 
@@ -68,6 +68,21 @@ class SessionDecorator(contextlib.ContextDecorator):
         return new_session
 
 # convenience methods
+class sudo(contextlib.ContextDecorator):
+    def __init__(self, requires=groups_module.admin, do_as=groups_module.root):
+        self.requires_decorator = requires_module.group(requires)
+        self.session_decorator = SessionDecorator(groups=(do_as,))
+
+    def __enter__(self):
+        self.requires_decorator.__enter__()
+        self.session_decorator.__enter__()
+
+    def __exit__(self, *args):
+        try:
+            self.requires_decorator.__exit__(*args)
+        finally:
+            self.session_decorator.__exit__(*args)
+
 def do_with_groups(*groups, replace=False):
     groups = [groups_module.Group.from_conforming_type(g) for g in groups]
     return SessionDecorator(extend_groups=(not replace), groups=groups)

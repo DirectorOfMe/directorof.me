@@ -37,7 +37,6 @@ class RequiresDecorator(contextlib.ContextDecorator):
         return RequiresDecorator(self, or_=other)
 
     def test(self):
-        print("TEST", self.group.name, [g.name for g in self.session.groups])
         groups_test = self.group and self.group in self.session.groups
         requirements_test = self.requirement and self.requirement.test()
 
