@@ -14,7 +14,6 @@ class SessionApp(Spec):
     id = Attribute(uuid.UUID)
     app_id = Attribute(uuid.UUID)
     app_slug = Attribute(str)
-    config = Attribute(typing.Dict[str, typing.Any])
 
 class SessionProfile(Spec):
     '''JSON Serializable profile (user) object'''

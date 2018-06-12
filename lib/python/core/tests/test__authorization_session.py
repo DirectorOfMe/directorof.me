@@ -16,16 +16,15 @@ from directorofme.flask import JSONEncoder
 
 ### Tests
 def test__SessionApp():
-    assert SessionApp.attributes == {"id", "app_id", "app_slug", "config"}, "attributes correct"
+    assert SessionApp.attributes == {"id", "app_id", "app_slug"}, "attributes correct"
 
     app = SessionApp()
     assert isinstance(app, SessionApp), "init works with no args"
 
-    app = SessionApp(id=uuid.uuid1(), app_id=uuid.uuid1(), app_slug="test", config={})
+    app = SessionApp(id=uuid.uuid1(), app_id=uuid.uuid1(), app_slug="test")
     assert isinstance(app.id, uuid.UUID), "id set correctly by __init__"
     assert isinstance(app.app_id, uuid.UUID), "app_id set correctly by __init__"
     assert app.app_slug == "test", "app_slug set correctly by __init__"
-    assert app.config == {}, "config set correctly by __init__"
 
 
 def test__SessionProfile():
@@ -57,7 +56,7 @@ class TestSession:
         assert session.default_object_perms == {}, "default_object_perms is set by __init__"
 
     def test__json_encode(self):
-        app = SessionApp(id=uuid.uuid1(), app_id=uuid.uuid1(), app_slug="test", config={})
+        app = SessionApp(id=uuid.uuid1(), app_id=uuid.uuid1(), app_slug="test")
         profile = SessionProfile(id=uuid.uuid1(), email="hi@example.com")
         session = Session(save=True, app=app, profile=profile, groups=[], environment={}, default_object_perms={})
         assert "save" not in json.loads(json.dumps(session, cls=JSONEncoder)), "save not exported"

@@ -101,8 +101,40 @@ class DOM(Session):
         access_token = request.cookies.get("access_token_cookie")
         csrf_token = request.headers.get("X-CSRF-TOKEN")
 
-        if csrf_token is None and app is not None:
-            with app.app_context():
-                csrf_token = flask_jwt.get_csrf_token(access_token.encode("utf-8"))
+        refresh_token = request.cookies.get("refresh_token_cookie")
+        refresh_csrf_token = request.headers.get("X-CSRF-REFRESH-TOKEN")
 
-        return cls(request.host, access_token=access_token, access_csrf_token=csrf_token)
+        if app is not None:
+            if csrf_token is None and access_token:
+                with app.app_context():
+                    csrf_token = flask_jwt.get_csrf_token(access_token.encode("utf-8"))
+
+            if refresh_csrf_token is None and refresh_token:
+                with app.app_context():
+                    refresh_csrf_token = flask_jwt.get_csrf_token(refresh_token.encode("utf-8"))
+
+        return cls(
+            request.host,
+            access_token=access_token,
+            access_csrf_token=csrf_token,
+            refresh_token=refresh_token,
+            refresh_csrf_token=refresh_csrf_token
+        )
+
+    @classmethod
+    def from_installed_app(cls, domain, cipher, installed_app):
+        try:
+            dom_integration = installed_app["config"]["integrations"]["directorofme"]
+        except KeyError:
+            raise ValueError("InstalledApp must have `directorofme` integration in config")
+
+        try:
+            refresh_token = cipher.decrypt(dom_integration["refresh_token"]["value"])
+            refresh_csrf_token = cipher.decrypt(dom_integration["refresh_csrf_token"]["value"])
+        except KeyError as e:
+            raise ValueError("Missing token: {}".format(e))
+
+        client = DOM(domain, refresh_token=refresh_token, refresh_csrf_token=refresh_csrf_token)
+        client.refresh()
+
+        return client

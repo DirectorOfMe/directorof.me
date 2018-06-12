@@ -216,7 +216,7 @@ class Spec:
         ])
 
         self.ma = ma
-        self.spec = APISpec(**spec_kwargs, )
+        self.spec = APISpec(**spec_kwargs)
         self.app = None
         self.paths = []
         self._setup_shared()

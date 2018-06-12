@@ -40,7 +40,8 @@ def slack_config():
 		"SLACK_CLIENT_ID": "slack-id",
     	"SLACK_CLIENT_SECRET": "slack-secret",
     	"SLACK_AUTH_URL": "https://slack.com/auth",
-    	"SLACK_TOKEN_URL": "https://slack.com/token"
+    	"SLACK_TOKEN_URL": "https://slack.com/token",
+        "SLACK_APP_ID": "A1234567"
 	}
 
 
@@ -157,3 +158,6 @@ class TestSlack:
 
         with mock_get(client, { "ok": False }), pytest.raises(OAuth2Error):
             assert client.confirm_identity() == (None, False, None), "not ok returns no email"
+
+    def test__app_url(self, slack_config):
+        assert Slack(slack_config).app_url() == "https://slack.com/app_redirect?app=A1234567", "app_url works"

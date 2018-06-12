@@ -61,8 +61,12 @@ class TestDOM:
         with pytest.raises(client.NotFound, match=r".*message.*"):
             dom_client.check(response)
 
-        response.status_code = 500
+        response.status_code = 409
         response._content = b"text"
+        with pytest.raises(client.Conflict, match=r".*text.*"):
+            dom_client.check(response)
+
+        response.status_code = 500
         with pytest.raises(client.ServerError, match=r".*text.*"):
             dom_client.check(response)
 
@@ -92,3 +96,78 @@ class TestDOM:
             mock_put.assert_called_with("auth/session")
             assert dom_client.headers["X-CSRF-TOKEN"] == "csrf_access_token"
             assert dom_client.headers["X-CSRF-REFRESH-TOKEN"] == "csrf_refresh_token"
+
+    def test__from_request(self, app):
+        class MockRequest:
+            def __init__(self, host, access_token, csrf_token, refresh_token, refresh_csrf_token):
+                self.host = host
+                self.cookies = {
+                    "access_token_cookie": access_token,
+                    "refresh_token_cookie": refresh_token
+                }
+                self.headers = {
+                    "X-CSRF-TOKEN": csrf_token,
+                    "X-CSRF-REFRESH-TOKEN": refresh_csrf_token
+                }
+
+        client = DOM.from_request(MockRequest("test.example.com", "access", "csrf", "refresh", "refresh_csrf"))
+        assert client.url("foo") == "https://test.example.com/api/-/foo", "host set from request"
+        assert client.cookies["access_token_cookie"] == "access", "access cookie set from request cookie"
+        assert client.cookies["refresh_token_cookie"] == "refresh", "refresh cookie set from request cookie"
+
+        assert client.headers["X-CSRF-TOKEN"] == "csrf", "csrf header set from request"
+        assert client.headers["X-CSRF-REFRESH-TOKEN"] == "refresh_csrf", "request csrf header set from request"
+
+        with mock.patch("flask_jwt_extended.get_csrf_token") as get_csrf_token:
+            get_csrf_token.return_value = "got_csrf"
+            client = DOM.from_request(MockRequest("test.example.com", "access", "csrf", "refresh", None), app)
+
+            assert get_csrf_token.called, "csrf mock called"
+            assert client.headers["X-CSRF-TOKEN"] == "csrf", "csrf installed from request"
+            assert client.headers["X-CSRF-REFRESH-TOKEN"] == "got_csrf", "csrf installed from token"
+
+            get_csrf_token.reset_mock()
+            client = DOM.from_request(
+                MockRequest("test.example.com", "access", None, "refresh", "refresh_csrf"),
+                app
+            )
+
+            assert get_csrf_token.called, "csrf mock called"
+            assert client.headers["X-CSRF-TOKEN"] == "got_csrf", "csrf installed from token"
+            assert client.headers["X-CSRF-REFRESH-TOKEN"] == "refresh_csrf", "csrf installed from header"
+
+    def test__from_installed_app(self):
+        class Cipher:
+            def decrypt(self, value):
+                return value
+
+        installed_app = {
+            "config": {
+                "integrations": {
+                    "directorofme": {
+                        "refresh_token": {
+                            "encryption": "RSA",
+                            "value": "encrypted refresh_token"
+                        },
+                        "refresh_csrf_token": {
+                            "encryption": "RSA",
+                            "value": "encrypted refresh_csrf_token"
+                        },
+                    }
+                }
+            }
+        }
+
+        with mock.patch.object(DOM, "refresh") as mock_refresh:
+            client = DOM.from_installed_app("test.example.com", Cipher(), installed_app)
+
+            assert mock_refresh.called, "client refreshed"
+            assert client.cookies["refresh_token_cookie"] == "encrypted refresh_token", "refresh cookie works"
+            assert client.headers["X-CSRF-REFRESH-TOKEN"] == "encrypted refresh_csrf_token", "refresh csrf works"
+
+        with pytest.raises(ValueError):
+            DOM.from_installed_app("test.example.com", Cipher(), {})
+
+        del installed_app["config"]["integrations"]["directorofme"]["refresh_token"]["value"]
+        with pytest.raises(ValueError):
+            DOM.from_installed_app("test.example.com", Cipher(), installed_app)

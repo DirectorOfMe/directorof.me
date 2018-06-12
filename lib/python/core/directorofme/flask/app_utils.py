@@ -32,7 +32,9 @@ def directorofme_app(app_name, user_config):
     except TypeError:
         raise MisconfiguredAuthError("JWT_PUBLIC_KEY_FILE must be set")
     except FileNotFoundError:
-        raise MisconfiguredAuthError("JWT_PUBLIC_KEY_FILE not found: {}".format(app.config["JWT_PUBLIC_KEY_FILE"]))
+        raise MisconfiguredAuthError("JWT_PUBLIC_KEY_FILE not found: {}".format(
+            app.config["JWT_PUBLIC_KEY_FILE"]
+        ))
 
     if app.config.get("PUSH_REFRESH_TOKEN_FILE"):
         try:
@@ -41,6 +43,7 @@ def directorofme_app(app_name, user_config):
         except FileNotFoundError:
             raise ValueError(
                 "PUSH_REFRESH_TOKEN_FILE not found: {}".format(app.config["PUSH_REFRESH_TOKEN_FILE"]))
+
         try:
             with open(app.config["PUSH_REFRESH_CSRF_TOKEN_FILE"]) as push_refresh_csrf_token:
                 app.config["PUSH_REFRESH_CSRF_TOKEN"] = push_refresh_csrf_token.read().strip()

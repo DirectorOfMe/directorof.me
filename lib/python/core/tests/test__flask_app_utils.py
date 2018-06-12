@@ -31,15 +31,65 @@ open_mock.side_effect = open_side_effect
 
 @mock.patch("builtins.open", open_mock)
 def test__directorofme_app_basic(clear_env):
-    app = directorofme_app("app", { "app": { "JWT_PUBLIC_KEY_FILE": "public_key" }})
+    app = directorofme_app("app", {
+        "app": {
+            "JWT_PUBLIC_KEY_FILE": "public_key",
+            "PUSH_REFRESH_TOKEN_FILE": "push_refresh_token",
+            "PUSH_REFRESH_CSRF_TOKEN_FILE": "push_refresh_csrf_token",
+        }
+    })
 
     assert isinstance(app, flask.Flask), "return a Flask app"
     assert isinstance(app.wsgi_app, ProxyFix), "proxy fix installed"
     assert app.json_encoder is JSONEncoder, "json encoder installed"
     assert app.config["RESTFUL_JSON"]["cls"] is JSONEncoder, "json encoder installed for flask-restful"
     assert app.name == "app", "name set"
-    assert app.config["JWT_PUBLIC_KEY"] == "public_key", "public key read"
     assert app.config["PREFERRED_URL_SCHEME"] == "https", "empty app keys don't override defaults"
+    assert app.config["JWT_PUBLIC_KEY"] == "public_key", "public key read"
+    assert app.config["PUSH_REFRESH_TOKEN_FILE"] == "push_refresh_token", "push refresh token file read"
+    assert app.config["PUSH_REFRESH_CSRF_TOKEN_FILE"] == "push_refresh_csrf_token", \
+           "push refresh csrf token file read"
+
+
+@mock.patch("builtins.open", open_mock)
+def test__directorofme_app_push_token_file_errors(clear_env):
+    app = directorofme_app("app", {
+        "app": {
+            "JWT_PUBLIC_KEY_FILE": "public_key",
+            "PUSH_REFRESH_TOKEN_FILE": "push_refresh_token",
+            "PUSH_REFRESH_CSRF_TOKEN_FILE": "push_refresh_csrf_token",
+        }
+    })
+
+    open_mock.not_found = "push_refresh_token"
+    with pytest.raises(ValueError):
+        app = directorofme_app("app", {
+            "app": {
+                "JWT_PUBLIC_KEY_FILE": "public_key",
+                "PUSH_REFRESH_TOKEN_FILE": "push_refresh_token",
+                "PUSH_REFRESH_CSRF_TOKEN_FILE": "push_refresh_csrf_token",
+            }
+        })
+
+    open_mock.not_found = None
+    with pytest.raises(MisconfiguredAuthError):
+        app = directorofme_app("app", {
+            "app": {
+                "JWT_PUBLIC_KEY_FILE": "public_key",
+                "PUSH_REFRESH_TOKEN_FILE": "push_refresh_token",
+                "PUSH_REFRESH_CSRF_TOKEN_FILE": None,
+            }
+        })
+
+    open_mock.not_found = "push_refresh_csrf_token"
+    with pytest.raises(ValueError):
+        app = directorofme_app("app", {
+            "app": {
+                "JWT_PUBLIC_KEY_FILE": "public_key",
+                "PUSH_REFRESH_TOKEN_FILE": "push_refresh_token",
+                "PUSH_REFRESH_CSRF_TOKEN_FILE": "push_refresh_csrf_token",
+            }
+        })
 
 
 @mock.patch("builtins.open", open_mock)

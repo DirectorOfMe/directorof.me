@@ -76,6 +76,7 @@ class Slack(Client):
 
     def __init__(self, config, callback_url=None, scopes=("identity.basic", "identity.email"),
                  state=None, **kwargs):
+        kwargs["scope"] = ",".join(scopes)
         self.app_id = config.get("SLACK_APP_ID")
         super().__init__(
             callback_url,
@@ -83,7 +84,7 @@ class Slack(Client):
             config.get("SLACK_AUTH_URL"),
             config.get("SLACK_TOKEN_URL"),
             {},
-            { "scope": ",".join(scopes) },
+            kwargs,
             config.get("SLACK_CLIENT_SECRET"),
             state=state
         )
