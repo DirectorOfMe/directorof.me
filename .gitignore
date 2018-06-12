@@ -21,6 +21,7 @@ push_tokens
 .cache/
 .coverage
 .pytest_cache
+crypto/
 
 # Built python files
 setup.py

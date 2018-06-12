@@ -102,13 +102,13 @@ class InstalledApp(db.Model):
     app_id = Column(UUIDType, ForeignKey(App.id), nullable=False)
 
     #: type of :class:`.App` this :class:`.InstalledApp` is.
-    app = relationship(App, backref="installs")
+    app = relationship(App)
 
     #: config for this app (conforms to :attr:`.App.config_schema`)
     config = Column(JSONType)
 
     #: Groups this app will mix into session
-    access_groups = relationship("Group", secondary=granted_access_groups, backref="granted_to")
+    access_groups = relationship("Group", secondary=granted_access_groups)
 
     @property
     def app_slug(self):

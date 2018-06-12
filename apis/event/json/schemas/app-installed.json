@@ -1,0 +1,16 @@
+{
+    "id": "https://matt.directorof.me/api/-/event/event_types/app-installed",
+    "$schema": "http://json-schema.org/draft-06/schema#",
+
+    "required": [ "installed_app_id", "app_slug" ],
+    "additionalProperties": false,
+
+    "properties": {
+        "installed_app_id": {
+            "type": "string", "format": "uuid"
+        },
+        "app_slug": {
+            "type": "string", "format": "slug"
+        }
+    }
+}

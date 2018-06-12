@@ -9,7 +9,7 @@ from flask_restful import abort
 from sqlalchemy import and_, or_
 
 from . import api, schemas
-from .. import models, db, app as flask_app, spec
+from .. import models, db, app as flask_app, spec, dom_events
 from directorofme.flask.api import dump_with_schema, load_with_schema, with_pagination_params, first_or_abort,\
                                    load_query_params, Resource, uuid_or_abort
 
@@ -160,7 +160,7 @@ class App(Resource):
 
 
 @spec.register_resource
-@api.resource("/apps/<string:slug>/encrypt", endpoint="apps_api:encrypt")
+@api.resource("/apps/<string:slug>/encrypt/", endpoint="apps_api:encrypt")
 class AppEncrypt(Resource):
     @load_with_schema(schemas.AppEncryptSchema)
     @dump_with_schema(schemas.AppEncryptSchema)
@@ -302,9 +302,8 @@ class Apps(Resource):
 @spec.register_resource
 @api.resource("/apps/push-event/<string:group>", endpoint="push_event_to_apps_api")
 class PushEventToApps(Resource):
-    @requires.push
-    @session.do_as_root
-    @load_with_schema(schemas.PushEventToAppsSchema)
+    @session.sudo(requires=groups_module.push)
+    @load_with_schema(schemas.Event)
     def post(self, event_data, group):
         push_client = DOM.from_request(flask.request, flask_app)
         errors = []
@@ -319,7 +318,7 @@ class PushEventToApps(Resource):
         ):
             try:
                 push_client.post(installed_app.app.event_url.url, data={
-                    "event": schemas.PushEventToAppsSchema().dump(event_data)[0],
+                    "event": schemas.Event().dump(event_data)[0],
                     "installed_app": schemas.InstalledAppSchema().dump(installed_app)[0]
                 })
             except ClientError as e:
@@ -549,23 +548,16 @@ class InstalledApps(Resource):
     ### TODO FACTOR
     @classmethod
     def emit_app_install_event(cls, installed_app):
-        try:
-            ### TODO: Async
-            DOM.from_request(flask.request, flask_app).post(
-                "event/events/",
-                data=schemas.PushEventToAppsSchema().dump({
-                    "event_type_slug": "app-installed",
-                    "event_time": installed_app.created,
-                    "data": {
-                        "installed_app_id": str(installed_app.id),
-                        "app_slug": installed_app.app.slug
-                }
-            }))
-        except Exception as e:
-            # TODO: Logger
-            print("Error processing event: {}".format(e))
-        finally:
-            return installed_app
+        actual_installed_app = installed_app
+        if isinstance(actual_installed_app, tuple):
+            actual_installed_app = installed_app[0]
+
+        dom_events.emit(DOM.from_request(flask.request, flask_app), "app-installed", {
+            "installed_app_id": str(actual_installed_app.id),
+            "app_slug": actual_installed_app.app_slug
+        })
+
+        return installed_app
 
 
     @dump_with_schema(schemas.InstalledAppCollectionSchema)

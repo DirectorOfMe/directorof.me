@@ -18,7 +18,7 @@ from directorofme.flask.api import dump_with_schema, first_or_abort, uuid_or_abo
                                    load_query_params, abort_if_errors
 
 from . import api, schemas
-from .. import db, app as flask_app, config, spec, marshmallow
+from .. import db, app as flask_app, config, spec, marshmallow, dom_events
 from ..models import Profile, InstalledApp, SlackBot, App, InstalledApp
 from ..exceptions import EmailNotVerified
 
@@ -34,7 +34,7 @@ def _unpack_state(val):
 
 def _session_from_profile(profile, installed_app_id):
     # we must always grant read access to auth data strucuture scope or the user can't do anything
-    groups_list = [db.Model.__scope__.read] if db.Model.__scope__ else []
+    groups_list = [db.Model.__scope__.read, db.Model.__scope__.write] if db.Model.__scope__ else []
     with session.do_as_root:
         groups_list += [ groups.Group.from_conforming_type(group) for license in profile.licenses \
                                                                   for license_group in license.groups \
@@ -129,27 +129,18 @@ class OAuthCallback(Resource):
     ### TODO FACTOR
     @classmethod
     def emit_app_install_event(cls, session, installed_app):
-        try:
-            event_token = flask_jwt.create_access_token(session)
-            csrf_token = flask_jwt.get_csrf_token(event_token)
+        event_token = flask_jwt.create_access_token(session)
+        csrf_token = flask_jwt.get_csrf_token(event_token)
+        dom_events.emit(
+            DOM(flask_app.config["SERVER_NAME"], access_token=event_token, access_csrf_token=csrf_token),
+            "app-installed", {
+                "installed_app_id": str(installed_app.id),
+                "app_slug": installed_app.app.slug
+            },
+            event_time=installed_app.created
+        )
 
-            ### TODO: Async
-            DOM(flask_app.config["SERVER_NAME"], access_token=event_token, access_csrf_token=csrf_token).post(
-                "event/events/",
-                data=schemas.PushEventToAppsSchema().dump({
-                    "event_type_slug": "app-installed",
-                    "event_time": installed_app.created,
-                    "data": {
-                        "installed_app_id": str(installed_app.id),
-                        "app_slug": installed_app.app.slug
-                }
-            }).data)
-        except Exception as e:
-            # TODO: Logger
-            import traceback; traceback.print_exc()
-            print("Error processing event: {}".format(e))
-        finally:
-            return installed_app
+        return installed_app
 
 
     @requires.anybody
@@ -242,7 +233,20 @@ class OAuthCallback(Resource):
                 if installed_slack_app is None:
                     with session.do_as_root:
                         new = True
+                        ### TODO: factor with bot
+                        bot_client = Slack(config, token={ "access_token": token["bot"]["bot_access_token"] })
+                        resp = bot_client.post("https://slack.com/api/im.open", data={
+                            "user": token["user_id"]
+                        }).json()
+
+                        if not resp["ok"]:
+                            abort(409, message="Cannot open IM channel to user: {}".format(resp.get("error")))
+
                         installed_slack_app = slack_app.install_for_group(profile.group_of_one, config={
+                            "user_id": token["user_id"],
+                            "dm_channel_id": resp["channel"]["id"],
+                            "team_id": token["team_id"],
+                            "scopes": token["scope"],
                             "integrations": {
                                 "slack": {
                                     "access_token": {
@@ -256,17 +260,20 @@ class OAuthCallback(Resource):
                         db.session.add(installed_slack_app)
                         db.session.flush()
 
-                        dom_token = flask_jwt.create_refresh_token(
-                            _session_from_profile(profile, installed_slack_app.id))
+                        new_session = _session_from_profile(profile, installed_slack_app.id)
+                        dom_token = flask_jwt.create_refresh_token(new_session)
                         csrf_token = flask_jwt.get_csrf_token(dom_token)
 
                         # re-grab a fresh object to manipulate
                         installed_slack_app.config["integrations"]["directorofme"] = {
-                            "encryption": "RSA",
-                            "value": slack_app.encrypt(json.dumps({
-                                "refresh_token": dom_token,
-                                "refresh_csrf_token": csrf_token
-                            }))
+                            "refresh_token": {
+                                "encryption": "RSA",
+                                "value": slack_app.encrypt(dom_token),
+                            },
+                            "refresh_csrf_token": {
+                                "encryption": "RSA",
+                                "value": slack_app.encrypt(csrf_token)
+                            }
                         }
                         flag_modified(installed_slack_app, "config")
 
@@ -278,9 +285,10 @@ class OAuthCallback(Resource):
             db.session.commit()
             ### XXX
             if new:
-                self.emit_app_install_event(
-                    _session_from_profile(profile, installed_slack_app.id),
-                    installed_slack_app)
+                flask.session.overwrite(new_session)
+                flask.session.save = True
+                self.emit_app_install_event(flask.session, installed_slack_app)
+
             return flask.session, status_code, { "Location": location }
         except OAuth2Error as e:
             return abort(400, message=str(e))

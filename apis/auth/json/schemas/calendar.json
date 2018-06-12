@@ -1,0 +1,53 @@
+{
+    "definitions": {
+        "tokens": {
+            "type": "object",
+            "patternProperties": {
+                "^.*_token$": {
+                    "value": { "type": "string" },
+                    "encryption": {
+                        "anyOf": [
+                            { "type": "null" },
+                            {
+                                "type": "string",
+                                "enum": [ "RSA" ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+
+
+    "id": "https://matt.directorof.me/api/-/auth/app/calendar",
+    "$schema": "http://json-schema.org/draft-06/schema#",
+
+    "description": "Schema for Slack App",
+    "type": "object",
+
+    "required": [ "scopes", "integrations" ],
+
+    "properties": {
+		"installed_from_message": {
+			"anyOf": [
+				{ "type": "string" },
+				{ "type": "null" }
+			]
+		},
+        "scopes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "integrations": {
+            "type": "object",
+            "patternProperties": {
+                "^._token*$": { "$ref": "#/definitions/tokens" }
+            },
+			"additionalProperties": true
+        }
+    }
+}

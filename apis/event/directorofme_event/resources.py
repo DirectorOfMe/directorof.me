@@ -2,6 +2,7 @@ from furl import furl
 from flask_restful import abort
 from sqlalchemy.exc import IntegrityError
 
+from directorofme.schemas import Event
 from directorofme.authorization.exceptions import PermissionDeniedError
 from directorofme.flask.api import dump_with_schema, load_with_schema, with_pagination_params, \
                                    uuid_or_abort, first_or_abort, load_query_params, with_cursor_params, Resource
@@ -209,16 +210,14 @@ class EventTypes(Resource):
 @api.resource("/events/<string:id>", endpoint="events_api")
 class Event(Resource):
     @spec.register_schema("EventSchema")
-    class EventSchema(marshmallow.Schema):
-        event_type_slug = marshmallow.String(required=True)
-        event_time = marshmallow.DateTime()
-        data = marshmallow.Dict(required=True)
-
+    class EventSchema(Event):
         id = marshmallow.UUID(required=True, dump_only=True)
         created = marshmallow.DateTime(required=True, dump_only=True)
         updated = marshmallow.DateTime(required=True, dump_only=True)
 
-        event_time = marshmallow.DateTime(required=True, dump_only=True)
+		### TODO: Test for event_time passed, could not have been tested right before
+        event_time = marshmallow.DateTime()
+		### TODO: required_for_dump
 
         _links = marshmallow.Hyperlinks({
             "self": marshmallow.URLFor("event.events_api", id="<id>"),
@@ -422,6 +421,7 @@ class Events(Resource):
             ### GETTING EMTPY SESSION ON REQUEST, NOT PUSH SESSION
         except Exception as e:
             # TODO Logger
+            import traceback; traceback.print_exc()
             print("Error processing event: {}".format(e))
         finally:
             return event

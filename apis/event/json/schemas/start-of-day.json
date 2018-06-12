@@ -1,0 +1,13 @@
+{
+    "id": "https://matt.directorof.me/api/-/event/event_types/start-of-day",
+    "$schema": "http://json-schema.org/draft-06/schema#",
+
+    "required": [ "time" ],
+    "additionalProperties": false,
+
+    "properties": {
+        "time": {
+            "type": "string", "pattern": "[0-2]?[0-9]:[0-9][0-9]"
+        }
+    }
+}

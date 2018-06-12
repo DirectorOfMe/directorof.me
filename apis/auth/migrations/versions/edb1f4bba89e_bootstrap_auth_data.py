@@ -44,13 +44,19 @@ def build_groups():
 
 def build_apps(groups):
     schemas = {}
-    for app_name in ("rythym", "slack"):
+    for app_name in ("rythym", "slack", "calendar"):
         with open(os.path.join(os.path.dirname(__file__), "../../json/schemas/{}.json".format(app_name))) as f:
             schemas[app_name] = json.load(f)
 
         jsonschema.Draft4Validator.check_schema(schemas[app_name])
 
     slugged_event = slugify("directorofme_event")
+
+    with open("/etc/directorofme_slack/slack_pub.pem") as pub_key:
+        slack_public_key = pub_key.read()
+
+    with open("/etc/directorofme_calendar/calendar_pub.pem") as pub_key:
+        calendar_public_key = pub_key.read()
 
     return [
         App(
@@ -69,13 +75,13 @@ def build_apps(groups):
             read=(admin.name,),
             write=(admin.name,)
         ),
-        # TODO: public keys
         App(
             name="Slack",
             desc="DirectorOf.Me for Slack.",
             url="/slack",
-            event_url="/api/-/slack/handle-event",
+            event_url="slack/handle-event",
             config_schema = schemas["slack"],
+            public_key=slack_public_key,
             listens_for = [ "app-installed" ],
             requested_access_groups = [
                 groups["s-{}-read".format(slugify(db.Model.__scope__.display_name))],
@@ -87,8 +93,24 @@ def build_apps(groups):
             write=(admin.name,)
         ),
         App(
+            name="Calendar",
+            desc="DirectorOf.Me Calendar Integration.",
+            url="/calendar",
+            config_schema = schemas["calendar"],
+            public_key=calendar_public_key,
+            listens_for = [ "start-of-day" ],
+            requested_access_groups = [
+                groups["s-{}-read".format(slugify(db.Model.__scope__.display_name))],
+                groups["s-{}-write".format(slugify(db.Model.__scope__.display_name))],
+                groups["s-{}-read".format(slugged_event)],
+                groups["s-{}-write".format(slugged_event)]
+            ],
+            read=(user.name,),
+            write=(admin.name,)
+        ),
+        App(
             url="/rythym",
-            event_url="/api/-/rythym/handle-event",
+            event_url="rythym/handle-event",
             name="Rythym",
             config_schema = schemas["rythym"],
             desc="""Have your best day every day with the Daily Rythym App.

@@ -12,11 +12,13 @@ from directorofme.flask.api import Spec
 from directorofme.authorization import groups, orm
 from flask_marshmallow import Marshmallow
 from directorofme.flask import DOMSQLAlchemy
+from directorofme.events import DOMEventRegistry
 
 __all__ = [ "app", "api", "config", "db", "exceptions", "jwt", "migrate", "marshmallow",
-            "resources", "models", "spec" ]
+            "resources", "models", "spec", "dom_events" ]
 
 # ORDER MATTERS HERE
+dom_events = DOMEventRegistry()
 from .config import config
 config = config()
 

@@ -27,26 +27,43 @@ def default_perms(*args):
 
 @mock.patch.object(EventType, "default_perms", default_perms)
 def upgrade():
-    schema = None
-    with open(os.path.join(os.path.dirname(__file__), "../../json/schemas/daily-standup-report.json")) as f:
-        schema = json.load(f)
-    Draft4Validator.check_schema(schema)
+    schemas = {}
+    for name in ("daily-standup-report", "app-installed", "start-of-day", "slack-message-sent"):
+        with open(os.path.join(os.path.dirname(__file__), "../../json/schemas/{}.json".format(name))) as f:
+            schemas[name] = json.load(f)
+
+        Draft4Validator.check_schema(schemas[name])
 
     session = sa.orm.session.Session(bind=op.get_bind())
     with EventType.disable_permissions():
         session.add(EventType(
-            name="Daily Stand-Up Report",
+            name="Daily StandUp Report",
             desc="""Start your day off with all the information you need. The Daily Stand-Up report is
                     delivered to you each morning via E-Mail or Chat and has all the information you
                     need to have your best day every day.
                  """,
-            data_schema=schema,
+            data_schema=schemas["daily-standup-report"],
             read=(groups.everybody.name,),
             write=(groups.admin.name,),
         ))
         session.add(EventType(
             name="App Installed",
             desc="An app was installed",
+            data_schema=schemas["daily-standup-report"],
+            read=(groups.everybody.name,),
+            write=(groups.admin.name,),
+        ))
+        session.add(EventType(
+            name="Start Of Day",
+            desc="Your day just started",
+            data_schema=schemas["start-of-day"],
+            read=(groups.everybody.name,),
+            write=(groups.admin.name,),
+        ))
+        session.add(EventType(
+            name="Slack Message Sent",
+            desc="A message was delivered via slack",
+            data_schema=schemas["slack-message-sent"],
             read=(groups.everybody.name,),
             write=(groups.admin.name,),
         ))

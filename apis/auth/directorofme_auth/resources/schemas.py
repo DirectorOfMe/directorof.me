@@ -1,5 +1,6 @@
 from marshmallow_enum import EnumField
 from directorofme.authorization import groups
+from directorofme.schemas import Event, InstalledApp
 from .. import spec, marshmallow
 
 @spec.register_schema("SessionQuerySchema")
@@ -166,7 +167,7 @@ class ProfileLicenses(
 class AppSchema(marshmallow.Schema):
     name = marshmallow.String(required=True)
     desc = marshmallow.String(required=True)
-    url = marshmallow.Url(required=True)
+    url = marshmallow.Url(required=True, relative=True)
     event_url = marshmallow.Url(required=False, allow_none=True)
 
     callback_url = marshmallow.Url(allow_none=True)
@@ -223,10 +224,25 @@ class AppDecryptSchema(AppEncryptSchema):
     }, dump_only=True)
 
 
+@spec.register_schema("InstallAppSchema")
+class InstallAppSchema(InstalledApp):
+	id = marshmallow.UUID(required=True, dump_only=True)
+	app_slug = marshmallow.String(required=True, dump_only=True)
+
+
 @spec.register_schema("InstalledAppSchema")
-class InstallAppSchema(marshmallow.Schema):
-    config = marshmallow.Dict(allow_none=True)
+class InstalledAppSchema(InstalledApp):
+    id = marshmallow.UUID(required=True, dump_only=True)
+    created = marshmallow.DateTime(dump_only=True)
+    updated = marshmallow.DateTime(dump_only=True)
+
     scopes = marshmallow.Method(serialize="dump_scopes", deserialize="load_scopes", required=True)
+
+    _links = marshmallow.Hyperlinks({
+        "self": marshmallow.URLFor("auth.installed_apps_api", id="<id>"),
+        "collection": marshmallow.URLFor("auth.installed_apps_collection_api"),
+        "app": marshmallow.URLFor("auth.apps_api", slug="<app_slug>")
+    }, dump_only=True)
 
     def load_scopes(self, value):
         return marshmallow.List(marshmallow.String)._deserialize(value, None, None)
@@ -236,20 +252,6 @@ class InstallAppSchema(marshmallow.Schema):
             g.display_name for g in obj.access_groups
         ], None, None)
 
-
-@spec.register_schema("InstalledAppSchema")
-class InstalledAppSchema(InstallAppSchema):
-    app_slug = marshmallow.String(required=True)
-
-    id = marshmallow.UUID(required=True, dump_only=True)
-    created = marshmallow.DateTime(dump_only=True)
-    updated = marshmallow.DateTime(dump_only=True)
-
-    _links = marshmallow.Hyperlinks({
-        "self": marshmallow.URLFor("auth.installed_apps_api", id="<id>"),
-        "collection": marshmallow.URLFor("auth.installed_apps_collection_api"),
-        "app": marshmallow.URLFor("auth.apps_api", slug="<app_slug>")
-    }, dump_only=True)
 
 @spec.register_schema("InstalledAppCollectionSchema")
 class InstalledAppCollectionSchema(
@@ -262,14 +264,4 @@ class InstalledAppCollectionSchema(
 class InstalledAppCollectionQuerySchema(marshmallow.Schema):
     app = marshmallow.String()
 
-
-###: TODO FACTOR THIS -- COPIED FROM EVENT
-@spec.register_schema("PushEventToAppsSchema")
-class PushEventToAppsSchema(marshmallow.Schema):
-    id = marshmallow.UUID(required=True, load_only=True)
-    created = marshmallow.DateTime(required=True, load_only=True)
-    updated = marshmallow.DateTime(required=True, load_only=True)
-
-    event_type_slug = marshmallow.String(required=True)
-    event_time = marshmallow.DateTime(required=True)
-    data = marshmallow.Dict(required=True)
+PushEventToAppsSchema = spec.register_schema("PushEventToAppsSchema")(Event)

@@ -493,7 +493,7 @@ class TestEvents:
             response = json_request(test_client, "post", url,
                                     data={"event_type_slug": event_type.slug, "data": { "test": "data" }})
             assert mock_token.called, "mock used"
-            assert response.status_code == 404, "404 if event_type can't be selected"
+            assert response.status_code == 409, "409 if event_type can't be selected"
 
         with token_mock(authorized_for_read_identity) as mock_token:
             response = json_request(test_client, "post", url,
