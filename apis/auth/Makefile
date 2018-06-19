@@ -8,7 +8,7 @@ PKG_DEPS             ?= $(FLASK_PKG_DEPS),\
 					    python-slugify>=1.2.4, \
 						marshmallow-enum==1.3, \
 						pycrypto>=2.6.1, \
-						cryptogrophy>=2.2.2,
+						cryptography>=2.2.2,
 
 FLASK_APP            ?= $(PKG_NAME):app
 SERVICE_NAME         ?= $(PKG_NAME)

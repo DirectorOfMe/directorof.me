@@ -1,6 +1,6 @@
 from marshmallow_enum import EnumField
 from directorofme.authorization import groups
-from directorofme.schemas import Event, InstalledApp
+from directorofme.schemas import Event, InstalledAppRequest
 from .. import spec, marshmallow
 
 @spec.register_schema("SessionQuerySchema")
@@ -225,13 +225,13 @@ class AppDecryptSchema(AppEncryptSchema):
 
 
 @spec.register_schema("InstallAppSchema")
-class InstallAppSchema(InstalledApp):
-	id = marshmallow.UUID(required=True, dump_only=True)
-	app_slug = marshmallow.String(required=True, dump_only=True)
+class InstallAppSchema(InstalledAppRequest):
+    # just basically remove stuff we don't care about
+    app_slug = marshmallow.String(required=False)
 
 
 @spec.register_schema("InstalledAppSchema")
-class InstalledAppSchema(InstalledApp):
+class InstalledAppSchema(InstalledAppRequest):
     id = marshmallow.UUID(required=True, dump_only=True)
     created = marshmallow.DateTime(dump_only=True)
     updated = marshmallow.DateTime(dump_only=True)

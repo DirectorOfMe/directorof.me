@@ -200,7 +200,7 @@ class AppEncrypt(Resource):
 
 
 @spec.register_resource
-@api.resource("/apps/<string:slug>/decrypt", endpoint="apps_api:decrypt")
+@api.resource("/apps/<string:slug>/decrypt/", endpoint="apps_api:decrypt")
 class AppDecrypt(Resource):
     @load_with_schema(schemas.AppDecryptSchema)
     @dump_with_schema(schemas.AppDecryptSchema)
